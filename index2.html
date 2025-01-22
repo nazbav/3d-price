@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -11,7 +12,7 @@
   />
 
   <style>
-    body {
+   body {
       margin: 20px;
     }
     .table-container {
@@ -27,8 +28,7 @@
     .footer {
       margin-top: 40px;
       font-size: 0.9rem;
-      color: #888;
-      border-top: 1px solid #ddd;
+      border-top: 1px solid var(--bs-border-color);
       padding-top: 10px;
     }
     table td, table th {
@@ -39,12 +39,26 @@
       padding: 2px 6px;
       margin-left: 2px;
     }
+	
+thead th {
+  background-color: var(--bs-table-bg) !important;
+  color: var(--bs-body-color) !important;
+}
+
+/* Дополнительный стиль для тёмной темы */
+[data-bs-theme="dark"] thead th {
+  background-color: var(--bs-dark-bg-subtle) !important;
+  color: var(--bs-light) !important;
+}
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1 class="my-4">Калькулятор стоимости 3D-печати (учёт множества факторов)</h1>
+<div class="d-flex justify-content-between align-items-center">
+  <h1 class="my-4">Калькулятор стоимости 3D-печати</h1>
+  <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
+</div>
 
   <a href="index.html"><h3 class="my-4">Первая версия калькулятора (тык)</h1></a> 
 
@@ -285,6 +299,28 @@
 </script>
 
 <script>
+
+// Ключ для хранения темы в LocalStorage
+const THEME_STORAGE_KEY = "themePreference";
+
+// Функция установки темы
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-bs-theme", theme);
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  document.getElementById("themeToggle").innerText = theme === "dark" ? "☀️ Светлая тема" : "🌙 Темная тема";
+}
+
+// Переключение темы при клике
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const currentTheme = document.documentElement.getAttribute("data-bs-theme");
+  const newTheme = currentTheme === "dark" ? "light" : "dark";
+  setTheme(newTheme);
+});
+
+// Устанавливаем тему при загрузке страницы
+const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || "light";
+setTheme(savedTheme);
+
 /** ========================================================
  *   1. Структура данных и LocalStorage
  * =========================================================
@@ -732,7 +768,7 @@ function onCalculate() {
     <hr/>
     Сумма без налога: ${subTotal.toFixed(2)} ₽<br/>
     Налог (${taxPercent}%): ${costTax.toFixed(2)} ₽<br/>
-    <strong>Итого: ${total.toFixed(2)} ₽<\/strong><br/><br/>
+    <strong>Итого: ${total.toFixed(2)} ₽<\/strong><br/>
   `;
 
   
