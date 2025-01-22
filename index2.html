@@ -742,6 +742,10 @@ function onCalculate() {
     Вес изделия (г): ${grams}, 
       с учётом брака (${material.wastePercent}%) = ${realGrams.toFixed(2)} г.<br/>
     <hr/>
+    Сумма без налога: ${subTotal.toFixed(2)} ₽<br/>
+    Налог (${taxPercent}%): ${costTax.toFixed(2)} ₽<br/>
+    <strong>Итого: ${total.toFixed(2)} ₽</strong><br/>
+    <hr/>
     <strong>Разбивка затрат (без налога):<\/strong><br/>
     - Амортизация принтера: ${costPrinterPart.toFixed(2)} ₽<br/>
     - Оплата оператора: ${costOperatorPart.toFixed(2)} ₽<br/>
@@ -749,11 +753,7 @@ function onCalculate() {
     - Доп. расходы (по часу): ${costAdditionalPart.toFixed(2)} ₽<br/>
     - Электроэнергия: ${costElectric.toFixed(2)} ₽<br/>
     - Обслуживание принтера: ${costMaintenance.toFixed(2)} ₽<br/>
-    - Упаковка/доставка: ${costShipping.toFixed(2)} ₽<br/>
-    <hr/>
-    Сумма без налога: ${subTotal.toFixed(2)} ₽<br/>
-    Налог (${taxPercent}%): ${costTax.toFixed(2)} ₽<br/>
-    <strong>Итого: ${total.toFixed(2)} ₽</strong><br/><br/>
+    - Упаковка/доставка: ${costShipping.toFixed(2)} ₽<br/><br/>
   `;
 
   if (daysNeeded > 0) {
