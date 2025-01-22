@@ -1,23 +1,30 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>Калькулятор 3D-печати (расширенный, полный CRUD, чистый JS)</title>
+  <!-- Адаптив для мобильных -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+  <title>Калькулятор 3D-печати (расширенный, мобильная адаптация)</title>
   
-  <!-- Bootstrap 5 (CSS) для упрощённого стайлинга -->
+  <!-- Bootstrap 5 (CSS) -->
   <link 
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" 
     rel="stylesheet"
   />
 
   <style>
-   body {
-      margin: 20px;
+    /* Основные отступы и стили */
+    body {
+      /* Вместо фиксированных отступов используем bootstrap-классы или небольшие отступы. */
+      margin: 0;
+      padding: 0;
     }
-    .table-container {
+    .container {
       margin-top: 20px;
+      margin-bottom: 20px;
     }
+
     .nav-tabs .nav-link.active {
       font-weight: bold;
     }
@@ -31,36 +38,54 @@
       border-top: 1px solid var(--bs-border-color);
       padding-top: 10px;
     }
-    table td, table th {
+    table td, 
+    table th {
       vertical-align: middle;
+      white-space: nowrap; /* Можно убрать перенос слов в ячейках */
     }
     .btn-group-sm > .btn {
       font-size: 0.8rem;
       padding: 2px 6px;
       margin-left: 2px;
     }
-	
-thead th {
-  background-color: var(--bs-table-bg) !important;
-  color: var(--bs-body-color) !important;
-}
+    
+    thead th {
+      background-color: var(--bs-table-bg) !important;
+      color: var(--bs-body-color) !important;
+    }
 
-/* Дополнительный стиль для тёмной темы */
-[data-bs-theme="dark"] thead th {
-  background-color: var(--bs-dark-bg-subtle) !important;
-  color: var(--bs-light) !important;
-}
+    /* Тёмная тема: заголовок таблицы */
+    [data-bs-theme="dark"] thead th {
+      background-color: var(--bs-dark-bg-subtle) !important;
+      color: var(--bs-light) !important;
+    }
+
+    /* Пример простого медиа-запроса, чтобы при узких экранах блоки могли переноситься. */
+    @media (max-width: 576px) {
+      .d-flex {
+        flex-wrap: wrap !important;
+      }
+      .d-flex > * {
+        margin-top: .5rem; /* Небольшой отступ между элементами при переносе */
+      }
+      /* Можно также уменьшить шрифт заголовка, например:
+      h1 {
+        font-size: 1.5rem;
+      }
+      */
+    }
+
   </style>
 </head>
 <body>
 
 <div class="container">
-<div class="d-flex justify-content-between align-items-center">
-  <h1 class="my-4">Калькулятор стоимости 3D-печати</h1>
-  <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
-</div>
 
-
+  <!-- Шапка с переключателем темы -->
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="my-4">Калькулятор стоимости 3D-печати</h1>
+    <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
+  </div>
 
   <!-- Навигационные вкладки -->
   <ul class="nav nav-tabs" id="mainTab" role="tablist">
@@ -106,8 +131,8 @@ thead th {
 
     <!-- Вкладка Принтеры -->
     <div class="tab-pane fade show active" id="printers" role="tabpanel" aria-labelledby="printers-tab">
-      <div class="table-container">
-        <h3 class="mt-4">Список принтеров</h3>
+      <div class="mt-4">
+        <h3>Список принтеров</h3>
         <p class="small-text">
           Укажите название, стоимость (с учётом запчастей, расходников и т.д.), за сколько часов планируется окупить, 
           а также мощность (Вт) и стоимость обслуживания (руб/час).
@@ -137,8 +162,8 @@ thead th {
 
     <!-- Вкладка Материалы -->
     <div class="tab-pane fade" id="materials" role="tabpanel" aria-labelledby="materials-tab">
-      <div class="table-container">
-        <h3 class="mt-4">Список материалов</h3>
+      <div class="mt-4">
+        <h3>Список материалов</h3>
         <p class="small-text">
           Укажите тип материала, стоимость за 1 кг, сколько кг есть в наличии, а также % на брак (отход).
         </p>
@@ -165,8 +190,8 @@ thead th {
 
     <!-- Вкладка Доп. расходы -->
     <div class="tab-pane fade" id="additional" role="tabpanel" aria-labelledby="additional-tab">
-      <div class="table-container">
-        <h3 class="mt-4">Дополнительные расходы</h3>
+      <div class="mt-4">
+        <h3>Дополнительные расходы</h3>
         <p class="small-text">
           Укажите расходы на обслуживание и хранение: контейнеры, адгезив, сушилка, фильтры, 
           а также любые иные траты (например, «тестовая печать»).
@@ -272,29 +297,51 @@ thead th {
     <div class="tab-pane fade" id="importexport" role="tabpanel" aria-labelledby="importexport-tab">
       <div class="mt-4">
         <h3>Экспорт данных в JSON</h3>
-        <p>Нажмите на кнопку, чтобы выгрузить все текущие настройки (принтеры, материалы, доп. расходы) и параметры калькулятора в виде JSON.</p>
+        <p>
+          Нажмите на кнопку, чтобы выгрузить все текущие настройки (принтеры, материалы, доп. расходы) 
+          и параметры калькулятора в виде JSON.
+        </p>
         <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
-        <textarea id="exportArea" class="form-control mt-2" rows="5" placeholder="Здесь появится экспортированный JSON"></textarea>
+        <textarea 
+          id="exportArea" 
+          class="form-control mt-2" 
+          rows="5" 
+          placeholder="Здесь появится экспортированный JSON"></textarea>
       </div>
       <hr />
       <div class="mt-4">
         <h3>Импорт данных из JSON</h3>
-        <p>Вставьте JSON в поле ниже и нажмите «Импортировать». Текущие данные будут заменены данными из JSON.</p>
-        <textarea id="importArea" class="form-control" rows="5" placeholder="{ ... }"></textarea>
+        <p>
+          Вставьте JSON в поле ниже и нажмите «Импортировать». 
+          Текущие данные будут заменены данными из JSON.
+        </p>
+        <textarea 
+          id="importArea" 
+          class="form-control" 
+          rows="5" 
+          placeholder="{ ... }"></textarea>
         <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
       </div>
     </div>
 
   </div>
 
+  <!-- Нижняя часть -->
   <div class="footer">
-    <p class="mb-1">Все данные автоматически сохраняются в вашем браузере (LocalStorage) при любых изменениях.</p>
-    <p class="mb-0">При необходимости вы можете сбросить настройки, импортировав пустой JSON или очистив LocalStorage вручную.</p>
-</div>
+    <p class="mb-1">
+      Все данные автоматически сохраняются в вашем браузере (LocalStorage) при любых изменениях.
+    </p>
+    <p class="mb-0">
+      При необходимости вы можете сбросить настройки, импортировав пустой JSON или очистив LocalStorage вручную.
+    </p>
+  </div>
 
-  <a href="index.html"><h6 class="my-4">Первая версия калькулятора (тык)</h6></a>
-   <p><span style="text-decoration:line-through">©</span>2025 Ничьи права не защищены.</p>
-	
+  <!-- Ссылка на первую версию -->
+  <div class="mt-4">
+    <a href="index.html"><h6>Первая версия калькулятора (тык)</h6></a>
+    <p><span style="text-decoration:line-through">©</span>2025 Ничьи права не защищены.</p>
+  </div>
+
 </div>
 
 <!-- Bootstrap Bundle (JS + Popper) -->
