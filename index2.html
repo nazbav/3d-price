@@ -298,77 +298,65 @@ let appData = {
   printers: [
     {
       id: 1,
-      name: 'Ender 3 v3 se',
+      name: "Ender 3 v3 se",
       cost: 20000,
       hoursToRecoup: 500,
-      power: 300,         // мощность (Вт)
-      maintCostHour: 5    // обслуживание (руб/час)
+      power: 300,
+      maintCostHour: 5
     },
     {
       id: 2,
-      name: 'FlashForge Adventurer 5M',
+      name: "FlashForge Adventurer 5M",
       cost: 35000,
       hoursToRecoup: 500,
       power: 200,
-      maintCostHour: 10
+      maintCostHour: 5
     }
   ],
   materials: [
     {
       id: 1,
-      name: 'HIPS',
+      name: "HIPS",
       costPerKg: 700,
       availableKg: 1,
-      wastePercent: 0
+      wastePercent: 1
     },
     {
       id: 2,
-      name: 'ABS',
+      name: "ABS",
       costPerKg: 800,
       availableKg: 2,
       wastePercent: 5
     },
     {
       id: 3,
-      name: 'PLA',
+      name: "PLA",
       costPerKg: 1500,
       availableKg: 1,
-      wastePercent: 0
+      wastePercent: 1
     },
     {
       id: 4,
-      name: 'PET-G',
+      name: "PET-G",
       costPerKg: 800,
       availableKg: 4,
-      wastePercent: 10
+      wastePercent: 3
     }
   ],
   additional: [
     {
-      id: 1,
-      description: 'Тестовые расходы (обучение, настройки)',
-      cost: 20000
-    },
-    {
       id: 2,
-      description: 'Контейнеры для хранения пластика',
+      description: "Контейнеры для хранения пластика",
       cost: 2000
-    },
-    {
-      id: 3,
-      description: 'Фильтры для вентиляции',
-      cost: 1000
     }
   ],
-
-  // Параметры калькулятора (сохраняем, чтобы не вводить заново)
   calcSettings: {
-    operatorRate: 200,    // Ставка оператора, руб/час
-    workHoursDay: 8,      // Сколько часов в день
-    startDate: '',        // Дата начала (строка вида yyyy-mm-dd)
-    costKwh: 6,           // Цена 1 кВт⋅ч
-    shipping: 200,        // Упаковка/доставка руб
-    taxPercent: 6         // налог %
+    operatorRate: 5,
+    workHoursDay: 3,
+    startDate: "2025-01-22",
+    costKwh: 1,
+    shipping: 10,
+    taxPercent: 3
   }
 };
 
@@ -746,6 +734,19 @@ function onCalculate() {
     Налог (${taxPercent}%): ${costTax.toFixed(2)} ₽<br/>
     <strong>Итого: ${total.toFixed(2)} ₽</strong><br/>
     <hr/>
+  `;
+
+  
+  if (daysNeeded > 0) {
+    elRes.innerHTML += `
+      При ${whDay} рабочих часах в день, понадобится ~${daysNeeded} дн.<br/>
+    `;
+    if (finishDateStr) {
+      elRes.innerHTML += `Ориентировочная дата окончания: ${finishDateStr}<br/>`;
+    }
+  }
+  
+   elRes.innerHTML = `
     <strong>Разбивка затрат (без налога):<\/strong><br/>
     - Амортизация принтера: ${costPrinterPart.toFixed(2)} ₽<br/>
     - Оплата оператора: ${costOperatorPart.toFixed(2)} ₽<br/>
@@ -756,14 +757,6 @@ function onCalculate() {
     - Упаковка/доставка: ${costShipping.toFixed(2)} ₽<br/><br/>
   `;
 
-  if (daysNeeded > 0) {
-    elRes.innerHTML += `
-      При ${whDay} рабочих часах в день, понадобится ~${daysNeeded} дн.<br/>
-    `;
-    if (finishDateStr) {
-      elRes.innerHTML += `Ориентировочная дата окончания: ${finishDateStr}<br/>`;
-    }
-  }
 }
 
 /** ========================================================
