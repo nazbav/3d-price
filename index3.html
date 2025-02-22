@@ -1271,7 +1271,7 @@ function onCalculateAll() {
       
       const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
       const costPrinterPart = h * costPH;
-      // Вычисляем фактический расход пластика с учетом отходов (в граммах)
+      // Фактический расход пластика с учётом отходов (в граммах)
       const realW = w * (1 + (mat.wastePercent / 100));
       // Агрегируем потребление для данного материала
       materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
@@ -1434,12 +1434,14 @@ function onCalculateAll() {
       });
       htmlRes += `<\/tbody><\/table>`;
     }
-    // Вывод таблички дополнительных расходов для данного принтера
+    // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
     if (d.additionalDetails && d.additionalDetails.length > 0) {
       htmlRes += `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
       htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
       htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
+      let sumPrinterAdditional = 0;
       d.additionalDetails.forEach(ad => {
+        sumPrinterAdditional += ad.costDistributed;
         htmlRes += `<tr>
           <td>${ad.description}<\/td>
           <td>${ad.baseCost.toFixed(2)}<\/td>
@@ -1448,6 +1450,7 @@ function onCalculateAll() {
         <\/tr>`;
       });
       htmlRes += `<\/tbody><\/table>`;
+      htmlRes += `Доп. расходы для принтера без налога: ${sumPrinterAdditional.toFixed(2)} ₽<br/>`;
     }
     htmlRes += `<\/div>`;
   });
@@ -1526,6 +1529,17 @@ function onCalculateAll() {
   saveToLocalStorage();
   renderHistoryTable();
 }
+
+function findMaterialById(mid) {
+  let mat = appData.materials.find(m => m.id === mid);
+  if (mat) return mat;
+  for (let p of appData.printers) {
+    mat = p.materials.find(m => m.id === mid);
+    if (mat) return mat;
+  }
+  return null;
+}
+
 
 function findMaterialById(mid) {
   let mat = appData.materials.find(m => m.id === mid);
