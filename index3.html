@@ -109,7 +109,6 @@
             <thead class="table-light">
               <tr>
                 <th><input type="checkbox" id="selectAll_printers" onchange="selectAll(this, 'printers')"></th>
-                <th>ID</th>
                 <th>Название</th>
                 <th>Стоимость (₽)</th>
                 <th>Часы окуп.</th>
@@ -139,7 +138,6 @@
                 <thead>
                   <tr>
                     <th><input type="checkbox" id="selectAll_printerAdditional" onchange="selectAll(this, 'printerAdditional')"></th>
-                    <th>ID</th>
                     <th>Описание</th>
                     <th>Стоим. (₽)</th>
                     <th>Часы окуп.</th>
@@ -164,7 +162,6 @@
                 <thead>
                   <tr>
                     <th><input type="checkbox" id="selectAll_printerMaterials" onchange="selectAll(this, 'printerMaterials')"></th>
-                    <th>ID</th>
                     <th>Название</th>
                     <th>Стоим./кг</th>
                     <th>Остаток (кг)</th>
@@ -198,7 +195,6 @@
             <thead class="table-light">
               <tr>
                 <th><input type="checkbox" id="selectAll_globalMaterials" onchange="selectAll(this, 'globalMaterials')"></th>
-                <th>ID</th>
                 <th>Название</th>
                 <th>Стоим./кг</th>
                 <th>Остаток (кг)</th>
@@ -229,7 +225,6 @@
             <thead class="table-light">
               <tr>
                 <th><input type="checkbox" id="selectAll_globalAdditional" onchange="selectAll(this, 'globalAdditional')"></th>
-                <th>ID</th>
                 <th>Описание</th>
                 <th>Стоим. (₽)</th>
                 <th>Часы окуп.</th>
@@ -739,7 +734,6 @@ function renderPrintersTable(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_printers_${printer.id}" class="printers_chk"><\/td>
-      <td>${printer.id}<\/td>
       <td>${printer.name}<\/td>
       <td>${printer.cost}<\/td>
       <td>${printer.hoursToRecoup}<\/td>
@@ -815,7 +809,6 @@ function onShowPrinterDetails(id){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_printerAdditional_${a.id}" class="printerAdditional_chk"><\/td>
-      <td>${a.id}<\/td>
       <td>${a.description}<\/td>
       <td>${a.cost}<\/td>
       <td>${a.hoursToRecoup}<\/td>
@@ -838,7 +831,6 @@ function onShowPrinterDetails(id){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_printerMaterials_${m.id}" class="printerMaterials_chk"><\/td>
-      <td>${m.id}<\/td>
       <td>${m.name}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
@@ -965,7 +957,6 @@ function renderGlobalMaterialsTable(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
-      <td>${m.id}<\/td>
       <td>${m.name}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
@@ -1056,7 +1047,6 @@ function renderGlobalAdditionalTable(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalAdditional_${a.id}" class="globalAdditional_chk"><\/td>
-      <td>${a.id}<\/td>
       <td>${a.description}<\/td>
       <td>${a.cost}<\/td>
       <td>${a.hoursToRecoup || 1000}<\/td>
@@ -1165,7 +1155,6 @@ function addModelRow(printerId, modelData) {
   const materialId = `modelMaterial_${printerId}_${uniqueId}`;
   const tr = document.createElement("tr");
   tr.innerHTML = `
-    <td>${idx}<\/td>
     <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /><\/td>
     <td>
       <select class="form-select form-select-sm" id="${statusId}">
@@ -1194,6 +1183,7 @@ function getAllMaterialsForPrinter(printerId){
 }
 
 let lastCalcFullData = null;
+
 
 function onCalculateAll() {
   const calcName = document.getElementById("calcName").value.trim();
@@ -1246,12 +1236,14 @@ function onCalculateAll() {
     calcData[pr.id] = modelsData;
   });
   
+  // Агрегируем суммарное потребление пластика (в граммах) для каждого материала по всему расчёту
+  let materialConsumption = {};
+  
   // Расчёт затрат по принтерам
   let detailsByPrinter = [];
   let sumWithoutTax = 0;
   let finalTimeAllPrinters = 0;
   let maxPrinterTime = 0;
-  let warnings = [];
   
   appData.printers.forEach(pr => {
     const table = document.getElementById(`calcModelsTable_${pr.id}`);
@@ -1279,28 +1271,20 @@ function onCalculateAll() {
       
       const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
       const costPrinterPart = h * costPH;
+      // Вычисляем фактический расход пластика с учетом отходов (в граммах)
       const realW = w * (1 + (mat.wastePercent / 100));
+      // Агрегируем потребление для данного материала
+      materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
+      
       const costPerGram = mat.costPerKg / 1000;
-      // Проверка достаточности материала
-      if(realW > mat.balance * 1000) {
-        warnings.push(`Материала "${mat.name}" недостаточно: требуется ${realW.toFixed(2)} г, остаток ${(mat.balance*1000).toFixed(2)} г.`);
-      }
       const costMaterial = realW * costPerGram;
       
-      const usedAdds = pr.additional.filter(a => a.useInCalc !== false);
-      let sumPrAddFull = 0;
-      usedAdds.forEach(a => { sumPrAddFull += a.cost; });
-      let costAddPr = 0;
-      if (pr.hoursToRecoup > 0 && sumPrAddFull > 0) {
-        costAddPr = (sumPrAddFull / pr.hoursToRecoup) * h;
-      }
       const costElectric = (pr.power / 1000) * h * cKwh;
       const costMaint = pr.maintCostHour * h;
-      const subTotalModel = costPrinterPart + costMaterial + costAddPr + costElectric + costMaint;
+      const subTotalModel = costPrinterPart + costMaterial + costElectric + costMaint;
       
       prCostNoTax += subTotalModel;
       
-      // Добавляем данные материала для этикетки
       lines.push({
         name: inpName.value.trim() || "Модель",
         status: selStatus.value || "new",
@@ -1310,7 +1294,6 @@ function onCalculateAll() {
         realWeight: realW,
         costPrinterPart: costPrinterPart,
         costMaterial: costMaterial,
-        costAdditionalPrinterPart: costAddPr,
         costElectric: costElectric,
         costMaintenance: costMaint,
         subTotalModel: subTotalModel,
@@ -1322,6 +1305,27 @@ function onCalculateAll() {
         }
       });
     });
+    
+    // Расчёт дополнительных расходов для принтера (по всем его расходным статьям)
+    let printerAdditionalDetails = [];
+    let sumPrAddFull = 0;
+    pr.additional.filter(a => a.useInCalc !== false).forEach(a => { sumPrAddFull += a.cost; });
+    pr.additional.filter(a => a.useInCalc !== false).forEach(a => {
+      let costDistributed = 0;
+      if (pr.hoursToRecoup > 0) {
+        costDistributed = (a.cost / pr.hoursToRecoup) * prTime;
+      }
+      printerAdditionalDetails.push({
+         description: a.description,
+         baseCost: a.cost,
+         hoursToRecoup: a.hoursToRecoup,
+         costDistributed: costDistributed
+      });
+    });
+    // Добавляем сумму дополнительных расходов к итоговой стоимости принтера
+    if (pr.hoursToRecoup > 0 && sumPrAddFull > 0) {
+      prCostNoTax += (sumPrAddFull / pr.hoursToRecoup) * prTime;
+    }
     
     if (parallelMode === "no") {
       finalTimeAllPrinters += prTime;
@@ -1335,9 +1339,20 @@ function onCalculateAll() {
       printerName: pr.name,
       linesDetail: lines,
       printerTime: prTime,
-      subTotal: prCostNoTax
+      subTotal: prCostNoTax,
+      additionalDetails: printerAdditionalDetails
     });
   });
+  
+  // Проверяем для каждого материала, достаточно ли остатка
+  let warnings = [];
+  for (let mid in materialConsumption) {
+    const required = materialConsumption[mid];
+    const mat = findMaterialById(parseInt(mid, 10));
+    if (mat && required > (mat.balance * 1000)) {
+      warnings.push(`Материала "${mat.name}" недостаточно: требуется ${required.toFixed(2)} г, остаток ${(mat.balance * 1000).toFixed(2)} г.`);
+    }
+  }
   
   let finalTimeOperator = (parallelMode === "yes") ? maxPrinterTime : finalTimeAllPrinters;
   const totalOperatorCost = finalTimeOperator * opRate;
@@ -1347,14 +1362,14 @@ function onCalculateAll() {
   appData.additionalGlobal.forEach(g => {
     if (!g.useInCalc) return;
     const costPerHour = (g.hoursToRecoup > 0) ? g.cost / g.hoursToRecoup : 0;
-    const c = costPerHour * finalTimeOperator;
-    sumGlobalAdd += c;
+    const cVal = costPerHour * finalTimeOperator;
+    sumGlobalAdd += cVal;
     globalAdditionalDetails.push({
       id: g.id,
       description: g.description,
       baseCost: g.cost,
       hoursToRecoup: g.hoursToRecoup,
-      costDistributed: c
+      costDistributed: cVal
     });
   });
   
@@ -1380,8 +1395,8 @@ function onCalculateAll() {
   if (finDateStr) {
     htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
   }
-  if(warnings.length > 0) {
-    htmlRes += `<div class="alert alert-warning mt-2">Предупреждения:<br/>`+warnings.join("<br/>")+`<\/div>`;
+  if (warnings.length > 0) {
+    htmlRes += `<div class="alert alert-warning mt-2">Предупреждения:<br/>` + warnings.join("<br/>") + `<\/div>`;
   }
   htmlRes += `<hr/><strong>Детализация по принтерам:<\/strong><br/>`;
   detailsByPrinter.forEach(d => {
@@ -1419,16 +1434,30 @@ function onCalculateAll() {
       });
       htmlRes += `<\/tbody><\/table>`;
     }
+    // Вывод таблички дополнительных расходов для данного принтера
+    if (d.additionalDetails && d.additionalDetails.length > 0) {
+      htmlRes += `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
+      htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
+      htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
+      d.additionalDetails.forEach(ad => {
+        htmlRes += `<tr>
+          <td>${ad.description}<\/td>
+          <td>${ad.baseCost.toFixed(2)}<\/td>
+          <td>${ad.hoursToRecoup}<\/td>
+          <td>${ad.costDistributed.toFixed(2)}<\/td>
+        <\/tr>`;
+      });
+      htmlRes += `<\/tbody><\/table>`;
+    }
     htmlRes += `<\/div>`;
   });
   
   if (globalAdditionalDetails.length > 0) {
     htmlRes += `<hr/><strong>Глобальные доп. расходы (включённые):<\/strong>`;
     htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
-    htmlRes += `<thead><tr><th>ID<\/th><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
+    htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
     globalAdditionalDetails.forEach(gd => {
       htmlRes += `<tr>
-        <td>${gd.id}<\/td>
         <td>${gd.description}<\/td>
         <td>${gd.baseCost.toFixed(2)}<\/td>
         <td>${gd.hoursToRecoup}<\/td>
@@ -1480,7 +1509,6 @@ function onCalculateAll() {
     costKwh: cKwh,
     totalOperatorCost: totalOperatorCost,
     details: detailsByPrinter,
-    details: detailsByPrinter,
     calcData,
     globalAdditional: {
       sumGlobalAdd,
@@ -1498,6 +1526,18 @@ function onCalculateAll() {
   saveToLocalStorage();
   renderHistoryTable();
 }
+
+function findMaterialById(mid) {
+  let mat = appData.materials.find(m => m.id === mid);
+  if (mat) return mat;
+  for (let p of appData.printers) {
+    mat = p.materials.find(m => m.id === mid);
+    if (mat) return mat;
+  }
+  return null;
+}
+
+
 function calcFinishDate(sv, days){
   if(!sv) return "";
   try{
@@ -1646,12 +1686,11 @@ function generateFullHistoryHtml(){
           <strong>Глобальные доп. расходы:<\/strong><br/>
           <table style="margin-top:5px;">
             <thead><tr>
-              <th>ID<\/th><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено<\/th>
+              <th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено<\/th>
             <\/tr><\/thead>
             <tbody>`;
         h.globalAdditional.details.forEach(gd => {
           s += `<tr>
-            <td>${gd.id}<\/td>
             <td>${gd.description}<\/td>
             <td>${gd.baseCost.toFixed(2)}<\/td>
             <td>${gd.hoursToRecoup}<\/td>
