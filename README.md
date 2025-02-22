@@ -4,6 +4,7 @@
 
 1. [Первая версия (упрощённая)](https://nazbav.github.io/3d-price/index.html)  
 2. [Вторая версия (расширенная)](https://nazbav.github.io/3d-price/index2.html)  
+3. [Третья версия (расширенная)](https://nazbav.github.io/3d-price/index3.html)
 
 Вторая версия включает более подробный функционал:
 - Хранение нескольких принтеров и материалов
