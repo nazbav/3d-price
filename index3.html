@@ -1409,7 +1409,7 @@ function onCalculateAll() {
   htmlRes += `Общее время оператора: ${finalTimeOperator.toFixed(2)} ч.<br/>`;
   htmlRes += `Стоимость работы оператора: ${totalOperatorCost.toFixed(2)} ₽<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
-  htmlRes += `Доставка: ${ship.toFixed(2)} ₽<br/>`;
+  htmlRes += `Упаковка/Доставка: ${ship.toFixed(2)} ₽<br/>`;
   htmlRes += `Стоимость этикеток: ${totalLabelsCost.toFixed(2)} ₽<br/>`;
   htmlRes += `Подитог (без налога): ${subtotal.toFixed(2)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${taxAmount.toFixed(2)} ₽<br/>`;
@@ -1682,7 +1682,7 @@ function generateFullHistoryHtml(){
       s += `<div class="entry">
         <h3>Расчёт от ${h.dateStr}, итог: ${h.total.toFixed(2)} ₽<\/h3>
         <p>Название: ${h.calcName || "(без названия)"}, Клиент: ${h.clientName || "(не указан)"}, Статус: ${h.orderStatus || "(нет)"}<\/p>
-        <p>Оператор ч.: ${h.totalHours.toFixed(2)}, Налог: ${h.taxPercent}%, Доставка: ${h.shipping}, Оператор: ${h.operatorRate}₽/ч, Электричество: ${h.costKwh}₽/кВт⋅ч<\/p>
+        <p>Оператор ч.: ${h.totalHours.toFixed(2)}, Налог: ${h.taxPercent}%, Упаковка/Доставка: ${h.shipping}, Оператор: ${h.operatorRate}₽/ч, Электричество: ${h.costKwh}₽/кВт⋅ч<\/p>
         <p>Учет параллельной печати: ${h.parallelMode}, Наценка: ${h.markupPercent}%<\/p>
       `;
       if(h.details && Array.isArray(h.details)){
@@ -1964,7 +1964,7 @@ function generateMaxDetailedCalcHtml(d) {
   <h1>Подробный расчёт<\/h1>
   <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${d.orderStatus || "?"}<\/p>
   <p>Итог: <strong>${d.total.toFixed(2)} ₽<\/strong><\/p>
-  <p>Оператор ч.: ${d.totalHours.toFixed(2)} ч, Стоимость работы оператора: ${d.totalOperatorCost.toFixed(2)} ₽, Налог: ${d.taxPercent}%, Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
+  <p>Оператор ч.: ${d.totalHours.toFixed(2)} ч, Стоимость работы оператора: ${d.totalOperatorCost.toFixed(2)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
   <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
   <p>Подитог (без налога): ${(d.total - d.globalAdditional.taxAmount).toFixed(2)} ₽, Общий налог: ${d.globalAdditional.taxAmount.toFixed(2)} ₽<\/p>
   <hr/>
