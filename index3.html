@@ -368,20 +368,29 @@
     </div>
 
     <!-- Настройка этикетки -->
-    <div class="tab-pane fade" id="labelsettingsPane" role="tabpanel" aria-labelledby="labelsettings-tab">
-      <div class="mt-4">
-        <h3>Настройка этикетки</h3>
-        <div class="mb-3">
-          <label for="companyNameInput" class="form-label">Название компании:</label>
-          <input type="text" id="companyNameInput" class="form-control"/>
-        </div>
-        <div class="mb-3">
-          <label for="chatLinkInput" class="form-label">Ссылка на чат (QR):</label>
-          <input type="text" id="chatLinkInput" class="form-control"/>
-        </div>
-        <button class="btn btn-primary" onclick="saveLabelSettings()">Сохранить</button>
-      </div>
+ <div class="tab-pane fade" id="labelsettingsPane" role="tabpanel" aria-labelledby="labelsettings-tab">
+  <div class="mt-4">
+    <h3>Настройка этикетки</h3>
+    <div class="mb-3">
+      <label for="companyNameInput" class="form-label">Название компании:</label>
+      <input type="text" id="companyNameInput" class="form-control"/>
     </div>
+    <div class="mb-3">
+      <label for="chatLinkInput" class="form-label">Ссылка на чат (QR):</label>
+      <input type="text" id="chatLinkInput" class="form-control"/>
+    </div>
+    <!-- Добавляем новые поля -->
+    <div class="mb-3">
+      <label for="labelCostInput" class="form-label">Стоимость 1 этикетки (₽):</label>
+      <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
+    </div>
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="printLabelsCheckbox">
+      <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
+    </div>
+    <button class="btn btn-primary" onclick="saveLabelSettings()">Сохранить</button>
+  </div>
+</div>
   </div>
   <div class="footer">
     <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
@@ -438,9 +447,11 @@ let appData = {
     markupPercent: 0
   },
   labelSettings: {
-    companyName: "Компания",
-    chatLink: "https://t.me/dur"
-  },
+  companyName: "Компания",
+  chatLink: "https://t.me/dur",
+  costPerLabel: 0,   
+  printLabels: false 
+},
   calcHistory: []
 };
 
@@ -474,6 +485,8 @@ function initAll(){
   document.getElementById("calcMarkupPercent").value = appData.calcSettings.markupPercent || 0;
   document.getElementById("companyNameInput").value = appData.labelSettings.companyName || "";
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
+  document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
+  document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
 }
 document.addEventListener("DOMContentLoaded", initAll);
 
@@ -1372,7 +1385,16 @@ function onCalculateAll() {
     });
   });
   
-  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost;
+    let totalLabelsCost = 0;
+  if(appData.labelSettings.printLabels) {
+    const labelCost = appData.labelSettings.costPerLabel || 0;
+    const totalModels = Object.values(calcData).reduce((acc, models) => acc + models.length, 0);
+    totalLabelsCost = totalModels * labelCost;
+  }
+
+  
+  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost;
+  
   if (markupPercent > 0) {
     subtotal *= (1 + markupPercent / 100);
   }
@@ -1388,6 +1410,7 @@ function onCalculateAll() {
   htmlRes += `Стоимость работы оператора: ${totalOperatorCost.toFixed(2)} ₽<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Доставка: ${ship.toFixed(2)} ₽<br/>`;
+  htmlRes += `Стоимость этикеток: ${totalLabelsCost.toFixed(2)} ₽<br/>`;
   htmlRes += `Подитог (без налога): ${subtotal.toFixed(2)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${taxAmount.toFixed(2)} ₽<br/>`;
   htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${finalSum.toFixed(2)} ₽<\/strong><br/>`;
@@ -1494,6 +1517,8 @@ function onCalculateAll() {
     parallelMode,
     markupPercent
   };
+  
+  lastCalcFullData.totalLabelsCost = totalLabelsCost;
   
   const dtStr = new Date().toLocaleString("ru-RU");
   const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
@@ -1754,8 +1779,15 @@ function onImportJson(){
 function saveLabelSettings(){
   const cn = document.getElementById("companyNameInput").value.trim();
   const cl = document.getElementById("chatLinkInput").value.trim();
-  appData.labelSettings.companyName = cn || "Моя компания";
-  appData.labelSettings.chatLink = cl || "https://t.me/example";
+  const cost = parseFloat(document.getElementById("labelCostInput").value) || 0;
+  const print = document.getElementById("printLabelsCheckbox").checked;
+  
+  appData.labelSettings = {
+    companyName: cn || "Моя компания",
+    chatLink: cl || "https://t.me/example",
+    costPerLabel: cost,
+    printLabels: print
+  };
   saveToLocalStorage();
   alert("Сохранено");
 }
