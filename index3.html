@@ -1861,12 +1861,12 @@ function downloadThermoLabelHtml(modelName, printerName, materialName, hours, we
 <div id="labelContainer">
   <div class="label-header">${appData.labelSettings.companyName}<\/div>
   <div class="label-content">
-    <div>Модель: ${modelName}<\/div>
-    <div>Принтер: ${printerName}<\/div>
-    <div>Материал: ${materialName}<\/div>
-    <div>Время: ${hours} ч<\/div>
-    <div>Вес: ${weight} г<\/div>
-    <div>Дата: ${new Date().toLocaleDateString("ru-RU")}<\/div>
+    <div style="text-aligin:center">${modelName}<\/div>
+    <div>ЧПУ: ${printerName}<\/div>
+    <div>М: ${materialName}<\/div>
+    <div>Ч: ${hours} ч<\/div>
+    <div>В: ${weight} г<\/div>
+    <div>Д: ${new Date().toLocaleDateString("ru-RU")}<\/div>
   <\/div>
   <img class="qr-code" src="${qrDataUrl}" alt="QR-код">
 <\/div>
