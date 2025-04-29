@@ -1515,7 +1515,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
 
     // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
     if (d.additionalDetails && d.additionalDetails.length > 0) {
-      let htmlResadditionalDetails += `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
+      let htmlResadditionalDetails = `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
       htmlResadditionalDetails += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
       htmlResadditionalDetails += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
       let sumPrinterAdditional = 0;
