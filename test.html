@@ -2207,9 +2207,10 @@ peer.on('connection', conn => {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
-const SUPABASE_URL = "https://kvvxfytrlgihewmsvwkj.supabase.co"; // <-- замените на ваш
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2dnhmeXRybGdpaGV3bXN2d2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NDExMzIsImV4cCI6MjA2MTUxNzEzMn0.bvXmrh3XZivLVyg4irGo82pLAhlrSapzmxcDKLEAjLo"; // <-- замените на ваш
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL = "https://kvvxfytrlgihewmsvwkj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2dnhmeXRybGdpaGV3bXN2d2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NDExMzIsImV4cCI6MjA2MTUxNzEzMn0.bvXmrh3XZivLVyg4irGo82pLAhlrSapzmxcDKLEAjLo";
+
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // ✅ исправлено
 
 let syncId = localStorage.getItem("sync_id") || crypto.randomUUID();
 let encryptionKey = localStorage.getItem("encryption_key") || crypto.randomUUID() + crypto.randomUUID();
@@ -2236,27 +2237,30 @@ async function decryptData(encrypted, key) {
 
 async function saveSettingsToCloud() {
   const encrypted = await encryptData(appData, encryptionKey);
-  const { error } = await supabase
+  const { error } = await _supabase
     .from('user_settings')
     .upsert({
       sync_id: syncId,
       encrypted_data: encrypted,
       updated_at: new Date().toISOString()
     }, { onConflict: 'sync_id' });
+
   if (error) alert("Ошибка сохранения: " + error.message);
   else alert("✅ Данные сохранены в облако.");
 }
 
 async function loadSettingsFromCloud() {
-  const { data, error } = await supabase
+  const { data, error } = await _supabase
     .from('user_settings')
     .select('encrypted_data')
     .eq('sync_id', syncId)
     .single();
+
   if (error || !data) {
     alert("Ошибка загрузки: " + error?.message);
     return;
   }
+
   try {
     const decrypted = await decryptData(data.encrypted_data, encryptionKey);
     appData = decrypted;
@@ -2289,6 +2293,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const incomingId = params.get("sync_id");
   const incomingKey = params.get("key");
+
   if (incomingId && incomingKey) {
     localStorage.setItem("sync_id", incomingId);
     localStorage.setItem("encryption_key", incomingKey);
