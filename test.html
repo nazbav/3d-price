@@ -1464,9 +1464,11 @@ function onCalculateAll() {
   htmlRes += `<hr/><strong>Детализация по принтерам:<\/strong><br/>`;
   detailsByPrinter.forEach(d => {
 
-if (!d.linesDetail || d.linesDetail.length === 0) {
+if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   return;
 }
+
+
 	  
     htmlRes += `<div style="margin-top:1em;">`;
     htmlRes += `<strong>${d.printerName} (ID: ${d.printerId})<\/strong><br/>`;
@@ -1512,7 +1514,7 @@ if (!d.linesDetail || d.linesDetail.length === 0) {
     }
 
     // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
-    if (d.additionalDetails && d.additionalDetails.length > 0) {
+    if (d.additionalDetails && d.additionalDetails.length > 0 && sumPrinterAdditional > 0) {
       htmlRes += `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
       htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
       htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
