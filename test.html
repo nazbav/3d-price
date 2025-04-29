@@ -1149,9 +1149,6 @@ function renderCalcPrinters(){
    const c = document.getElementById("calcPrintersContainer");
   c.innerHTML = "";
   appData.printers.forEach(pr => {
-    const hasModels = pr.models && pr.models.length > 0;
-    if (!hasModels) return; // Не отображаем принтеры без моделей
-
     const block = document.createElement("div");
 
     block.className = "border p-3 mb-3";
