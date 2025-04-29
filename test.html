@@ -366,7 +366,18 @@
       <div id="qrcode" class="mt-2"></div>
     </div>
     <hr>
-    <h3>Экспорт данных</h3>
+    
+<h3>☁️ Облачная синхронизация</h3>
+<button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако</button>
+<button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
+<hr>
+<h3>📡 Быстрая синхронизация</h3>
+<button class="btn btn-primary btn-sm" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
+<input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
+<div id="qrcode" class="mt-2"></div>
+<hr>
+<h3>Экспорт данных</h3>
+
     <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
     <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
     <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
@@ -2190,5 +2201,104 @@ peer.on('connection', conn => {
 });
 
 </script>
+
+<!-- Supabase & QR -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+const SUPABASE_URL = "https://kvvxfytrlgihewmsvwkj.supabase.co"; // <-- замените на ваш
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2dnhmeXRybGdpaGV3bXN2d2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NDExMzIsImV4cCI6MjA2MTUxNzEzMn0.bvXmrh3XZivLVyg4irGo82pLAhlrSapzmxcDKLEAjLo"; // <-- замените на ваш
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let syncId = localStorage.getItem("sync_id") || crypto.randomUUID();
+let encryptionKey = localStorage.getItem("encryption_key") || crypto.randomUUID() + crypto.randomUUID();
+localStorage.setItem("sync_id", syncId);
+localStorage.setItem("encryption_key", encryptionKey);
+
+async function encryptData(data, key) {
+  const text = JSON.stringify(data);
+  const enc = new TextEncoder().encode(text);
+  const cryptoKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(key.slice(0, 32)), "AES-GCM", false, ["encrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, enc);
+  return btoa(JSON.stringify({ iv: Array.from(iv), data: Array.from(new Uint8Array(cipher)) }));
+}
+
+async function decryptData(encrypted, key) {
+  const parsed = JSON.parse(atob(encrypted));
+  const iv = new Uint8Array(parsed.iv);
+  const data = new Uint8Array(parsed.data);
+  const cryptoKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(key.slice(0, 32)), "AES-GCM", false, ["decrypt"]);
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, data);
+  return JSON.parse(new TextDecoder().decode(decrypted));
+}
+
+async function saveSettingsToCloud() {
+  const encrypted = await encryptData(appData, encryptionKey);
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({
+      sync_id: syncId,
+      encrypted_data: encrypted,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'sync_id' });
+  if (error) alert("Ошибка сохранения: " + error.message);
+  else alert("✅ Данные сохранены в облако.");
+}
+
+async function loadSettingsFromCloud() {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('encrypted_data')
+    .eq('sync_id', syncId)
+    .single();
+  if (error || !data) {
+    alert("Ошибка загрузки: " + error?.message);
+    return;
+  }
+  try {
+    const decrypted = await decryptData(data.encrypted_data, encryptionKey);
+    appData = decrypted;
+    saveToLocalStorage();
+    initAll();
+    alert("✅ Настройки загружены.");
+  } catch (e) {
+    alert("Ошибка расшифровки.");
+  }
+}
+
+function generateSyncLinkAndQR() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("sync_id", syncId);
+  url.searchParams.set("key", encryptionKey);
+  const link = url.toString();
+  document.getElementById("syncLinkDisplay").value = link;
+  const qrcodeDiv = document.getElementById("qrcode");
+  qrcodeDiv.innerHTML = "";
+  new QRCode(qrcodeDiv, {
+    text: link,
+    width: 256,
+    height: 256,
+    colorDark: "#000000",
+    colorLight: "#ffffff"
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const params = new URLSearchParams(window.location.search);
+  const incomingId = params.get("sync_id");
+  const incomingKey = params.get("key");
+  if (incomingId && incomingKey) {
+    localStorage.setItem("sync_id", incomingId);
+    localStorage.setItem("encryption_key", incomingKey);
+    syncId = incomingId;
+    encryptionKey = incomingKey;
+    await loadSettingsFromCloud();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});
+</script>
+
 </body>
 </html>
