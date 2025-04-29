@@ -1463,6 +1463,11 @@ function onCalculateAll() {
   }
   htmlRes += `<hr/><strong>Детализация по принтерам:<\/strong><br/>`;
   detailsByPrinter.forEach(d => {
+
+if (!d.linesDetail || d.linesDetail.length === 0) {
+  return;
+}
+	  
     htmlRes += `<div style="margin-top:1em;">`;
     htmlRes += `<strong>${d.printerName} (ID: ${d.printerId})<\/strong><br/>`;
     htmlRes += `Время: ${d.printerTime.toFixed(2)} ч; Без налога: ${d.subTotal.toFixed(2)} ₽<br/>`;
