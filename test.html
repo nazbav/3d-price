@@ -352,34 +352,33 @@
     </div>
 
     <!-- Импорт/Экспорт -->
-    <div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
-      <div class="mt-4">
-        <h3>Экспорт данных (полный) в JSON</h3>
-        <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
-		   <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>   
-        <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
-      </div>
-      <hr />
-      <div class="mt-4">
-        <h3>Импорт данных (полный) из JSON</h3>
-        <textarea id="importArea" class="form-control" rows="5"></textarea>
-        <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
-		<button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button> 
+<div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
+  <div class="mt-4">
+    <h3>Синхронизация между устройствами</h3>
+    <div class="mb-3">
+      <input type="text" id="peerIdInput" class="form-control mb-2" placeholder="ID подключения">
+      <button class="btn btn-primary btn-sm" onclick="generatePeerId()">Сгенерировать ID</button>
+      <button class="btn btn-success btn-sm" onclick="connectToPeer()">Подключиться</button>
     </div>
-
-<div class="mb-3 mt-3">
-  <button class="btn btn-warning" onclick="startPeerExport()">P2P Экспорт (PeerJS)</button>
-  <div id="peerInfo" class="mt-2" style="display:none;">
-    <p>Передай этот ID или QR-код на другом устройстве:</p>
-    <p><strong id="peerIdDisplay"></strong></p>
-    <div id="peerQr"></div>
-    <p>Или открой ссылку:<br><a id="peerLink" href="#" target="_blank"></a></p>
+    <div class="mb-3">
+      <button class="btn btn-info btn-sm" onclick="exportViaLink()">Ссылка для синхронизации</button>
+      <button class="btn btn-secondary btn-sm" onclick="exportViaQR()">QR-код</button>
+      <div id="qrcode" class="mt-2"></div>
+    </div>
+    <hr>
+    <h3>Экспорт данных</h3>
+    <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
+    <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
+    <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
+  </div>
+  <hr>
+  <div class="mt-4">
+    <h3>Импорт данных</h3>
+    <textarea id="importArea" class="form-control" rows="5"></textarea>
+    <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
+    <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
   </div>
 </div>
-
-	 
-	
-    </div>
 
     <!-- Настройка этикетки -->
  <div class="tab-pane fade" id="labelsettingsPane" role="tabpanel" aria-labelledby="labelsettings-tab">
@@ -511,23 +510,6 @@ function initAll(){
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
   document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
   document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
-
-
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const peerId = urlParams.get('peer');
-  if(peerId){
-    const p = new Peer();
-    const conn = p.connect(peerId);
-    conn.on('data', function(data){
-      try {
-        localStorage.setItem(STORAGE_KEY, data);
-        alert("Данные получены и сохранены. Перезагрузите страницу.");
-      } catch(e){
-        alert("Ошибка при сохранении данных");
-      }
-    });
-  }
 
 
 }
@@ -2120,33 +2102,92 @@ function renderSummary(){
 
 
 
-
-
 let peer = null;
-let conn = null;
+let connection = null;
 
-function startPeerExport() {
-  const data = localStorage.getItem(STORAGE_KEY);
+function generatePeerId() {
   peer = new Peer();
-  peer.on('open', function(id) {
-    document.getElementById("peerIdDisplay").textContent = id;
-    document.getElementById("peerInfo").style.display = "block";
-    const link = `${location.origin}${location.pathname}?peer=${id}`;
-    document.getElementById("peerLink").href = link;
-    document.getElementById("peerLink").textContent = link;
-    new QRCode(document.getElementById("peerQr"), {
-      text: link,
-      width: 256,
-      height: 256
-    });
-    peer.on('connection', function(c) {
-      conn = c;
-      conn.on('open', function() {
-        conn.send(data);
-      });
+  peer.on('open', id => {
+    document.getElementById('peerIdInput').value = id;
+    new QRCode(document.getElementById('qrcode'), {
+      text: id,
+      width: 128,
+      height: 128
     });
   });
 }
+
+function connectToPeer() {
+  const peerId = document.getElementById('peerIdInput').value;
+  connection = peer.connect(peerId);
+  setupConnectionHandlers(connection);
+}
+
+function setupConnectionHandlers(conn) {
+  conn.on('open', () => {
+    conn.send({type: 'requestData'});
+  });
+  
+  conn.on('data', data => {
+    if(data.type === 'fullData') {
+      appData = data.payload;
+      saveToLocalStorage();
+      initAll();
+      alert('Данные синхронизированы!');
+    }
+  });
+}
+
+function exportViaLink() {
+  const dataStr = JSON.stringify(appData);
+  const base64 = btoa(unescape(encodeURIComponent(dataStr)));
+  const url = new URL(window.location.href);
+  url.searchParams.set('peerid', document.getElementById('peerIdInput').value);
+  url.searchParams.set('data', base64);
+  prompt('Ссылка для синхронизации:', url.toString());
+}
+
+function exportViaQR() {
+  const dataStr = JSON.stringify(appData);
+  const base64 = btoa(unescape(encodeURIComponent(dataStr)));
+  const url = new URL(window.location.href);
+  url.searchParams.set('data', base64);
+  new QRCode(document.getElementById('qrcode'), {
+    text: url.toString(),
+    width: 128,
+    height: 128
+  });
+}
+
+window.addEventListener('load', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const savedData = urlParams.get('data');
+  
+  if(savedData) {
+    try {
+      const data = JSON.parse(decodeURIComponent(escape(atob(savedData))));
+      appData = data;
+      saveToLocalStorage();
+      initAll();
+      alert('Данные успешно загружены из ссылки!');
+    } catch(e) {
+      alert('Ошибка загрузки данных из ссылки');
+    }
+  }
+});
+
+peer = new Peer();
+peer.on('connection', conn => {
+  setupConnectionHandlers(conn);
+  conn.on('data', data => {
+    if(data.type === 'requestData') {
+      conn.send({
+        type: 'fullData',
+        payload: appData
+      });
+    }
+  });
+});
 
 </script>
 </body>
