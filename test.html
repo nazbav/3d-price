@@ -1467,7 +1467,7 @@ function onCalculateAll() {
     htmlRes += `<strong>${d.printerName} (ID: ${d.printerId})<\/strong><br/>`;
     htmlRes += `Время: ${d.printerTime.toFixed(2)} ч; Без налога: ${d.subTotal.toFixed(2)} ₽<br/>`;
     if (d.linesDetail.length > 0) {
-      htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
+      htmlRes += `<div class="table-responsive"><table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
       htmlRes += `<thead><tr>
         <th>Модель<\/th>
         <th>Статус<\/th>
@@ -1503,7 +1503,7 @@ function onCalculateAll() {
           <\/td>
         <\/tr>`;
       });
-      htmlRes += `<\/tbody><\/table>`;
+      htmlRes += `<\/tbody><\/table></div>`;
     }
 
     // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
