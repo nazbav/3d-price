@@ -1514,23 +1514,26 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     }
 
     // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
-    if (d.additionalDetails && d.additionalDetails.length > 0 && sumPrinterAdditional > 0) {
-      htmlRes += `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
-      htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
-      htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
+    if (d.additionalDetails && d.additionalDetails.length > 0) {
+      let htmlResadditionalDetails += `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
+      htmlResadditionalDetails += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
+      htmlResadditionalDetails += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
       let sumPrinterAdditional = 0;
       d.additionalDetails.forEach(ad => {
         sumPrinterAdditional += ad.costDistributed;
-        htmlRes += `<tr>
+        htmlResadditionalDetails += `<tr>
           <td>${ad.description}<\/td>
           <td>${ad.baseCost.toFixed(2)}<\/td>
           <td>${ad.hoursToRecoup}<\/td>
           <td>${ad.costDistributed.toFixed(2)}<\/td>
         <\/tr>`;
       });
-      htmlRes += `<\/tbody><\/table>`;
-      htmlRes += `Доп. расходы для принтера без налога: ${sumPrinterAdditional.toFixed(2)} ₽<br/>`;
+      htmlResadditionalDetails += `<\/tbody><\/table>`;
+      htmlResadditionalDetails += `Доп. расходы для принтера без налога: ${sumPrinterAdditional.toFixed(2)} ₽<br/>`;
+	    if(sumPrinterAdditional > 0)
+	    htmlRes += htmlResadditionalDetails;
     }
+	  
     htmlRes += `<\/div>`;
   });
   
