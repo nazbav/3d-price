@@ -2148,12 +2148,21 @@ async function saveSettingsToCloud() {
 async function loadSettingsFromCloud() {
   const { data, error } = await _supabase
     .from('user_settings')
-    .select('encrypted_data')
+    .select('*')
     .eq('sync_id', syncId)
     .single();
 
   if (error || !data) {
     alert("Ошибка загрузки: " + error?.message);
+    return;
+  }
+
+  // Проверка времени
+  const createdAt = new Date(data.created_at);
+  const now = new Date();
+  if ((now - createdAt) > 5 * 60 * 1000) { // 5 минут
+    alert("Данные устарели и были удалены");
+    await _supabase.from('user_settings').delete().eq('sync_id', syncId);
     return;
   }
 
