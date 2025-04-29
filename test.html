@@ -1146,10 +1146,14 @@ function onDeleteGlobalAdditional(id){
 
 /* Функции калькуляции */
 function renderCalcPrinters(){
-  const c = document.getElementById("calcPrintersContainer");
+   const c = document.getElementById("calcPrintersContainer");
   c.innerHTML = "";
   appData.printers.forEach(pr => {
+    const hasModels = pr.models && pr.models.length > 0;
+    if (!hasModels) return; // Не отображаем принтеры без моделей
+
     const block = document.createElement("div");
+
     block.className = "border p-3 mb-3";
     block.innerHTML = `
       <h5>Принтер: ${pr.name} (ID: ${pr.id})<\/h5>
@@ -1466,7 +1470,7 @@ function onCalculateAll() {
     htmlRes += `<strong>${d.printerName} (ID: ${d.printerId})<\/strong><br/>`;
     htmlRes += `Время: ${d.printerTime.toFixed(2)} ч; Без налога: ${d.subTotal.toFixed(2)} ₽<br/>`;
     if (d.linesDetail.length > 0) {
-      htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
+      htmlRes += `<dib class="table-responsive"><table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
       htmlRes += `<thead><tr>
         <th>Модель<\/th>
         <th>Статус<\/th>
@@ -1502,7 +1506,7 @@ function onCalculateAll() {
           <\/td>
         <\/tr>`;
       });
-      htmlRes += `<\/tbody><\/table>`;
+      htmlRes += `<\/tbody><\/table></div>`;
     }
 
     // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
