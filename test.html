@@ -21,6 +21,16 @@
       .d-flex { flex-wrap: wrap !important; }
       .d-flex > * { margin-top: .5rem; }
     }
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  th, td {
+    min-width: 100px;
+  }
+}
     .form-select.form-select-sm { min-width: 120px; }
     /* Стили для этикетки */
     .label-preview { border: 1px solid #000; width: 30mm; height: 20mm; padding: 2mm; font-family: sans-serif; }
@@ -1437,7 +1447,14 @@ function onCalculateAll() {
   htmlRes += `Подитог (без налога): ${subtotal.toFixed(2)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${taxAmount.toFixed(2)} ₽<br/>`;
   htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${finalSum.toFixed(2)} ₽<\/strong><br/>`;
-  if (finDateStr) {
+ 
+  // Вывод цены за 1 грамм
+  const totalWeight = detailsByPrinter.reduce((acc, printer) => 
+    acc + printer.linesDetail.reduce((sum, line) => sum + line.realWeight, 0), 0);
+  const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
+  htmlRes += `<strong>Цена за 1 грамм: ${pricePerGram.toFixed(2)} ₽<\/strong><br/>`;
+
+ if (finDateStr) {
     htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
   }
   if (warnings.length > 0) {
@@ -1457,7 +1474,11 @@ function onCalculateAll() {
         <th>Вес (г)<\/th>
         <th>Материал<\/th>
         <th>Вес+отход<\/th>
-        <th>Без налога (₽)<\/th>
+        <th>Амортизация принтера (₽)<\/th>
+        <th>Стоимость материала (₽)<\/th>
+        <th>Электричество (₽)<\/th>
+        <th>Обслуживание (₽)<\/th>
+        <th>Итого (₽)<\/th>
         <th>Этикетка<\/th>
       <\/tr><\/thead><tbody>`;
       d.linesDetail.forEach(ln => {
@@ -1468,6 +1489,10 @@ function onCalculateAll() {
           <td>${ln.weight.toFixed(2)}<\/td>
           <td>${ln.matName}<\/td>
           <td>${ln.realWeight.toFixed(2)}<\/td>
+          <td>${ln.costPrinterPart.toFixed(2)}<\/td>
+          <td>${ln.costMaterial.toFixed(2)}<\/td>
+          <td>${ln.costElectric.toFixed(2)}<\/td>
+          <td>${ln.costMaintenance.toFixed(2)}<\/td>
           <td>${ln.subTotalModel.toFixed(2)}<\/td>
           <td>
             <button class="btn btn-sm btn-outline-secondary"
@@ -1479,6 +1504,7 @@ function onCalculateAll() {
       });
       htmlRes += `<\/tbody><\/table>`;
     }
+
     // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
     if (d.additionalDetails && d.additionalDetails.length > 0) {
       htmlRes += `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
