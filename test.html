@@ -6,9 +6,7 @@
   <title>Калькулятор 3D-печати (v3)</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.4.7/dist/peerjs.min.js"></script>
-
+	
   <style>
     body { margin: 0; padding: 0; }
     .container { margin-top: 20px; margin-bottom: 20px; }
@@ -353,19 +351,6 @@
 
     <!-- Импорт/Экспорт -->
 <div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
-  <div class="mt-4">
-    <h3>Синхронизация между устройствами</h3>
-    <div class="mb-3">
-      <input type="text" id="peerIdInput" class="form-control mb-2" placeholder="ID подключения">
-      <button class="btn btn-primary btn-sm" onclick="generatePeerId()">Сгенерировать ID</button>
-      <button class="btn btn-success btn-sm" onclick="connectToPeer()">Подключиться</button>
-    </div>
-    <div class="mb-3">
-      <button class="btn btn-info btn-sm" onclick="exportViaLink()">Ссылка для синхронизации</button>
-      <button class="btn btn-secondary btn-sm" onclick="exportViaQR()">QR-код</button>
-      <div id="qrcode" class="mt-2"></div>
-    </div>
-    <hr>
     
 <h3>☁️ Облачная синхронизация</h3>
 <button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако</button>
@@ -2110,95 +2095,6 @@ function renderSummary(){
   `;
   el.innerHTML = h;
 }
-
-
-
-let peer = null;
-let connection = null;
-
-function generatePeerId() {
-  peer = new Peer();
-  peer.on('open', id => {
-    document.getElementById('peerIdInput').value = id;
-    new QRCode(document.getElementById('qrcode'), {
-      text: id,
-      width: 128,
-      height: 128
-    });
-  });
-}
-
-function connectToPeer() {
-  const peerId = document.getElementById('peerIdInput').value;
-  connection = peer.connect(peerId);
-  setupConnectionHandlers(connection);
-}
-
-function setupConnectionHandlers(conn) {
-  conn.on('open', () => {
-    conn.send({type: 'requestData'});
-  });
-  
-  conn.on('data', data => {
-    if(data.type === 'fullData') {
-      appData = data.payload;
-      saveToLocalStorage();
-      initAll();
-      alert('Данные синхронизированы!');
-    }
-  });
-}
-
-function exportViaLink() {
-  const dataStr = JSON.stringify(appData);
-  const base64 = btoa(unescape(encodeURIComponent(dataStr)));
-  const url = new URL(window.location.href);
-  url.searchParams.set('peerid', document.getElementById('peerIdInput').value);
-  url.searchParams.set('data', base64);
-  prompt('Ссылка для синхронизации:', url.toString());
-}
-
-function exportViaQR() {
-  const dataStr = JSON.stringify(appData);
-  const base64 = btoa(unescape(encodeURIComponent(dataStr)));
-  const url = new URL(window.location.href);
-  url.searchParams.set('data', base64);
-  new QRCode(document.getElementById('qrcode'), {
-    text: url.toString(),
-    width: 128,
-    height: 128
-  });
-}
-
-window.addEventListener('load', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const savedData = urlParams.get('data');
-  
-  if(savedData) {
-    try {
-      const data = JSON.parse(decodeURIComponent(escape(atob(savedData))));
-      appData = data;
-      saveToLocalStorage();
-      initAll();
-      alert('Данные успешно загружены из ссылки!');
-    } catch(e) {
-      alert('Ошибка загрузки данных из ссылки');
-    }
-  }
-});
-
-peer = new Peer();
-peer.on('connection', conn => {
-  setupConnectionHandlers(conn);
-  conn.on('data', data => {
-    if(data.type === 'requestData') {
-      conn.send({
-        type: 'fullData',
-        payload: appData
-      });
-    }
-  });
-});
 
 </script>
 
