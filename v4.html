@@ -362,12 +362,10 @@
     <!-- Импорт/Экспорт -->
 <div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
     
-<h3>☁️ Облачная синхронизация</h3>
-<button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
-<button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
-<hr>
 <h3>📡 Быстрая синхронизация (облачная)</h3>
 <button class="btn btn-primary btn-sm" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
+<button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
+<button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
 <input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
 <div id="qrcode" class="mt-2"></div>
 <hr>
