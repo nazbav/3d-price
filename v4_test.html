@@ -2056,6 +2056,7 @@ function renderSummary(){
   let totalRevenue = 0;
   let totalCost = 0;
   let totalTax = 0;
+  let totalEarned = 0;
   let materialStats = {}; 
   let totalPrintHours = 0;
   let totalElectricityCost = 0;
@@ -2072,14 +2073,16 @@ function renderSummary(){
 
   completedOrders.forEach(order => {
     totalRevenue += order.total;
-    
     // ФИКС: Правильный расчет налога
     if (order.taxAmount !== undefined) {
       totalTax += order.taxAmount;
     } else if (order.taxPercent !== undefined && order.taxPercent > 0) {
       totalTax += order.total * (order.taxPercent / 100);
     }
-    
+
+	  
+    totalEarned += order.total - (order.taxAmount || 0);  // Рассчитываем чистый заработок
+
     // Расчет себестоимости
     order.details.forEach(printer => {
       const printerId = printer.printerId;
@@ -2180,6 +2183,7 @@ const printerUtilization = appData.printers.length ? (totalPrintHours / (appData
 
     <h3>Финансовые результаты</h3>
     <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
+    <h4>Всего заработано: ${totalEarned.toFixed(2)} ₽</h4>
     
     <div class="row mt-4">
       <div class="col-md-6">
