@@ -2131,7 +2131,7 @@ function renderSummary(){
     totalPrintHours += order.totalHours || 0;
   });
 
-  const netProfit = totalRevenue - totalCost - totalTax;Add commentMore actions
+  const netProfit = totalRevenue - totalCost - totalTax;
   const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
   const profitPerHour = totalPrintHours > 0 ? netProfit / totalPrintHours : 0;
 	
