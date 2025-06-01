@@ -2011,341 +2011,495 @@ function onEditCalcHistory(timestamp){
   const tab = new bootstrap.Tab(tabEl);
   tab.show();
 }
-function renderSummary(){
-  let totalPrintersCost = 0;
-  appData.printers.forEach(p => { totalPrintersCost += p.cost; });
-  
-  let totalPrintersAdds = 0;
-  let totalPrintersMats = 0;
-  appData.printers.forEach(p => {
-    p.additional.forEach(a => { totalPrintersAdds += a.cost; });
-    p.materials.forEach(m => { totalPrintersMats += (m.costPerKg * m.declaredWeight); });
-  });
-  
-  let totalGlobalMats = 0;
-  appData.materials.forEach(m => { totalGlobalMats += (m.costPerKg * m.declaredWeight); });
-  
-  let totalGlobalAdds = 0;
-  appData.additionalGlobal.forEach(a => { totalGlobalAdds += a.cost; });
-  
-  let summ = totalPrintersCost + totalPrintersAdds + totalPrintersMats + totalGlobalMats + totalGlobalAdds;
+function renderSummary() {
+  // Вспомогательные функции форматирования
+  const formatCurrency = (value) => new Intl.NumberFormat('ru-RU', { 
+    style: 'currency', 
+    currency: 'RUB',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
 
-  const el = document.getElementById("summaryContent");
-  let h = `
-  <div class="mt-3">
-    <h5>Принтеры:</h5>
-    <p>Всего: ${appData.printers.length}. Сумма стоимости: <strong>${totalPrintersCost}</strong> ₽</p>
-    <p>Индивидуальные доп.расходы: <strong>${totalPrintersAdds}</strong> ₽</p>
-    <p>Индивидуальные материалы (сумма): <strong>${totalPrintersMats}</strong> ₽</p>
-    <hr/>
-    <h5>Глобальные материалы:</h5>
-    <p>Всего: ${appData.materials.length}, сумма: <strong>${totalGlobalMats}</strong> ₽</p>
-    <hr/>
-    <h5>Глобальные доп. расходы:</h5>
-    <p>Всего: ${appData.additionalGlobal.length}, сумма: <strong>${totalGlobalAdds}</strong> ₽</p>
-    <hr/>
-    <p>Итого вложения: <strong>${summ}</strong> ₽</p>
-    
-    <hr/>
-  `;
+  const formatNumber = (value, decimals = 2) => 
+    new Intl.NumberFormat('ru-RU', { 
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals 
+    }).format(value);
 
-
-
-  // Новый блок: Финансовая аналитика
-  let completedOrders = appData.calcHistory.filter(o => o.orderStatus === "done");
-  let totalRevenue = 0;
-  let totalCost = 0;
-  let totalTax = 0;
-  let totalEarned = 0;
-  let materialStats = {}; 
-  let totalPrintHours = 0;
-  let totalElectricityCost = 0;
-  let printerStats = {};
-  let totalOperatorEarnings = 0;
-	
-  // Инициализация статистики для всех принтеров
-  appData.printers.forEach(p => {
-    printerStats[p.id] = {
-      name: p.name,
-      hours: 0,
-      cost: 0
+  // 1. Расчет капитальных вложений
+  const calculateCapitalInvestments = () => {
+    const capital = {
+      printersCost: appData.printers.reduce((sum, p) => sum + p.cost, 0),
+      printersAdds: appData.printers.reduce(
+        (sum, p) => sum + p.additional.reduce((aSum, a) => aSum + a.cost, 0), 0),
+      printersMats: appData.printers.reduce(
+        (sum, p) => sum + p.materials.reduce((mSum, m) => mSum + (m.costPerKg * m.declaredWeight), 0), 0),
+      globalMats: appData.materials.reduce(
+        (sum, m) => sum + (m.costPerKg * m.declaredWeight), 0),
+      globalAdds: appData.additionalGlobal.reduce((sum, a) => sum + a.cost, 0)
     };
-  });
 
-  completedOrders.forEach(order => {
-    totalRevenue += order.total;
-    // ФИКС: Правильный расчет налога
-    if (order.taxAmount !== undefined) {
-      totalTax += order.taxAmount;
-    } else if (order.taxPercent !== undefined && order.taxPercent > 0) {
-      totalTax += order.total * (order.taxPercent / 100);
-    }
+    capital.total = Object.values(capital).reduce((sum, val) => sum + val, 0);
+    return capital;
+  };
 
-	  
-    totalEarned += order.total - (order.taxAmount || 0);  // Рассчитываем чистый заработок
-    totalOperatorEarnings += order.totalOperatorCost || 0;
-    
+  // 2. Анализ завершенных заказов
+  const analyzeCompletedOrders = () => {
+    const completedOrders = appData.calcHistory.filter(o => o.orderStatus === "done");
+    const results = {
+      totalRevenue: 0,
+      totalTax: 0,
+      totalCost: 0,
+      totalPrintHours: 0,
+      totalElectricityCost: 0,
+      totalOperatorExpenses: 0,
+      materialStats: {},
+      printerStats: {},
+      completedOrdersCount: completedOrders.length
+    };
 
-    // Расчет себестоимости
-    order.details.forEach(printer => {
-      const printerId = printer.printerId;
-      
-      // ФИКС: Проверка существования записи о принтере
-      if (!printerStats[printerId]) {
-        printerStats[printerId] = {
-          name: printer.printerName,
-          hours: 0,
-          cost: 0
-        };
-      }
-      
-      printer.linesDetail.forEach(model => {
-	      console.log(model);
-        // ФИКС: Убрано добавление стоимости материалов
-         if (model.materialData.id){
-        // Обновление статистики материалов
-        const materialId = model.materialData.id;
-        if (!materialStats[materialId]) {
-          const mat = findMaterialById(materialId);
-          materialStats[materialId] = {
-            name: mat ? mat.name+" | "+mat.manufacturer : model.matName+" | "+model.materialData.manufacturer,
-            totalGrams: 0,
-            totalCost: 0
-          };
-	}
-       
-        materialStats[materialId].totalGrams += model.realWeight;
-        materialStats[materialId].totalCost += model.costMaterial;
-        
-        // Учет затрат (БЕЗ материалов)
-        totalCost += model.costPrinterPart; 
-        totalCost += model.costElectric;
-        totalCost += model.costMaintenance;
-        
-        // Статистика по принтерам
-        printerStats[printerId].hours += model.hours;
-        printerStats[printerId].cost += model.costPrinterPart;
-        
-        totalElectricityCost += model.costElectric;
-	 }
-      });
+    // Инициализация статистики принтеров
+    appData.printers.forEach(p => {
+      results.printerStats[p.id] = {
+        name: p.name,
+        hours: 0,
+        cost: 0,
+        prints: 0
+      };
     });
+
+    completedOrders.forEach(order => {
+      results.totalRevenue += order.total || 0;
+      
+      // Расчет налогов
+      if (order.taxAmount !== undefined) {
+        results.totalTax += order.taxAmount;
+      } else if (order.taxPercent !== undefined && order.taxPercent > 0) {
+        results.totalTax += order.total * (order.taxPercent / 100);
+      }
+
+      // Учет расходов на оператора
+      results.totalOperatorExpenses += order.totalOperatorCost || 0;
+
+      // Обработка деталей заказа
+      order.details?.forEach(printer => {
+        const printerId = printer.printerId;
+        
+        if (!results.printerStats[printerId]) {
+          results.printerStats[printerId] = {
+            name: printer.printerName,
+            hours: 0,
+            cost: 0,
+            prints: 0
+          };
+        }
+        
+        printer.linesDetail?.forEach(model => {
+          if (model.materialData?.id) {
+            const materialId = model.materialData.id;
+            
+            // Статистика по материалам
+            if (!results.materialStats[materialId]) {
+              const mat = findMaterialById(materialId);
+              results.materialStats[materialId] = {
+                name: mat ? `${mat.name} | ${mat.manufacturer}` : 
+                          `${model.matName} | ${model.materialData?.manufacturer || 'N/A'}`,
+                totalGrams: 0,
+                totalCost: 0
+              };
+            }
+            
+            results.materialStats[materialId].totalGrams += model.realWeight || 0;
+            results.materialStats[materialId].totalCost += model.costMaterial || 0;
+            
+            // Учет затрат
+            results.totalCost += model.costPrinterPart || 0;
+            results.totalCost += model.costElectric || 0;
+            results.totalCost += model.costMaintenance || 0;
+            
+            // Статистика по принтерам
+            results.printerStats[printerId].hours += model.hours || 0;
+            results.printerStats[printerId].cost += model.costPrinterPart || 0;
+            results.printerStats[printerId].prints++;
+            
+            results.totalElectricityCost += model.costElectric || 0;
+            results.totalPrintHours += model.hours || 0;
+          }
+        });
+      });
+      
+      // Глобальные расходы
+      results.totalCost += order.globalAdditional?.sumGlobalAdd || 0;
+      results.totalCost += order.shipping || 0;
+      results.totalCost += order.totalOperatorCost || 0;
+    });
+
+    return results;
+  };
+
+  // 3. Расчет ключевых показателей
+  const calculateKPIs = (capital, ordersAnalysis) => {
+    const {
+      totalRevenue,
+      totalCost,
+      totalTax,
+      totalPrintHours,
+      totalElectricityCost,
+      materialStats,
+      completedOrdersCount
+    } = ordersAnalysis;
     
-    // Глобальные расходы
-    totalCost += order.globalAdditional?.sumGlobalAdd || 0;
-    totalCost += order.shipping || 0;
-    totalCost += order.totalOperatorCost || 0;
+    const netProfit = totalRevenue - totalCost - totalTax;
+    const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
     
-    totalPrintHours += order.totalHours || 0;
-  });
+    // Расчет показателей по материалам
+    const totalMaterialCost = Object.values(materialStats).reduce(
+      (sum, m) => sum + m.totalCost, 0);
+    const totalGrams = Object.values(materialStats).reduce(
+      (sum, m) => sum + m.totalGrams, 0);
 
-  const netProfit = totalRevenue - totalOperatorEarnings - totalCost - totalTax;
-  const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-  const profitPerHour = totalPrintHours > 0 ? netProfit / totalPrintHours : 0;
-// Расчет дополнительных показателей
-const totalMaterialCost = Object.values(materialStats).reduce((sum, m) => sum + m.totalCost, 0);
-const totalGrams = Object.values(materialStats).reduce((sum, m) => sum + m.totalGrams, 0);
-const avgOrderRevenue = completedOrders.length ? totalRevenue / completedOrders.length : 0;
-const materialCostPerRevenue = totalRevenue ? (totalMaterialCost / totalRevenue) * 100 : 0;
-const marginPercent = totalRevenue ? ((totalRevenue - totalMaterialCost - totalElectricityCost) / totalRevenue) * 100 : 0;
-const netProfitPerGram = totalGrams ? netProfit / (totalGrams / 1000) : 0; // на кг
-const netProfitPerOrder = completedOrders.length ? netProfit / completedOrders.length : 0;
-const costPerGram = totalGrams ? totalCost / (totalGrams / 1000) : 0; // на кг
-const printerUtilization = appData.printers.length ? (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0; // за месяц
+    return {
+      netProfit,
+      profitability,
+      profitPerHour: totalPrintHours > 0 ? netProfit / totalPrintHours : 0,
+      payback: netProfit - capital.total,
+      avgOrderRevenue: completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0,
+      netProfitPerOrder: completedOrdersCount > 0 ? netProfit / completedOrdersCount : 0,
+      materialCostPerRevenue: totalRevenue > 0 ? (totalMaterialCost / totalRevenue) * 100 : 0,
+      marginPercent: totalRevenue > 0 ? 
+        ((totalRevenue - totalMaterialCost - totalElectricityCost) / totalRevenue) * 100 : 0,
+      netProfitPerGram: totalGrams > 0 ? netProfit / (totalGrams / 1000) : 0,
+      costPerGram: totalGrams > 0 ? totalCost / (totalGrams / 1000) : 0,
+      printerUtilization: appData.printers.length > 0 ? 
+        (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0,
+      costPerHour: totalPrintHours > 0 ? totalCost / totalPrintHours : 0,
+      materialCostPerHour: totalPrintHours > 0 ? totalMaterialCost / totalPrintHours : 0,
+      totalMaterialCost,
+      totalGrams
+    };
+  };
 
-	
-  // Форматирование данных
-  let materialHtml = Object.values(materialStats).map(m => 
-    `<tr>
-      <td>${m.name}</td>
-      <td>${(m.totalGrams / 1000).toFixed(3)} кг</td>
-      <td>${m.totalCost.toFixed(2)} ₽</td>
-      <td>${m.totalGrams > 0 ? (m.totalCost / (m.totalGrams / 1000)).toFixed(2) : 0} ₽/кг</td>
-    </tr>`
-  ).join('');
+  // Генерация HTML
+  const generateHTML = (capital, ordersAnalysis, kpis) => {
+    const {
+      completedOrdersCount,
+      totalRevenue,
+      totalTax,
+      totalCost,
+      totalOperatorExpenses,
+      materialStats,
+      printerStats
+    } = ordersAnalysis;
 
-  let printerHtml = Object.entries(printerStats).map(([id, stat]) => 
-    `<tr>
-      <td>${stat.name}</td>
-      <td>${stat.hours.toFixed(2)} ч</td>
-      <td>${stat.cost.toFixed(2)} ₽</td>
-      <td>${stat.hours > 0 ? (stat.cost / stat.hours).toFixed(2) : 0} ₽/ч</td>
-    </tr>`
-  ).join('');
+    const {
+      netProfit,
+      profitability,
+      profitPerHour,
+      payback,
+      avgOrderRevenue,
+      netProfitPerOrder,
+      materialCostPerRevenue,
+      marginPercent,
+      netProfitPerGram,
+      costPerGram,
+      printerUtilization,
+      costPerHour,
+      materialCostPerHour
+    } = kpis;
 
+    // Форматирование данных для таблиц
+    const materialRows = Object.values(materialStats).map(m => `
+      <tr>
+        <td>${m.name}</td>
+        <td class="text-end">${formatNumber(m.totalGrams / 1000, 3)} кг</td>
+        <td class="text-end">${formatCurrency(m.totalCost)}</td>
+        <td class="text-end">${m.totalGrams > 0 ? 
+          formatCurrency(m.totalCost / (m.totalGrams / 1000)) : '0.00'} ₽/кг</td>
+      </tr>
+    `).join('');
 
-	
-  // Добавление новой статистики
-  h += `
-  <div class="mt-4">
-<div class="alert alert-warning" role="alert">
-    Внимание! Показатели ниже могут быть некорректными или рассчитаны неверно. Требуется проверка. 
-    <a href="https://github.com/nazbav/3d-price/issues/1" class="alert-link">Подробнее здесь</a>.
-</div>
+    const printerRows = Object.values(printerStats).map(p => `
+      <tr>
+        <td>${p.name}</td>
+        <td class="text-end">${formatNumber(p.hours, 1)} ч</td>
+        <td class="text-end">${formatCurrency(p.cost)}</td>
+        <td class="text-end">${p.hours > 0 ? 
+          formatCurrency(p.cost / p.hours) : '0.00'} ₽/ч</td>
+        <td class="text-end">${p.prints}</td>
+      </tr>
+    `).join('');
 
+    // Генерация карточек KPI
+    const kpiCards = [
+      {title: 'Рентабельность', value: profitability, unit: '%', 
+       desc: '(Чистая прибыль / Выручка)', icon: 'bi-graph-up'},
+      {title: 'Прибыль в час', value: profitPerHour, unit: '₽/ч', 
+       desc: '(Чистая прибыль / Часы печати)', icon: 'bi-speedometer2'},
+      {title: 'Маржинальность', value: marginPercent, unit: '%', 
+       desc: '(Выручка - Материалы - Электричество)', icon: 'bi-percent'},
+      {title: 'Материалы / Выручка', value: materialCostPerRevenue, unit: '%', 
+       desc: 'Доля затрат на материалы', icon: 'bi-coin'},
+      {title: 'Средний чек', value: avgOrderRevenue, unit: '₽', 
+       desc: '(Выручка / Заказы)', icon: 'bi-receipt'},
+      {title: 'Прибыль / заказ', value: netProfitPerOrder, unit: '₽', 
+       desc: '(Чистая прибыль / Заказы)', icon: 'bi-box-seam'},
+      {title: 'Себестоимость печати', value: costPerGram, unit: '₽/кг', 
+       desc: '(Общие затраты / Материалы)', icon: 'bi-printer'},
+      {title: 'Прибыль / кг', value: netProfitPerGram, unit: '₽/кг', 
+       desc: '(Чистая прибыль / Материалы)', icon: 'bi-box'},
+      {title: 'Электричество', value: ordersAnalysis.totalElectricityCost, unit: '₽', 
+       desc: 'Общие затраты', icon: 'bi-lightning'},
+      {title: 'Себестоимость часа', value: costPerHour, unit: '₽/ч', 
+       desc: '(Затраты / Часы печати)', icon: 'bi-clock'},
+      {title: 'Материалы / час', value: materialCostPerHour, unit: '₽/ч', 
+       desc: 'Расход материалов', icon: 'bi-hourglass-split'},
+      {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', 
+       desc: '(Использование / Потенциал)', icon: 'bi-cpu'}
+    ].map(card => `
+      <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center">
+              <i class="bi ${card.icon} fs-3 text-primary me-3"></i>
+              <div>
+                <h5 class="mb-0">${formatNumber(card.value, 1)}${card.unit}</h5>
+                <small class="text-muted">${card.title}</small>
+              </div>
+            </div>
+            <div class="mt-2 text-muted small">${card.desc}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
 
-    <h3>Финансовые результаты</h3>
-  <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
-  <p>Всего заработано (чистая прибыль): <strong>${totalRevenue.toFixed(2)} (${netProfit.toFixed(2)})</strong> ₽</p>
-  <p>Заработано оператором: <strong>${totalOperatorEarnings.toFixed(2)}</strong> ₽</p>
-  <p>Чистая прибыль - Расходы (окупаемость): <strong>${(netProfit - summ).toFixed(2)}</strong> ₽</p>
-    
-    <div class="row mt-4">
-      <div class="col-md-6">
-        <h4>Расход материалов</h4>
-        <table class="table table-bordered">
-          <thead>
-            <tr><th>Материал</th><th>Расход</th><th>Стоимость</th><th>₽/кг</th></tr>
-          </thead>
-          <tbody>${materialHtml}</tbody>
-        </table>
+    return `
+    <div class="container-fluid p-0">
+      <!-- Капитальные вложения -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Капитальные вложения</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <h6>Принтеры:</h6>
+              <p>Всего: ${appData.printers.length} шт</p>
+              <p>Сумма: <strong>${formatCurrency(capital.printersCost)}</strong></p>
+            </div>
+            <div class="col-md-4">
+              <h6>Материалы:</h6>
+              <p>Принтерные: <strong>${formatCurrency(capital.printersMats)}</strong></p>
+              <p>Глобальные: <strong>${formatCurrency(capital.globalMats)}</strong></p>
+            </div>
+            <div class="col-md-4">
+              <h6>Дополнительно:</h6>
+              <p>Принтерные: <strong>${formatCurrency(capital.printersAdds)}</strong></p>
+              <p>Глобальные: <strong>${formatCurrency(capital.globalAdds)}</strong></p>
+            </div>
+          </div>
+          <div class="alert alert-primary mt-3 mb-0">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>Общие капитальные вложения:</span>
+              <strong class="fs-5">${formatCurrency(capital.total)}</strong>
+            </div>
+          </div>
+        </div>
       </div>
       
-      <div class="col-md-6">
-        <h4>Затраты по принтерам</h4>
-        <table class="table table-bordered">
-          <thead>
-            <tr><th>Принтер</th><th>Время</th><th>Амортизация</th><th>₽/час</th></tr>
-          </thead>
-          <tbody>${printerHtml}</tbody>
-        </table>
+      <!-- Финансовые результаты -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Финансовые результаты</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Показатели могут требовать проверки. 
+            <a href="https://github.com/nazbav/3d-price/issues/1" class="alert-link">Подробнее здесь</a>
+          </div>
+          
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="border p-3 rounded bg-light">
+                <h6>Завершённых заказов</h6>
+                <h3 class="text-center">${completedOrdersCount}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded bg-light">
+                <h6>Общая выручка</h6>
+                <h3 class="text-center text-success">${formatCurrency(totalRevenue)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded bg-light">
+                <h6>Общие расходы</h6>
+                <h3 class="text-center text-danger">${formatCurrency(totalCost)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded bg-light">
+                <h6>Чистая прибыль</h6>
+                <h3 class="text-center ${netProfit >= 0 ? 'text-success' : 'text-danger'}">
+                  ${formatCurrency(netProfit)}
+                </h3>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h6>Детализация расходов</h6>
+                  <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Налоги:</span>
+                      <span>${formatCurrency(totalTax)}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Расходы на оператора:</span>
+                      <span>${formatCurrency(totalOperatorExpenses)}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Окупаемость (прибыль - вложения):</span>
+                      <span class="${payback >= 0 ? 'text-success' : 'text-danger'}">
+                        ${formatCurrency(payback)}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-body">
+                  <h6>Эффективность</h6>
+                  <div class="progress mb-2" style="height: 25px">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: ${Math.min(100, profitability)}%" 
+                         aria-valuenow="${profitability}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      Рентабельность: ${formatNumber(profitability, 1)}%
+                    </div>
+                  </div>
+                  <div class="progress mb-2" style="height: 25px">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: ${Math.min(100, marginPercent)}%" 
+                         aria-valuenow="${marginPercent}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      Маржинальность: ${formatNumber(marginPercent, 1)}%
+                    </div>
+                  </div>
+                  <div class="progress" style="height: 25px">
+                    <div class="progress-bar bg-info" role="progressbar" 
+                         style="width: ${Math.min(100, printerUtilization)}%" 
+                         aria-valuenow="${printerUtilization}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      Загрузка: ${formatNumber(printerUtilization, 1)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Статистика -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="bi bi-boxes me-2"></i>Расход материалов</h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Материал</th>
+                      <th class="text-end">Расход</th>
+                      <th class="text-end">Стоимость</th>
+                      <th class="text-end">₽/кг</th>
+                    </tr>
+                  </thead>
+                  <tbody>${materialRows}</tbody>
+                  <tfoot class="table-light">
+                    <tr>
+                      <th>Итого</th>
+                      <th class="text-end">${formatNumber(kpis.totalGrams / 1000, 3)} кг</th>
+                      <th class="text-end">${formatCurrency(kpis.totalMaterialCost)}</th>
+                      <th class="text-end">${kpis.totalGrams > 0 ? 
+                        formatCurrency(kpis.totalMaterialCost / (kpis.totalGrams / 1000)) : '0.00'} ₽/кг</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header bg-light">
+              <h6 class="mb-0"><i class="bi bi-printer me-2"></i>Затраты по принтерам</h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Принтер</th>
+                      <th class="text-end">Время</th>
+                      <th class="text-end">Амортизация</th>
+                      <th class="text-end">₽/час</th>
+                      <th class="text-end">Моделей</th>
+                    </tr>
+                  </thead>
+                  <tbody>${printerRows}</tbody>
+                  <tfoot class="table-light">
+                    <tr>
+                      <th>Итого</th>
+                      <th class="text-end">${formatNumber(ordersAnalysis.totalPrintHours, 1)} ч</th>
+                      <th class="text-end">${formatCurrency(Object.values(printerStats).reduce((sum, p) => sum + p.cost, 0))}</th>
+                      <th class="text-end">${ordersAnalysis.totalPrintHours > 0 ? 
+                        formatCurrency(Object.values(printerStats).reduce((sum, p) => sum + p.cost, 0) / ordersAnalysis.totalPrintHours) : '0.00'} ₽/ч</th>
+                      <th class="text-end">${Object.values(printerStats).reduce((sum, p) => sum + p.prints, 0)}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- KPI -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Ключевые показатели эффективности</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            ${kpiCards}
+          </div>
+        </div>
       </div>
     </div>`;
-h += `</div>`;
+  };
 
-// Заменяем блок "Ключевые показатели эффективности" на улучшенную версию
-h += `
-<div class="mt-4">
-  <h4>Ключевые показатели эффективности</h4>
-  <div class="row">
-    <!-- Ряд 1: Основные финансовые показатели -->
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${profitability.toFixed(1)}%</h5>
-          <p class="text-muted mb-0">Рентабельность</p>
-          <small class="text-muted">(Чистая прибыль / Выручка)</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${profitPerHour.toFixed(2)} ₽/ч</h5>
-          <p class="text-muted mb-0">Прибыль в час</p>
-          <small class="text-muted">(Чистая прибыль / Часы печати)</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${marginPercent.toFixed(1)}%</h5>
-          <p class="text-muted mb-0">Маржинальность</p>
-          <small class="text-muted">(Выручка - Материалы - Электричество)</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${materialCostPerRevenue.toFixed(1)}%</h5>
-          <p class="text-muted mb-0">Материалы / Выручка</p>
-          <small class="text-muted">Доля затрат на материалы</small>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Ряд 2: Показатели производительности -->
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${avgOrderRevenue.toFixed(2)} ₽</h5>
-          <p class="text-muted mb-0">Средний чек</p>
-          <small class="text-muted">(Выручка / Заказы)</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${netProfitPerOrder.toFixed(2)} ₽</h5>
-          <p class="text-muted mb-0">Прибыль / заказ</p>
-          <small class="text-muted">(Чистая прибыль / Заказы)</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${costPerGram.toFixed(2)} ₽/кг</h5>
-          <p class="text-muted mb-0">Себестоимость печати</p>
-          <small class="text-muted">(Общие затраты / Материалы)</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${netProfitPerGram.toFixed(2)} ₽/кг</h5>
-          <p class="text-muted mb-0">Прибыль / кг</p>
-          <small class="text-muted">(Чистая прибыль / Материалы)</small>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Ряд 3: Эксплуатационные показатели -->
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${totalElectricityCost.toFixed(2)} ₽</h5>
-          <p class="text-muted mb-0">Электричество</p>
-          <small class="text-muted">Общие затраты</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${(totalCost/totalPrintHours).toFixed(2)} ₽/ч</h5>
-          <p class="text-muted mb-0">Себестоимость часа</p>
-          <small class="text-muted">(Затраты / Часы печати)</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${(totalMaterialCost/totalPrintHours).toFixed(2)} ₽/ч</h5>
-          <p class="text-muted mb-0">Материалы / час</p>
-          <small class="text-muted">Расход материалов</small>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-3 text-center mb-3">
-      <div class="card h-100">
-        <div class="card-body">
-          <h5>${printerUtilization.toFixed(1)}%</h5>
-          <p class="text-muted mb-0">Загрузка оборудования</p>
-          <small class="text-muted">(Использование / Потенциал)</small>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>`;
-	
+  // Выполнение расчетов
+  const capital = calculateCapitalInvestments();
+  const ordersAnalysis = analyzeCompletedOrders();
+  const kpis = calculateKPIs(capital, ordersAnalysis);
 
-
-  el.innerHTML = h;
+  // Рендеринг результата
+  const summaryContent = document.getElementById("summaryContent");
+  summaryContent.innerHTML = generateHTML(capital, ordersAnalysis, kpis);
 }
 
 </script>
