@@ -519,18 +519,22 @@ function parseTimeInput(input) {
 }
 
 function formatTimeForDisplay(time) {
-  if (Number.isInteger(time)) {
-    return time.toString(); // Целое число - выводим как есть
+  if (time === undefined || time === null) return "";
+  const hours = Math.floor(time);
+  const minutes = Math.round((time - hours) * 60);
+  return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function handleTimeInput(event) {
+  const input = event.target.value;
+  // Позволяем вводить как Ч:М, так и десятичное число
+  if (input.includes(":")) {
+    const [hours, minutes] = input.split(":").map(Number);
+    if (!isNaN(hours) && !isNaN(minutes)) {
+      return hours + (minutes / 60);
+    }
   }
-  
-  // Проверяем, является ли число десятичной дробью с .5 (30 минут)
-  if (time % 1 === 0.5) {
-    const hours = Math.floor(time);
-    return `${hours}:30`;
-  }
-  
-  // Для других случаев показываем как десятичное число
-  return time.toString();
+  return parseFloat(input) || 0;
 }
 
 document.addEventListener("DOMContentLoaded", initAll);
@@ -1219,7 +1223,10 @@ function addModelRow(printerId, modelData) {
         ${optsStatus}
       <\/select>
     <\/td>
-    <td><input type="text" class="form-control form-control-sm" id="${hoursId}" placeholder="ч:м" value="${modelData.hours ? formatTimeForDisplay(modelData.hours) : ''}" /><\/td>
+    <td><input type="text" class="form-control form-control-sm time-input" 
+             id="${hoursId}" placeholder="ч:м" 
+             value="${modelData.hours ? formatTimeForDisplay(modelData.hours) : ''}" 
+             onblur="this.value = formatTimeForDisplay(handleTimeInput({target: {value: this.value}}))" /><\/td>
     <td><input type="number" step="0.1" class="form-control form-control-sm" id="${weightId}" placeholder="г" value="${modelData.weight || ''}" /><\/td>
     <td>
       <select class="form-select form-select-sm" id="${materialId}">
@@ -1283,7 +1290,7 @@ function onCalculateAll() {
       const inpH = row.querySelectorAll("input")[1];
       const inpW = row.querySelectorAll("input")[2];
       const selM = row.querySelectorAll("select")[1];
-      const h = parseTimeInput(inpH.value) || 0;
+      const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
       modelsData.push({
         name: inpName.value.trim() || "Модель",
@@ -1319,7 +1326,7 @@ function onCalculateAll() {
       const inpH = row.querySelectorAll("input")[1];
       const inpW = row.querySelectorAll("input")[2];
       const selM = row.querySelectorAll("select")[1];
-      const h = parseTimeInput(inpH.value) || 0;
+      const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
       const mid = parseInt(selM.value, 10);
       if (!mid || h <= 0 || w <= 0) return;
