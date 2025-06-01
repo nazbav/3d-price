@@ -1492,7 +1492,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
 	  
     htmlRes += `<div style="margin-top:1em;">`;
     htmlRes += `<strong>${d.printerName} (ID: ${d.printerId})<\/strong><br/>`;
-    htmlRes += `Время: ${d.printerTime.toFixed(2)} ч; Без налога: ${d.subTotal.toFixed(2)} ₽<br/>`;
+    htmlRes += `Время: ${d.printerTime.toFixed(2)} ч; Сумма: ${d.subTotal.toFixed(2)} ₽<br/>`;
     if (d.linesDetail.length > 0) {
       htmlRes += `<div class="table-responsive"><table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
       htmlRes += `<thead><tr>
@@ -1513,7 +1513,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
         htmlRes += `<tr>
           <td>${ln.name}<\/td>
           <td>${ln.status}<\/td>
-          <td>${ln.hours.toFixed(2)}<\/td>
+          <td>${formatTimeForDisplay(ln.hours)}<\/td>
           <td>${ln.weight.toFixed(2)}<\/td>
           <td>${ln.matName}<\/td>
           <td>${ln.realWeight.toFixed(2)}<\/td>
@@ -1829,7 +1829,7 @@ function downloadThermoLabelHtml(modelName, printerName, materialName, hours, we
     <div style="text-align: center;">${modelName}<\/div>
     <div>${printerName}<\/div>
     <div>М: ${materialName}<\/div>
-    <div>Ч: ${hours} ч<\/div>
+    <div>Ч: ${formatTimeForDisplay(hours)} ч<\/div>
     <div>В: ${weight} г<\/div>
     <div>Д: ${new Date().toLocaleDateString("ru-RU")}<\/div>
   <\/div>
@@ -1941,7 +1941,7 @@ function generateMaxDetailedCalcHtml(d) {
   <p>Итог: <strong>${d.total.toFixed(2)} ₽<\/strong><\/p>
   <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${d.totalOperatorCost.toFixed(2)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
   <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
-  <p>Подитог (без налога): ${(d.total - d.globalAdditional.taxAmount).toFixed(2)} ₽, Общий налог: ${d.globalAdditional.taxAmount.toFixed(2)} ₽<\/p>
+  <p>Подитог: ${(d.total - d.globalAdditional.taxAmount).toFixed(2)} ₽, Общий налог: ${d.globalAdditional.taxAmount.toFixed(2)} ₽<\/p>
   <hr/>
 `;
   d.detailsByPrinter.forEach(pr => {
@@ -1958,7 +1958,7 @@ function generateMaxDetailedCalcHtml(d) {
           <th>Вес (г)<\/th>
           <th>Материал<\/th>
           <th>Вес с браком<\/th>
-          <th>Сумма (без налога)<\/th>
+          <th>Сумма<\/th>
         <\/tr><\/thead>
         <tbody>`;
       pr.linesDetail.forEach(ln => {
