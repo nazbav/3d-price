@@ -12,7 +12,7 @@
     .container { margin-top: 20px; margin-bottom: 20px; }
     .nav-tabs .nav-link.active { font-weight: bold; }
     .small-text { font-size: 0.9rem; color: #555; }
-    .footer { margin-top: 40px; font-size: 0.9rem; border-top: 1px solid var(--bs-border-color); padding-top: 10px; }
+    .footer { margin-top: 40px; font-size: 0.9rem; border-top: 1px solid var(--bs-border-color); padding-59top: 10px; }
     table td, table th { vertical-align: middle; white-space: nowrap; }
     .btn-group-sm > .btn { font-size: 0.8rem; padding: 2px 6px; margin-left: 2px; }
     thead th { background-color: var(--bs-table-bg) !important; color: var(--bs-body-color) !important; }
@@ -1219,7 +1219,7 @@ function addModelRow(printerId, modelData) {
         ${optsStatus}
       <\/select>
     <\/td>
-    <td><input type="text" class="form-control form-control-sm" id="${hoursId}" placeholder="ч" value="${modelData.hours ? formatTimeForDisplay(modelData.hours) : ''}" /><\/td>
+    <td><input type="text" class="form-control form-control-sm" id="${hoursId}" placeholder="ч:м" value="${modelData.hours ? formatTimeForDisplay(modelData.hours) : ''}" /><\/td>
     <td><input type="number" step="0.1" class="form-control form-control-sm" id="${weightId}" placeholder="г" value="${modelData.weight || ''}" /><\/td>
     <td>
       <select class="form-select form-select-sm" id="${materialId}">
