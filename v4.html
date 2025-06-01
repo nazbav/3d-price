@@ -2011,8 +2011,20 @@ function onEditCalcHistory(timestamp){
   const tab = new bootstrap.Tab(tabEl);
   tab.show();
 }
+
+function ensureIconsLoaded() {
+  if (!document.querySelector('link[href*="bootstrap-icons"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
+    document.head.appendChild(link);
+  }
+}
+
+	
 function renderSummary() {
-  // Вспомогательные функции форматирования
+ensureIconsLoaded();
+// Вспомогательные функции форматирования
   const formatCurrency = (value) => new Intl.NumberFormat('ru-RU', { 
     style: 'currency', 
     currency: 'RUB',
