@@ -2105,7 +2105,6 @@ function renderSummary(){
       
       printer.linesDetail.forEach(model => {
         // ФИКС: Убрано добавление стоимости материалов
-        if (!model.materialId) continue;
         
         // Обновление статистики материалов
         const materialId = model.materialId;
