@@ -2188,7 +2188,7 @@ const printerUtilization = appData.printers.length ? (totalPrintHours / (appData
   <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
   <p>Всего заработано (чистая прибыль): <strong>${totalRevenue.toFixed(2)} (${netProfit.toFixed(2)})</strong> ₽</p>
   <p>Заработано оператором: <strong>${totalOperatorEarnings.toFixed(2)}</strong> ₽</p>
-  <p>Доходы - Расходы (окупаемость): <strong>${(totalRevenue.toFixed(2) - summ.toFixed(2))}</strong> ₽</p>
+  <p>Чистая прибыль - Ставка оператора - Расходы (окупаемость): <strong>${(totalRevenue.toFixed(2) - totalOperatorEarnings.toFixed(2) - summ.toFixed(2))}</strong> ₽</p>
     
     <div class="row mt-4">
       <div class="col-md-6">
