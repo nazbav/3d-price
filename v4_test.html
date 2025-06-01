@@ -2116,8 +2116,7 @@ function renderSummary(){
             totalCost: 0
           };
 	}
-        }
-        
+       
         materialStats[materialId].totalGrams += model.realWeight;
         materialStats[materialId].totalCost += model.costMaterial;
         
@@ -2131,6 +2130,7 @@ function renderSummary(){
         printerStats[printerId].cost += model.costPrinterPart;
         
         totalElectricityCost += model.costElectric;
+	 }
       });
     });
     
