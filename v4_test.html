@@ -2155,13 +2155,15 @@ function renderSummary(){
 
 
 
-  // Новый блок: Финансовая аналитика
+   // Новый блок: Финансовая аналитика
   let completedOrders = appData.calcHistory.filter(o => o.orderStatus === "done");
   let totalRevenue = 0;
   let totalCost = 0;
   let totalTax = 0;
-  let materialUsage = {}; // { materialId: { name, totalGrams } }
+  let materialStats = {}; // { materialId: { name, totalGrams, totalCost } }
   let totalPrintHours = 0;
+  let totalElectricityCost = 0;
+  let printerStats = {}; // { printerId: { name, hours, cost } }
 
   completedOrders.forEach(order => {
     totalRevenue += order.total;
@@ -2169,18 +2171,29 @@ function renderSummary(){
     
     // Расчет себестоимости
     order.details.forEach(printer => {
+      const printerId = printer.printerId;
+      if (!printerStats[printerId]) {
+        printerStats[printerId] = {
+          name: printer.printerName,
+          hours: 0,
+          cost: 0
+        };
+      }
+      
       printer.linesDetail.forEach(model => {
         // Затраты на материалы
         const materialId = model.materialId;
         if (materialId) {
-          if (!materialUsage[materialId]) {
+          if (!materialStats[materialId]) {
             const mat = findMaterialById(materialId);
-            materialUsage[materialId] = {
+            materialStats[materialId] = {
               name: mat ? mat.name : `Material ${materialId}`,
-              totalGrams: 0
+              totalGrams: 0,
+              totalCost: 0
             };
           }
-          materialUsage[materialId].totalGrams += model.realWeight;
+          materialStats[materialId].totalGrams += model.realWeight;
+          materialStats[materialId].totalCost += model.costMaterial;
           totalCost += model.costMaterial;
         }
         
@@ -2188,6 +2201,13 @@ function renderSummary(){
         totalCost += model.costPrinterPart; 
         totalCost += model.costElectric;
         totalCost += model.costMaintenance;
+        
+        // Статистика по принтерам
+        printerStats[printerId].hours += model.hours;
+        printerStats[printerId].cost += model.costPrinterPart;
+        
+        // Затраты на электроэнергию
+        totalElectricityCost += model.costElectric;
       });
     });
     
@@ -2200,16 +2220,31 @@ function renderSummary(){
     totalPrintHours += order.totalHours || 0;
   });
 
+  // Расчет дополнительных показателей
+  const netProfit = totalRevenue - totalCost - totalTax;
+  const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+  const profitPerHour = totalPrintHours > 0 ? netProfit / totalPrintHours : 0;
+  
   // Форматирование данных
-  let materialHtml = Object.values(materialUsage).map(m => 
+  let materialHtml = Object.values(materialStats).map(m => 
     `<tr>
       <td>${m.name}</td>
       <td>${(m.totalGrams / 1000).toFixed(3)} кг</td>
-      <td>${(m.totalGrams ? (totalCost * (m.totalGrams / Object.values(materialUsage).reduce((sum, m) => sum + m.totalGrams, 0))).toFixed(2) : 0)} ₽</td>
+      <td>${m.totalCost.toFixed(2)} ₽</td>
+      <td>${m.totalGrams > 0 ? (m.totalCost / (m.totalGrams / 1000)).toFixed(2) : 0} ₽/кг</td>
     </tr>`
   ).join('');
 
-  // Добавление секции в HTML
+  let printerHtml = Object.entries(printerStats).map(([id, stat]) => 
+    `<tr>
+      <td>${stat.name}</td>
+      <td>${stat.hours.toFixed(2)} ч</td>
+      <td>${stat.cost.toFixed(2)} ₽</td>
+      <td>${stat.hours > 0 ? (stat.cost / stat.hours).toFixed(2) : 0} ₽/ч</td>
+    </tr>`
+  ).join('');
+
+  // Добавление новой статистики
   h += `
   <div class="mt-4">
     <h3>Финансовые результаты</h3>
@@ -2217,34 +2252,87 @@ function renderSummary(){
     
     <table class="table table-bordered">
       <thead>
-        <tr><th>Показатель</th><th>Сумма</th></tr>
+        <tr><th>Показатель</th><th>Сумма</th><th>Доля</th></tr>
       </thead>
       <tbody>
-        <tr><td>Общая выручка</td><td>${totalRevenue.toFixed(2)} ₽</td></tr>
-        <tr><td>Себестоимость</td><td>${totalCost.toFixed(2)} ₽</td></tr>
-        <tr><td>Уплаченные налоги</td><td>${totalTax.toFixed(2)} ₽</td></tr>
+        <tr><td>Общая выручка</td><td>${totalRevenue.toFixed(2)} ₽</td><td>100%</td></tr>
+        <tr><td>Себестоимость</td><td>${totalCost.toFixed(2)} ₽</td><td>${(totalCost/totalRevenue*100).toFixed(1)}%</td></tr>
+        <tr><td>Налоги</td><td>${totalTax.toFixed(2)} ₽</td><td>${(totalTax/totalRevenue*100).toFixed(1)}%</td></tr>
         <tr class="table-success">
           <td><strong>Чистая прибыль</strong></td>
-          <td><strong>${(totalRevenue - totalCost - totalTax).toFixed(2)} ₽</strong></td>
+          <td><strong>${netProfit.toFixed(2)} ₽</strong></td>
+          <td><strong>${profitability.toFixed(1)}%</strong></td>
         </tr>
       </tbody>
     </table>
     
-    <h4>Расход материалов</h4>
-    <table class="table table-bordered">
-      <thead>
-        <tr><th>Материал</th><th>Расход</th><th>Стоимость</th></tr>
-      </thead>
-      <tbody>${materialHtml}</tbody>
-    </table>
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <h4>Расход материалов</h4>
+        <table class="table table-bordered">
+          <thead>
+            <tr><th>Материал</th><th>Расход</th><th>Стоимость</th><th>₽/кг</th></tr>
+          </thead>
+          <tbody>${materialHtml}</tbody>
+        </table>
+      </div>
+      
+      <div class="col-md-6">
+        <h4>Затраты по принтерам</h4>
+        <table class="table table-bordered">
+          <thead>
+            <tr><th>Принтер</th><th>Время</th><th>Амортизация</th><th>₽/час</th></tr>
+          </thead>
+          <tbody>${printerHtml}</tbody>
+        </table>
+      </div>
+    </div>
     
-    <h4>Затраты времени</h4>
-    <p>Общее время печати: <strong>${totalPrintHours.toFixed(2)} ч</strong></p>
+    <div class="mt-4">
+      <h4>Ключевые показатели эффективности</h4>
+      <div class="row">
+        <div class="col-md-3 text-center">
+          <div class="card">
+            <div class="card-body">
+              <h5>${profitability.toFixed(1)}%</h5>
+              <p class="text-muted mb-0">Рентабельность</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 text-center">
+          <div class="card">
+            <div class="card-body">
+              <h5>${profitPerHour.toFixed(2)} ₽/ч</h5>
+              <p class="text-muted mb-0">Прибыль в час</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 text-center">
+          <div class="card">
+            <div class="card-body">
+              <h5>${totalElectricityCost.toFixed(2)} ₽</h5>
+              <p class="text-muted mb-0">Затраты на электричество</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 text-center">
+          <div class="card">
+            <div class="card-body">
+              <h5>${(totalCost/totalPrintHours).toFixed(2)} ₽/ч</h5>
+              <p class="text-muted mb-0">Себестоимость часа</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>`;
 
   el.innerHTML = h;
+}
 
-	
+// Вспомогательная функция для поиска материала
+function findMaterialById(id) {
+  return appData.materials.find(m => m.id == id);
 }
 
 </script>
