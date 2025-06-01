@@ -340,7 +340,6 @@
           Прошлые расчёты. Кнопки: «JSON» — показать объект, «HTML» — скачать отчёт, «Редакт.» — загрузить данные обратно в калькулятор.
         </p>
         <button class="btn btn-danger mb-3" onclick="onClearCalcHistory()">Очистить историю</button>
-        <button class="btn btn-info mb-3" onclick="onViewFullHistoryHtml()">История в HTML</button>
         <div class="table-responsive">
           <table class="table table-bordered table-hover" id="historyTable">
             <thead class="table-light">
@@ -1732,100 +1731,7 @@ function onImportHistory(){
     alert("Ошибка импорта истории: " + e);
   }
 }
-function onViewFullHistoryHtml(){
-  const html = generateFullHistoryHtml();
-  const w = window.open("", "_blank", "width=900,height=600");
-  w.document.write(html);
-  w.document.close();
-}
-function generateFullHistoryHtml(){
-  let s = `<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8"/>
-  <title>Полная история расчётов<\/title>
-  <style>
-    body { font-family: sans-serif; margin:20px; }
-    h1 { margin-bottom:0.5em; }
-    .entry { border:1px solid #ccc; padding:10px; margin-bottom:10px; }
-    table { border-collapse: collapse; }
-    td, th { border:1px solid #999; padding:4px 6px; }
-    .printer-block { margin-top:10px; padding:5px; border:1px dashed #999; }
-  <\/style>
-<\/head>
-<body>
-  <h1>Полная история расчётов<\/h1>
-`;
-  if(appData.calcHistory.length === 0){
-    s += `<p>История пуста.<\/p>`;
-  } else {
-    appData.calcHistory.forEach(h => {
-      s += `<div class="entry">
-        <h3>Расчёт от ${h.dateStr}, итог: ${h.total.toFixed(2)} ₽<\/h3>
-        <p>Название: ${h.calcName || "(без названия)"}, Клиент: ${h.clientName || "(не указан)"}, Статус: ${h.orderStatus || "(нет)"}<\/p>
-        <p>Оператор ч.: ${h.totalHours.toFixed(2)}, Налог: ${h.taxPercent}%, Упаковка/Доставка: ${h.shipping}, Оператор: ${h.operatorRate}₽/ч, Электричество: ${h.costKwh}₽/кВт⋅ч<\/p>
-        <p>Учет параллельной печати: ${h.parallelMode}, Наценка: ${h.markupPercent}%<\/p>
-      `;
-      if(h.details && Array.isArray(h.details)){
-        h.details.forEach(pr => {
-          s += `<div class="printer-block">
-            <strong>Принтер: ${pr.printerName} (ID: ${pr.printerId})<\/strong><br/>
-            Время: ${pr.printerTime.toFixed(2)} ч, Итого (с налогом): ${(pr.totalWithTax||0).toFixed(2)} ₽<br/>
-          `;
-          if(pr.linesDetail && pr.linesDetail.length>0){
-            s += `<table style="margin-top:5px;">
-              <thead><tr>
-                <th>Модель<\/th>
-                <th>Статус<\/th>
-                <th>Часы<\/th>
-                <th>Вес (г)<\/th>
-                <th>Материал<\/th>
-                <th>Вес с браком<\/th>
-                <th>Сумма (без налога)<\/th>
-              <\/tr><\/thead>
-              <tbody>`;
-            pr.linesDetail.forEach(ln => {
-              s += `<tr>
-                <td>${ln.name}<\/td>
-                <td>${ln.status}<\/td>
-                <td>${ln.hours.toFixed(2)}<\/td>
-                <td>${ln.weight.toFixed(2)}<\/td>
-                <td>${ln.matName}<\/td>
-                <td>${ln.realWeight.toFixed(2)}<\/td>
-                <td>${ln.subTotalModel.toFixed(2)}<\/td>
-              <\/tr>`;
-            });
-            s += `<\/tbody><\/table>`;
-          }
-          s += `<\/div>`;
-        });
-      }
-      if(h.globalAdditional && h.globalAdditional.details && h.globalAdditional.details.length>0){
-        s += `<div class="printer-block">
-          <strong>Глобальные доп. расходы:<\/strong><br/>
-          <table style="margin-top:5px;">
-            <thead><tr>
-              <th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено<\/th>
-            <\/tr><\/thead>
-            <tbody>`;
-        h.globalAdditional.details.forEach(gd => {
-          s += `<tr>
-            <td>${gd.description}<\/td>
-            <td>${gd.baseCost.toFixed(2)}<\/td>
-            <td>${gd.hoursToRecoup}<\/td>
-            <td>${gd.costDistributed.toFixed(2)}<\/td>
-          <\/tr>`;
-        });
-        s += `<\/tbody><\/table>
-        Итого: ${h.globalAdditional.sumGlobalAdd.toFixed(2)} ₽
-        <\/div>`;
-      }
-      s += `<\/div>`;
-    });
-  }
-  s += `<\/body><\/html>`;
-  return s;
-}
+
 function onChangeCalcHistoryStatus(timestamp, newStatus){
   const it = appData.calcHistory.find(x => x.timestamp === timestamp);
   if(!it) return;
@@ -2155,23 +2061,40 @@ function renderSummary(){
 
 
 
-   // Новый блок: Финансовая аналитика
+  // Новый блок: Финансовая аналитика
   let completedOrders = appData.calcHistory.filter(o => o.orderStatus === "done");
   let totalRevenue = 0;
   let totalCost = 0;
   let totalTax = 0;
-  let materialStats = {}; // { materialId: { name, totalGrams, totalCost } }
+  let materialStats = {}; 
   let totalPrintHours = 0;
   let totalElectricityCost = 0;
-  let printerStats = {}; // { printerId: { name, hours, cost } }
+  let printerStats = {};
+  
+  // Инициализация статистики для всех принтеров
+  appData.printers.forEach(p => {
+    printerStats[p.id] = {
+      name: p.name,
+      hours: 0,
+      cost: 0
+    };
+  });
 
   completedOrders.forEach(order => {
     totalRevenue += order.total;
-    totalTax += order.taxAmount || 0;
+    
+    // ФИКС: Правильный расчет налога
+    if (order.taxAmount !== undefined) {
+      totalTax += order.taxAmount;
+    } else if (order.taxPercent !== undefined && order.taxPercent > 0) {
+      totalTax += order.total * (order.taxPercent / 100);
+    }
     
     // Расчет себестоимости
     order.details.forEach(printer => {
       const printerId = printer.printerId;
+      
+      // ФИКС: Проверка существования записи о принтере
       if (!printerStats[printerId]) {
         printerStats[printerId] = {
           name: printer.printerName,
@@ -2181,23 +2104,24 @@ function renderSummary(){
       }
       
       printer.linesDetail.forEach(model => {
-        // Затраты на материалы
+        // ФИКС: Убрано добавление стоимости материалов
+        if (!model.materialId) continue;
+        
+        // Обновление статистики материалов
         const materialId = model.materialId;
-        if (materialId) {
-          if (!materialStats[materialId]) {
-            const mat = findMaterialById(materialId);
-            materialStats[materialId] = {
-              name: mat ? mat.name : `Material ${materialId}`,
-              totalGrams: 0,
-              totalCost: 0
-            };
-          }
-          materialStats[materialId].totalGrams += model.realWeight;
-          materialStats[materialId].totalCost += model.costMaterial;
-          totalCost += model.costMaterial;
+        if (!materialStats[materialId]) {
+          const mat = findMaterialById(materialId);
+          materialStats[materialId] = {
+            name: mat ? mat.name : `Material ${materialId}`,
+            totalGrams: 0,
+            totalCost: 0
+          };
         }
         
-        // Прочие затраты
+        materialStats[materialId].totalGrams += model.realWeight;
+        materialStats[materialId].totalCost += model.costMaterial;
+        
+        // Учет затрат (БЕЗ материалов)
         totalCost += model.costPrinterPart; 
         totalCost += model.costElectric;
         totalCost += model.costMaintenance;
@@ -2206,7 +2130,6 @@ function renderSummary(){
         printerStats[printerId].hours += model.hours;
         printerStats[printerId].cost += model.costPrinterPart;
         
-        // Затраты на электроэнергию
         totalElectricityCost += model.costElectric;
       });
     });
@@ -2216,14 +2139,15 @@ function renderSummary(){
     totalCost += order.shipping || 0;
     totalCost += order.totalOperatorCost || 0;
     
-    // Учет времени
     totalPrintHours += order.totalHours || 0;
   });
 
-  // Расчет дополнительных показателей
+  // Расчет показателей (остается без изменений)
   const netProfit = totalRevenue - totalCost - totalTax;
   const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
   const profitPerHour = totalPrintHours > 0 ? netProfit / totalPrintHours : 0;
+
+	
   
   // Форматирование данных
   let materialHtml = Object.values(materialStats).map(m => 
