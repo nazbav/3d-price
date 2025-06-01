@@ -2170,6 +2170,12 @@ const printerUtilization = appData.printers.length ? (totalPrintHours / (appData
   // Добавление новой статистики
   h += `
   <div class="mt-4">
+<div class="alert alert-warning" role="alert">
+    Внимание! Показатели ниже могут быть некорректными или рассчитаны неверно. Требуется проверка. 
+    <a href="https://github.com/nazbav/3d-price/issues/1" class="alert-link">Подробнее здесь</a>.
+</div>
+
+
     <h3>Финансовые результаты</h3>
     <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
     
