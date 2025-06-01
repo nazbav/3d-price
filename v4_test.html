@@ -1460,7 +1460,7 @@ function onCalculateAll() {
   let htmlRes = `<strong>Общий результат:<\/strong><br/>`;
   htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
-  htmlRes += `Общее время оператора: ${finalTimeOperator.toFixed(2)} ч.<br/>`;
+  htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
   htmlRes += `Стоимость работы оператора: ${totalOperatorCost.toFixed(2)} ₽<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Упаковка/Доставка: ${ship.toFixed(2)} ₽<br/>`;
@@ -1939,7 +1939,7 @@ function generateMaxDetailedCalcHtml(d) {
   <h1>Подробный расчёт<\/h1>
   <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${d.orderStatus || "?"}<\/p>
   <p>Итог: <strong>${d.total.toFixed(2)} ₽<\/strong><\/p>
-  <p>Оператор ч.: ${d.totalHours.toFixed(2)} ч, Стоимость работы оператора: ${d.totalOperatorCost.toFixed(2)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
+  <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${d.totalOperatorCost.toFixed(2)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
   <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
   <p>Подитог (без налога): ${(d.total - d.globalAdditional.taxAmount).toFixed(2)} ₽, Общий налог: ${d.globalAdditional.taxAmount.toFixed(2)} ₽<\/p>
   <hr/>
@@ -1947,7 +1947,7 @@ function generateMaxDetailedCalcHtml(d) {
   d.detailsByPrinter.forEach(pr => {
     s += `<div class="printer-block">
       <strong>Принтер: ${pr.printerName} (ID: ${pr.printerId})<\/strong><br/>
-      Время: ${pr.printerTime.toFixed(2)} ч<br/>
+      Время: ${formatTimeForDisplay(pr.printerTime)} ч<br/>
     `;
     if(pr.linesDetail && pr.linesDetail.length>0){
       s += `<table style="margin-top:5px;">
