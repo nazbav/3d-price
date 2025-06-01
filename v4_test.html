@@ -2100,7 +2100,7 @@ function renderSummary(){
         if (!materialStats[materialId]) {
           const mat = findMaterialById(materialId);
           materialStats[materialId] = {
-            name: mat ? mat.name+" | "+mat.manufacture : model.matName+" | "+model.materialData.manufacturer,
+            name: mat ? mat.name+" | "+mat.manufacturer : model.matName+" | "+model.materialData.manufacturer,
             totalGrams: 0,
             totalCost: 0
           };
