@@ -45,6 +45,21 @@
   </div>
   <ul class="nav nav-tabs" id="mainTab" role="tablist">
     <li class="nav-item">
+      <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
+              data-bs-target="#calculatePane" type="button" role="tab" aria-selected="true"
+              aria-controls="calculatePane" aria-selected="false">
+        Калькулятор
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="history-tab" data-bs-toggle="tab"
+              data-bs-target="#historyPane" type="button" role="tab"
+              aria-controls="historyPane" aria-selected="false">
+        История
+      </button>
+    </li>
+
+    <li class="nav-item">
       <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
               data-bs-target="#printersPane" type="button" role="tab" aria-controls="printersPane" >
         Принтеры
@@ -65,27 +80,6 @@
       </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
-              data-bs-target="#calculatePane" type="button" role="tab" aria-selected="true"
-              aria-controls="calculatePane" aria-selected="false">
-        Калькулятор
-      </button>
-    </li>
-    <li class="nav-item">
-      <button class="nav-link" id="history-tab" data-bs-toggle="tab"
-              data-bs-target="#historyPane" type="button" role="tab"
-              aria-controls="historyPane" aria-selected="false">
-        История
-      </button>
-    </li>
-    <li class="nav-item">
-      <button class="nav-link" id="importexport-tab" data-bs-toggle="tab"
-              data-bs-target="#importexportPane" type="button" role="tab"
-              aria-controls="importexportPane" aria-selected="false">
-        Импорт/Экспорт
-      </button>
-    </li>
-    <li class="nav-item">
       <button class="nav-link" id="labelsettings-tab" data-bs-toggle="tab"
               data-bs-target="#labelsettingsPane" type="button" role="tab"
               aria-controls="labelsettingsPane" aria-selected="false">
@@ -99,6 +93,15 @@
         Итоги
       </button>
     </li>
+
+    <li class="nav-item">
+      <button class="nav-link" id="importexport-tab" data-bs-toggle="tab"
+              data-bs-target="#importexportPane" type="button" role="tab"
+              aria-controls="importexportPane" aria-selected="false">
+        Импорт/Экспорт
+      </button>
+    </li>
+
   </ul>
 
   <div class="tab-content" id="mainTabContent">
