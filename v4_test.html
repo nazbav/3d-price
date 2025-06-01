@@ -1644,18 +1644,6 @@ function findMaterialById(mid) {
   return null;
 }
 
-
-function findMaterialById(mid) {
-  let mat = appData.materials.find(m => m.id === mid);
-  if (mat) return mat;
-  for (let p of appData.printers) {
-    mat = p.materials.find(m => m.id === mid);
-    if (mat) return mat;
-  }
-  return null;
-}
-
-
 function calcFinishDate(sv, days){
   if(!sv) return "";
   try{
@@ -2252,12 +2240,6 @@ function renderSummary(){
   </div>`;
 
   el.innerHTML = h;
-}
-
-// Вспомогательная функция для поиска материала
-function findMaterialById(id) {
-  console.log(appData.materials);
-  return appData.materials.find(m => m.id == id);
 }
 
 </script>
