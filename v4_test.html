@@ -2134,22 +2134,43 @@ function renderSummary(){
   
   let summ = totalPrintersCost + totalPrintersAdds + totalPrintersMats + totalGlobalMats + totalGlobalAdds;
   
+  // Новый раздел: Заработано на печати
+  let totalEarned = 0;
+  appData.calcHistory.forEach(entry => {
+    if(entry.orderStatus === 'done') {
+      totalEarned += entry.total;
+    }
+  });
+
+  const completedOrders = appData.calcHistory.filter(e => e.orderStatus === 'done').length;
+  
   const el = document.getElementById("summaryContent");
   let h = `
   <div class="mt-3">
-    <h5>Принтеры:<\/h5>
-    <p>Всего: ${appData.printers.length}. Сумма стоимости: <strong>${totalPrintersCost}<\/strong> ₽<\/p>
-    <p>Индивидуальные доп.расходы: <strong>${totalPrintersAdds}<\/strong> ₽<\/p>
-    <p>Индивидуальные материалы (сумма): <strong>${totalPrintersMats}<\/strong> ₽<\/p>
+    <h5>Принтеры:</h5>
+    <p>Всего: ${appData.printers.length}. Сумма стоимости: <strong>${totalPrintersCost}</strong> ₽</p>
+    <p>Индивидуальные доп.расходы: <strong>${totalPrintersAdds}</strong> ₽</p>
+    <p>Индивидуальные материалы (сумма): <strong>${totalPrintersMats}</strong> ₽</p>
     <hr/>
-    <h5>Глобальные материалы:<\/h5>
-    <p>Всего: ${appData.materials.length}, сумма: <strong>${totalGlobalMats}<\/strong> ₽<\/p>
+    <h5>Глобальные материалы:</h5>
+    <p>Всего: ${appData.materials.length}, сумма: <strong>${totalGlobalMats}</strong> ₽</p>
     <hr/>
-    <h5>Глобальные доп. расходы:<\/h5>
-    <p>Всего: ${appData.additionalGlobal.length}, сумма: <strong>${totalGlobalAdds}<\/strong> ₽<\/p>
+    <h5>Глобальные доп. расходы:</h5>
+    <p>Всего: ${appData.additionalGlobal.length}, сумма: <strong>${totalGlobalAdds}</strong> ₽</p>
     <hr/>
-    <p>Итого: <strong>${summ}<\/strong> ₽<\/p>
-  <\/div>
+    <p>Итого вложения: <strong>${summ}</strong> ₽</p>
+    
+    <hr/>
+    <h5>Финансовые итоги:</h5>
+    <div class="d-flex justify-content-between">
+      <span>Завершённые заказы:</span>
+      <strong>${completedOrders}</strong>
+    </div>
+    <div class="d-flex justify-content-between">
+      <span>Общая выручка:</span>
+      <strong>${totalEarned.toFixed(2)} ₽</strong>
+    </div>
+  </div>
   `;
   el.innerHTML = h;
 }
