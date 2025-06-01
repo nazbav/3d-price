@@ -1465,7 +1465,7 @@ function onCalculateAll() {
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Упаковка/Доставка: ${ship.toFixed(2)} ₽<br/>`;
   htmlRes += `Стоимость этикеток: ${totalLabelsCost.toFixed(2)} ₽<br/>`;
-  htmlRes += `Подитог (без налога): ${subtotal.toFixed(2)} ₽<br/>`;
+  htmlRes += `Подитог: ${subtotal.toFixed(2)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${taxAmount.toFixed(2)} ₽<br/>`;
   htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${finalSum.toFixed(2)} ₽<\/strong><br/>`;
  
@@ -1549,7 +1549,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
         <\/tr>`;
       });
       htmlResadditionalDetails += `<\/tbody><\/table>`;
-      htmlResadditionalDetails += `Доп. расходы для принтера без налога: ${sumPrinterAdditional.toFixed(2)} ₽<br/>`;
+      htmlResadditionalDetails += `Доп. расходы для принтера: ${sumPrinterAdditional.toFixed(2)} ₽<br/>`;
 	    if(sumPrinterAdditional > 0)
 	    htmlRes += htmlResadditionalDetails;
     }
@@ -1570,7 +1570,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
       <\/tr>`;
     });
     htmlRes += `<\/tbody><\/table>`;
-    htmlRes += `Глобальные расходы без налога: ${sumGlobalAdd.toFixed(2)} ₽<br/>`;
+    htmlRes += `Глобальные расходы: ${sumGlobalAdd.toFixed(2)} ₽<br/>`;
   }
   
   document.getElementById("calcResult").style.display = "block";
