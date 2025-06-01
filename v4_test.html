@@ -2256,6 +2256,7 @@ function renderSummary(){
 
 // Вспомогательная функция для поиска материала
 function findMaterialById(id) {
+  console.log(appData.materials);
   return appData.materials.find(m => m.id == id);
 }
 
