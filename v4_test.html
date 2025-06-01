@@ -2061,7 +2061,8 @@ function renderSummary(){
   let totalPrintHours = 0;
   let totalElectricityCost = 0;
   let printerStats = {};
-  
+  let totalOperatorEarnings = 0;
+	
   // Инициализация статистики для всех принтеров
   appData.printers.forEach(p => {
     printerStats[p.id] = {
@@ -2082,6 +2083,8 @@ function renderSummary(){
 
 	  
     totalEarned += order.total - (order.taxAmount || 0);  // Рассчитываем чистый заработок
+    totalOperatorEarnings += order.totalOperatorCost || 0;
+    
 
     // Расчет себестоимости
     order.details.forEach(printer => {
@@ -2182,8 +2185,9 @@ const printerUtilization = appData.printers.length ? (totalPrintHours / (appData
 
 
     <h3>Финансовые результаты</h3>
-    <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
-    <h4>Всего заработано: ${totalEarned.toFixed(2)} ₽</h4>
+  <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
+  <h4>Всего заработано (чистая прибыль): ${netProfit.toFixed(2)} ₽</h4>
+  <p>Заработано оператором: <strong>${totalOperatorEarnings.toFixed(2)}</strong> ₽</p>
     
     <div class="row mt-4">
       <div class="col-md-6">
