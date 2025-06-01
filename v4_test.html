@@ -2131,7 +2131,10 @@ function renderSummary(){
     totalPrintHours += order.totalHours || 0;
   });
 
-  
+  const netProfit = totalRevenue - totalCost - totalTax;Add commentMore actions
+  const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+  const profitPerHour = totalPrintHours > 0 ? netProfit / totalPrintHours : 0;
+	
   // Форматирование данных
   let materialHtml = Object.values(materialStats).map(m => 
     `<tr>
@@ -2151,6 +2154,8 @@ function renderSummary(){
     </tr>`
   ).join('');
 
+
+	
   // Добавление новой статистики
   h += `
   <div class="mt-4">
