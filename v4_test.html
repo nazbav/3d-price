@@ -2105,7 +2105,7 @@ function renderSummary(){
       
       printer.linesDetail.forEach(model => {
         // ФИКС: Убрано добавление стоимости материалов
-        
+         if (model.materialId){
         // Обновление статистики материалов
         const materialId = model.materialId;
         if (!materialStats[materialId]) {
@@ -2115,6 +2115,7 @@ function renderSummary(){
             totalGrams: 0,
             totalCost: 0
           };
+	}
         }
         
         materialStats[materialId].totalGrams += model.realWeight;
