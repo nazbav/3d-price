@@ -2288,7 +2288,7 @@ ensureIconsLoaded();
     <div class="container-fluid p-0">
       <!-- Капитальные вложения -->
       <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
+        <div class="card-header">
           <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Капитальные вложения</h5>
         </div>
         <div class="card-body">
@@ -2320,7 +2320,7 @@ ensureIconsLoaded();
       
       <!-- Финансовые результаты -->
       <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
+        <div class="card-header">
           <h5 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Финансовые результаты</h5>
         </div>
         <div class="card-body">
@@ -2332,25 +2332,25 @@ ensureIconsLoaded();
           
           <div class="row mb-4">
             <div class="col-md-3">
-              <div class="border p-3 rounded bg-light">
+              <div class="border p-3 rounded">
                 <h6>Завершённых заказов</h6>
                 <h3 class="text-center">${completedOrdersCount}</h3>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="border p-3 rounded bg-light">
+              <div class="border p-3 rounded">
                 <h6>Общая выручка</h6>
                 <h3 class="text-center text-success">${formatCurrency(totalRevenue)}</h3>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="border p-3 rounded bg-light">
+              <div class="border p-3 rounded">
                 <h6>Общие расходы</h6>
                 <h3 class="text-center text-danger">${formatCurrency(totalCost)}</h3>
               </div>
             </div>
             <div class="col-md-3">
-              <div class="border p-3 rounded bg-light">
+              <div class="border p-3 rounded">
                 <h6>Чистая прибыль</h6>
                 <h3 class="text-center ${netProfit >= 0 ? 'text-success' : 'text-danger'}">
                   ${formatCurrency(netProfit)}
@@ -2425,7 +2425,7 @@ ensureIconsLoaded();
       <div class="row mb-4">
         <div class="col-md-6">
           <div class="card shadow-sm h-100">
-            <div class="card-header bg-light">
+            <div class="card-header">
               <h6 class="mb-0"><i class="bi bi-boxes me-2"></i>Расход материалов</h6>
             </div>
             <div class="card-body p-0">
@@ -2457,7 +2457,7 @@ ensureIconsLoaded();
         
         <div class="col-md-6">
           <div class="card shadow-sm h-100">
-            <div class="card-header bg-light">
+            <div class="card-header">
               <h6 class="mb-0"><i class="bi bi-printer me-2"></i>Затраты по принтерам</h6>
             </div>
             <div class="card-body p-0">
@@ -2492,7 +2492,7 @@ ensureIconsLoaded();
       
       <!-- KPI -->
       <div class="card shadow-sm">
-        <div class="card-header bg-light">
+        <div class="card-header">
           <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Ключевые показатели эффективности</h5>
         </div>
         <div class="card-body">
