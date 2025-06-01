@@ -2173,22 +2173,6 @@ const printerUtilization = appData.printers.length ? (totalPrintHours / (appData
     <h3>Финансовые результаты</h3>
     <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
     
-    <table class="table table-bordered">
-      <thead>
-        <tr><th>Показатель</th><th>Сумма</th><th>Доля</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Общая выручка</td><td>${totalRevenue.toFixed(2)} ₽</td><td>100%</td></tr>
-        <tr><td>Себестоимость</td><td>${costPerGram.toFixed(2)} ₽</td><td>${(costPerGram/totalRevenue*100).toFixed(1)}%</td></tr>
-        <tr><td>Налоги</td><td>${totalTax.toFixed(2)} ₽</td><td>${(totalTax/totalRevenue*100).toFixed(1)}%</td></tr>
-        <tr class="table-success">
-          <td><strong>Чистая прибыль</strong></td>
-          <td><strong>${netProfit.toFixed(2)} ₽</strong></td>
-          <td><strong>${profitability.toFixed(1)}%</strong></td>
-        </tr>
-      </tbody>
-    </table>
-    
     <div class="row mt-4">
       <div class="col-md-6">
         <h4>Расход материалов</h4>
