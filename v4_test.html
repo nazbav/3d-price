@@ -2134,6 +2134,17 @@ function renderSummary(){
   const netProfit = totalRevenue - totalCost - totalTax;
   const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
   const profitPerHour = totalPrintHours > 0 ? netProfit / totalPrintHours : 0;
+// Расчет дополнительных показателей
+const totalMaterialCost = Object.values(materialStats).reduce((sum, m) => sum + m.totalCost, 0);
+const totalGrams = Object.values(materialStats).reduce((sum, m) => sum + m.totalGrams, 0);
+const avgOrderRevenue = completedOrders.length ? totalRevenue / completedOrders.length : 0;
+const materialCostPerRevenue = totalRevenue ? (totalMaterialCost / totalRevenue) * 100 : 0;
+const marginPercent = totalRevenue ? ((totalRevenue - totalMaterialCost - totalElectricityCost) / totalRevenue) * 100 : 0;
+const netProfitPerGram = totalGrams ? netProfit / (totalGrams / 1000) : 0; // на кг
+const netProfitPerOrder = completedOrders.length ? netProfit / completedOrders.length : 0;
+const costPerGram = totalGrams ? totalCost / (totalGrams / 1000) : 0; // на кг
+const printerUtilization = appData.printers.length ? (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0; // за месяц
+
 	
   // Форматирование данных
   let materialHtml = Object.values(materialStats).map(m => 
@@ -2168,7 +2179,7 @@ function renderSummary(){
       </thead>
       <tbody>
         <tr><td>Общая выручка</td><td>${totalRevenue.toFixed(2)} ₽</td><td>100%</td></tr>
-        <tr><td>Себестоимость</td><td>${totalCost.toFixed(2)} ₽</td><td>${(totalCost/totalRevenue*100).toFixed(1)}%</td></tr>
+        <tr><td>Себестоимость</td><td>${costPerGram.toFixed(2)} ₽</td><td>${(costPerGram/totalRevenue*100).toFixed(1)}%</td></tr>
         <tr><td>Налоги</td><td>${totalTax.toFixed(2)} ₽</td><td>${(totalTax/totalRevenue*100).toFixed(1)}%</td></tr>
         <tr class="table-success">
           <td><strong>Чистая прибыль</strong></td>
@@ -2200,16 +2211,6 @@ function renderSummary(){
       </div>
     </div>`;
 h += `</div>`;
-// Расчет дополнительных показателей
-const totalMaterialCost = Object.values(materialStats).reduce((sum, m) => sum + m.totalCost, 0);
-const totalGrams = Object.values(materialStats).reduce((sum, m) => sum + m.totalGrams, 0);
-const avgOrderRevenue = completedOrders.length ? totalRevenue / completedOrders.length : 0;
-const materialCostPerRevenue = totalRevenue ? (totalMaterialCost / totalRevenue) * 100 : 0;
-const marginPercent = totalRevenue ? ((totalRevenue - totalMaterialCost - totalElectricityCost) / totalRevenue) * 100 : 0;
-const netProfitPerGram = totalGrams ? netProfit / (totalGrams / 1000) : 0; // на кг
-const netProfitPerOrder = completedOrders.length ? netProfit / completedOrders.length : 0;
-const costPerGram = totalGrams ? totalCost / (totalGrams / 1000) : 0; // на кг
-const printerUtilization = appData.printers.length ? (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0; // за месяц
 
 // Заменяем блок "Ключевые показатели эффективности" на улучшенную версию
 h += `
