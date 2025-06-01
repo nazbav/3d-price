@@ -2133,17 +2133,7 @@ function renderSummary(){
   appData.additionalGlobal.forEach(a => { totalGlobalAdds += a.cost; });
   
   let summ = totalPrintersCost + totalPrintersAdds + totalPrintersMats + totalGlobalMats + totalGlobalAdds;
-  
-  // Новый раздел: Заработано на печати
-  let totalEarned = 0;
-  appData.calcHistory.forEach(entry => {
-    if(entry.orderStatus === 'done') {
-      totalEarned += entry.total;
-    }
-  });
 
-  const completedOrders = appData.calcHistory.filter(e => e.orderStatus === 'done').length;
-  
   const el = document.getElementById("summaryContent");
   let h = `
   <div class="mt-3">
@@ -2161,18 +2151,100 @@ function renderSummary(){
     <p>Итого вложения: <strong>${summ}</strong> ₽</p>
     
     <hr/>
-    <h5>Финансовые итоги:</h5>
-    <div class="d-flex justify-content-between">
-      <span>Завершённые заказы:</span>
-      <strong>${completedOrders}</strong>
-    </div>
-    <div class="d-flex justify-content-between">
-      <span>Общая выручка:</span>
-      <strong>${totalEarned.toFixed(2)} ₽</strong>
-    </div>
-  </div>
   `;
+
+
+
+  // Новый блок: Финансовая аналитика
+  let completedOrders = appData.calcHistory.filter(o => o.orderStatus === "done");
+  let totalRevenue = 0;
+  let totalCost = 0;
+  let totalTax = 0;
+  let materialUsage = {}; // { materialId: { name, totalGrams } }
+  let totalPrintHours = 0;
+
+  completedOrders.forEach(order => {
+    totalRevenue += order.total;
+    totalTax += order.taxAmount || 0;
+    
+    // Расчет себестоимости
+    order.details.forEach(printer => {
+      printer.linesDetail.forEach(model => {
+        // Затраты на материалы
+        const materialId = model.materialId;
+        if (materialId) {
+          if (!materialUsage[materialId]) {
+            const mat = findMaterialById(materialId);
+            materialUsage[materialId] = {
+              name: mat ? mat.name : `Material ${materialId}`,
+              totalGrams: 0
+            };
+          }
+          materialUsage[materialId].totalGrams += model.realWeight;
+          totalCost += model.costMaterial;
+        }
+        
+        // Прочие затраты
+        totalCost += model.costPrinterPart; 
+        totalCost += model.costElectric;
+        totalCost += model.costMaintenance;
+      });
+    });
+    
+    // Глобальные расходы
+    totalCost += order.globalAdditional?.sumGlobalAdd || 0;
+    totalCost += order.shipping || 0;
+    totalCost += order.totalOperatorCost || 0;
+    
+    // Учет времени
+    totalPrintHours += order.totalHours || 0;
+  });
+
+  // Форматирование данных
+  let materialHtml = Object.values(materialUsage).map(m => 
+    `<tr>
+      <td>${m.name}</td>
+      <td>${(m.totalGrams / 1000).toFixed(3)} кг</td>
+      <td>${(m.totalGrams ? (totalCost * (m.totalGrams / Object.values(materialUsage).reduce((sum, m) => sum + m.totalGrams, 0))).toFixed(2) : 0)} ₽</td>
+    </tr>`
+  ).join('');
+
+  // Добавление секции в HTML
+  h += `
+  <div class="mt-4">
+    <h3>Финансовые результаты</h3>
+    <p>Завершённых заказов: <strong>${completedOrders.length}</strong></p>
+    
+    <table class="table table-bordered">
+      <thead>
+        <tr><th>Показатель</th><th>Сумма</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Общая выручка</td><td>${totalRevenue.toFixed(2)} ₽</td></tr>
+        <tr><td>Себестоимость</td><td>${totalCost.toFixed(2)} ₽</td></tr>
+        <tr><td>Уплаченные налоги</td><td>${totalTax.toFixed(2)} ₽</td></tr>
+        <tr class="table-success">
+          <td><strong>Чистая прибыль</strong></td>
+          <td><strong>${(totalRevenue - totalCost - totalTax).toFixed(2)} ₽</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h4>Расход материалов</h4>
+    <table class="table table-bordered">
+      <thead>
+        <tr><th>Материал</th><th>Расход</th><th>Стоимость</th></tr>
+      </thead>
+      <tbody>${materialHtml}</tbody>
+    </table>
+    
+    <h4>Затраты времени</h4>
+    <p>Общее время печати: <strong>${totalPrintHours.toFixed(2)} ч</strong></p>
+  </div>`;
+
   el.innerHTML = h;
+
+	
 }
 
 </script>
