@@ -2131,12 +2131,6 @@ function renderSummary(){
     totalPrintHours += order.totalHours || 0;
   });
 
-  // Расчет показателей (остается без изменений)
-  const netProfit = totalRevenue - totalCost - totalTax;
-  const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-  const profitPerHour = totalPrintHours > 0 ? netProfit / totalPrintHours : 0;
-
-	
   
   // Форматирование данных
   let materialHtml = Object.values(materialStats).map(m => 
@@ -2199,46 +2193,150 @@ function renderSummary(){
           <tbody>${printerHtml}</tbody>
         </table>
       </div>
-    </div>
-    
-    <div class="mt-4">
-      <h4>Ключевые показатели эффективности</h4>
-      <div class="row">
-        <div class="col-md-3 text-center">
-          <div class="card">
-            <div class="card-body">
-              <h5>${profitability.toFixed(1)}%</h5>
-              <p class="text-muted mb-0">Рентабельность</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3 text-center">
-          <div class="card">
-            <div class="card-body">
-              <h5>${profitPerHour.toFixed(2)} ₽/ч</h5>
-              <p class="text-muted mb-0">Прибыль в час</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3 text-center">
-          <div class="card">
-            <div class="card-body">
-              <h5>${totalElectricityCost.toFixed(2)} ₽</h5>
-              <p class="text-muted mb-0">Затраты на электричество</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3 text-center">
-          <div class="card">
-            <div class="card-body">
-              <h5>${(totalCost/totalPrintHours).toFixed(2)} ₽/ч</h5>
-              <p class="text-muted mb-0">Себестоимость часа</p>
-            </div>
-          </div>
+    </div>`;
+h += `</div>`;
+// Расчет дополнительных показателей
+const totalMaterialCost = Object.values(materialStats).reduce((sum, m) => sum + m.totalCost, 0);
+const totalGrams = Object.values(materialStats).reduce((sum, m) => sum + m.totalGrams, 0);
+const avgOrderRevenue = completedOrders.length ? totalRevenue / completedOrders.length : 0;
+const materialCostPerRevenue = totalRevenue ? (totalMaterialCost / totalRevenue) * 100 : 0;
+const marginPercent = totalRevenue ? ((totalRevenue - totalMaterialCost - totalElectricityCost) / totalRevenue) * 100 : 0;
+const netProfitPerGram = totalGrams ? netProfit / (totalGrams / 1000) : 0; // на кг
+const netProfitPerOrder = completedOrders.length ? netProfit / completedOrders.length : 0;
+const costPerGram = totalGrams ? totalCost / (totalGrams / 1000) : 0; // на кг
+const printerUtilization = appData.printers.length ? (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0; // за месяц
+
+// Заменяем блок "Ключевые показатели эффективности" на улучшенную версию
+h += `
+<div class="mt-4">
+  <h4>Ключевые показатели эффективности</h4>
+  <div class="row">
+    <!-- Ряд 1: Основные финансовые показатели -->
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${profitability.toFixed(1)}%</h5>
+          <p class="text-muted mb-0">Рентабельность</p>
+          <small class="text-muted">(Чистая прибыль / Выручка)</small>
         </div>
       </div>
     </div>
-  </div>`;
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${profitPerHour.toFixed(2)} ₽/ч</h5>
+          <p class="text-muted mb-0">Прибыль в час</p>
+          <small class="text-muted">(Чистая прибыль / Часы печати)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${marginPercent.toFixed(1)}%</h5>
+          <p class="text-muted mb-0">Маржинальность</p>
+          <small class="text-muted">(Выручка - Материалы - Электричество)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${materialCostPerRevenue.toFixed(1)}%</h5>
+          <p class="text-muted mb-0">Материалы / Выручка</p>
+          <small class="text-muted">Доля затрат на материалы</small>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Ряд 2: Показатели производительности -->
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${avgOrderRevenue.toFixed(2)} ₽</h5>
+          <p class="text-muted mb-0">Средний чек</p>
+          <small class="text-muted">(Выручка / Заказы)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${netProfitPerOrder.toFixed(2)} ₽</h5>
+          <p class="text-muted mb-0">Прибыль / заказ</p>
+          <small class="text-muted">(Чистая прибыль / Заказы)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${costPerGram.toFixed(2)} ₽/кг</h5>
+          <p class="text-muted mb-0">Себестоимость печати</p>
+          <small class="text-muted">(Общие затраты / Материалы)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${netProfitPerGram.toFixed(2)} ₽/кг</h5>
+          <p class="text-muted mb-0">Прибыль / кг</p>
+          <small class="text-muted">(Чистая прибыль / Материалы)</small>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Ряд 3: Эксплуатационные показатели -->
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${totalElectricityCost.toFixed(2)} ₽</h5>
+          <p class="text-muted mb-0">Электричество</p>
+          <small class="text-muted">Общие затраты</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${(totalCost/totalPrintHours).toFixed(2)} ₽/ч</h5>
+          <p class="text-muted mb-0">Себестоимость часа</p>
+          <small class="text-muted">(Затраты / Часы печати)</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${(totalMaterialCost/totalPrintHours).toFixed(2)} ₽/ч</h5>
+          <p class="text-muted mb-0">Материалы / час</p>
+          <small class="text-muted">Расход материалов</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 text-center mb-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <h5>${printerUtilization.toFixed(1)}%</h5>
+          <p class="text-muted mb-0">Загрузка оборудования</p>
+          <small class="text-muted">(Использование / Потенциал)</small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+	
+
 
   el.innerHTML = h;
 }
