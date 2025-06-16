@@ -417,7 +417,31 @@
     <p class="mt-3"><span style="text-decoration:line-through">©</span>2025. Ничьи права не защищены. Сделано при участии ИИ</p>
   </div>
 </div>
-	
+
+<!-- Модальное окно для данных из ссылки -->
+<div class="modal fade" id="incomingDataModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Импорт данных из ссылки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="targetOrderSelect" class="form-label">Выберите расчёт</label>
+          <select id="targetOrderSelect" class="form-select">
+            <option value="new">Создать новый расчёт</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="importLinkApplyBtn">Загрузить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const THEME_STORAGE_KEY = "themePreference";
@@ -536,6 +560,17 @@ function handleTimeInput(event) {
     }
   }
   return parseFloat(input) || 0;
+}
+
+function parseTimeFromLink(str){
+  if(!str) return 0;
+  let m = str.match(/(\d+)h\s*(\d+)m/);
+  if(m) return parseInt(m[1],10) + parseInt(m[2],10)/60;
+  m = str.match(/(\d+)h/);
+  if(m) return parseInt(m[1],10);
+  m = str.match(/(\d+)m/);
+  if(m) return parseInt(m[1],10)/60;
+  return parseTimeInput(str);
 }
 
 document.addEventListener("DOMContentLoaded", initAll);
@@ -1250,6 +1285,8 @@ function getAllMaterialsForPrinter(printerId){
 
 let lastCalcFullData = null;
 
+let incomingLinkData = null;
+
 
 
 
@@ -1641,6 +1678,17 @@ function findMaterialById(mid) {
   if (mat) return mat;
   for (let p of appData.printers) {
     mat = p.materials.find(m => m.id === mid);
+    if (mat) return mat;
+  }
+  return null;
+}
+
+function findMaterialByName(name) {
+  if (!name) return null;
+  let mat = appData.materials.find(m => m.name === name);
+  if (mat) return mat;
+  for (let p of appData.printers) {
+    mat = p.materials.find(m => m.name === name);
     if (mat) return mat;
   }
   return null;
@@ -2514,6 +2562,82 @@ ensureIconsLoaded();
   summaryContent.innerHTML = generateHTML(capital, ordersAnalysis, kpis);
 }
 
+function parseIncomingLinkParams(params){
+  const prName = params.get('printer');
+  if(!prName) return;
+  const statuses = params.getAll('model_status[]');
+  const names = params.getAll('model_name[]');
+  const times = params.getAll('model_time[]');
+  const weights = params.getAll('model_weight[]');
+  const mats = params.getAll('model_filament[]');
+  const models = [];
+  for(let i=0;i<names.length;i++){
+    models.push({
+      name:names[i]||'' ,
+      status:statuses[i]||'new',
+      timeStr:times[i]||'',
+      weight:weights[i]||'',
+      matName:mats[i]||''
+    });
+  }
+  incomingLinkData = {printerName: prName, models};
+  showIncomingDataModal();
+}
+
+function showIncomingDataModal(){
+  const sel = document.getElementById('targetOrderSelect');
+  sel.innerHTML = '<option value="new">Создать новый расчёт</option>';
+  appData.calcHistory.forEach(h=>{
+    const opt = document.createElement('option');
+    opt.value = h.timestamp;
+    opt.textContent = h.calcName || h.dateStr;
+    sel.appendChild(opt);
+  });
+  const modal = new bootstrap.Modal(document.getElementById('incomingDataModal'));
+  document.getElementById('importLinkApplyBtn').onclick = applyIncomingData;
+  modal.show();
+}
+
+function applyIncomingData(){
+  const sel = document.getElementById('targetOrderSelect');
+  const val = sel.value;
+  const modalEl = document.getElementById('incomingDataModal');
+  const modal = bootstrap.Modal.getInstance(modalEl);
+  modal.hide();
+  if(val !== 'new'){
+    onEditCalcHistory(parseInt(val,10));
+  } else {
+    document.getElementById('calcName').value = '';
+    document.getElementById('calcClientName').value = '';
+    document.getElementById('calcOrderStatus').value = 'new';
+    appData.printers.forEach(pr=>{
+      const tb = document.querySelector(`#calcModelsTable_${pr.id} tbody`);
+      if(tb) tb.innerHTML='';
+    });
+  }
+  if(incomingLinkData){
+    const pr = appData.printers.find(p=>p.name===incomingLinkData.printerName);
+    if(!pr){
+      alert('Не найден принтер '+incomingLinkData.printerName);
+    } else {
+      incomingLinkData.models.forEach(m=>{
+        const mat = findMaterialByName(m.matName);
+        addModelRow(pr.id, {
+          name: m.name,
+          status: m.status,
+          hours: parseTimeFromLink(m.timeStr),
+          weight: parseFloat(m.weight)||0,
+          materialId: mat?mat.id:''
+        });
+      });
+    }
+  }
+  const tabEl = document.querySelector('#calculate-tab');
+  const tab = new bootstrap.Tab(tabEl);
+  tab.show();
+  incomingLinkData = null;
+}
+
 </script>
 
 <!-- Supabase & QR -->
@@ -2623,6 +2747,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     syncId = incomingId;
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
+  }
+  parseIncomingLinkParams(params);
+  if(params.toString()){
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 });
