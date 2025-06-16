@@ -1,0 +1,2895 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>Калькулятор 3D-печати (v3)</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+	
+  <style>
+    body { margin: 0; padding: 0; }
+    .container { margin-top: 20px; margin-bottom: 20px; }
+    .nav-tabs .nav-link.active { font-weight: bold; }
+    .small-text { font-size: 0.9rem; color: #555; }
+    .footer { margin-top: 40px; font-size: 0.9rem; border-top: 1px solid var(--bs-border-color); padding-top: 10px; }
+    table td, table th { vertical-align: middle; white-space: nowrap; }
+    .btn-group-sm > .btn { font-size: 0.8rem; padding: 2px 6px; margin-left: 2px; }
+    thead th { background-color: var(--bs-table-bg) !important; color: var(--bs-body-color) !important; }
+    [data-bs-theme="dark"] thead th { background-color: var(--bs-dark-bg-subtle) !important; color: var(--bs-light) !important; }
+    @media (max-width: 576px) {
+      .d-flex { flex-wrap: wrap !important; }
+      .d-flex > * { margin-top: .5rem; }
+    }
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  th, td {
+    min-width: 100px;
+  }
+}
+    .form-select.form-select-sm { min-width: 120px; }
+    /* Стили для этикетки */
+    .label-preview { border: 1px solid #000; width: 30mm; height: 20mm; padding: 2mm; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="my-4">Калькулятор 3D-печати (расширенный)</h1>
+    <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
+  </div>
+  <ul class="nav nav-tabs" id="mainTab" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
+              data-bs-target="#calculatePane" type="button" role="tab" aria-selected="true"
+              aria-controls="calculatePane" aria-selected="false">
+        Калькулятор
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="history-tab" data-bs-toggle="tab"
+              data-bs-target="#historyPane" type="button" role="tab"
+              aria-controls="historyPane" aria-selected="false">
+        История
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
+              data-bs-target="#printersPane" type="button" role="tab" aria-controls="printersPane" >
+        Принтеры
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
+              data-bs-target="#globalMaterialsPane" type="button" role="tab"
+              aria-controls="globalMaterialsPane" aria-selected="false">
+        Общие материалы
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
+              data-bs-target="#globalAdditionalPane" type="button" role="tab"
+              aria-controls="globalAdditionalPane" aria-selected="false">
+        Общие доп. расходы
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="labelsettings-tab" data-bs-toggle="tab"
+              data-bs-target="#labelsettingsPane" type="button" role="tab"
+              aria-controls="labelsettingsPane" aria-selected="false">
+        Этикетка
+      </button>
+    </li>
+	<li class="nav-item">
+      <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
+              data-bs-target="#summaryPane" type="button" role="tab"
+              aria-controls="summaryPane" aria-selected="false">
+        Итоги
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button class="nav-link" id="importexport-tab" data-bs-toggle="tab"
+              data-bs-target="#importexportPane" type="button" role="tab"
+              aria-controls="importexportPane" aria-selected="false">
+        Импорт/Экспорт
+      </button>
+    </li>
+
+  </ul>
+
+  <div class="tab-content" id="mainTabContent">
+    <!-- Принтеры -->
+    <div class="tab-pane fade" id="printersPane" role="tabpanel" aria-labelledby="printers-tab">
+      <div class="mt-4">
+        <h3>Список принтеров</h3>
+        <p class="small-text">
+          Укажите параметры принтера и при необходимости добавьте доп. расходы и материалы, уникальные для него.
+        </p>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddPrinter()">Добавить принтер</button>
+          <button class="btn btn-danger btn-sm" onclick="massDelete('printers')">Массовое удаление</button>
+          <button class="btn btn-warning btn-sm" onclick="massEdit('printers')">Массовое изменение</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover" id="printersTable">
+            <thead class="">
+              <tr>
+                <th><input type="checkbox" id="selectAll_printers" onchange="selectAll(this, 'printers')"></th>
+                <th>Название</th>
+                <th>Стоимость (₽)</th>
+                <th>Часы окуп.</th>
+                <th>Мощн. (Вт)</th>
+                <th>Обсл. (₽/ч)</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <hr/>
+      <div id="printerDetails" style="display: none;">
+        <h4>Расходы и материалы для принтера <span id="printerDetailsName"></span> (ID: <span id="printerDetailsId"></span>)</h4>
+        <div class="row">
+          <div class="col-md-6">
+            <h5>Доп. расходы (индивидуальные)</h5>
+            <p class="small-text">Укажите стоимость, часы окупаемости и отметьте, участвует ли расход в расчёте.</p>
+            <div class="mb-2">
+              <button class="btn btn-sm btn-success" id="btnAddPrinterAdditional">Добавить</button>
+              <button class="btn btn-danger btn-sm" onclick="massDelete('printerAdditional')">Массовое удаление</button>
+              <button class="btn btn-warning btn-sm" onclick="massEdit('printerAdditional')">Массовое изменение</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover" id="printerAdditionalTable">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="selectAll_printerAdditional" onchange="selectAll(this, 'printerAdditional')"></th>
+                    <th>Описание</th>
+                    <th>Стоим. (₽)</th>
+                    <th>Часы окуп.</th>
+                    <th>Вкл. в расчёт?</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h5>Материалы (индивидуальные)</h5>
+            <p class="small-text">Укажите стоимость за кг, остаток (в кг), заявленный вес, процент отходов, производителя и дату производства.</p>
+            <div class="mb-2">
+              <button class="btn btn-sm btn-success" id="btnAddPrinterMaterial">Добавить</button>
+              <button class="btn btn-danger btn-sm" onclick="massDelete('printerMaterials')">Массовое удаление</button>
+              <button class="btn btn-warning btn-sm" onclick="massEdit('printerMaterials')">Массовое изменение</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover" id="printerMaterialsTable">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="selectAll_printerMaterials" onchange="selectAll(this, 'printerMaterials')"></th>
+                    <th>Название</th>
+                    <th>Стоим./кг</th>
+                    <th>Остаток (кг)</th>
+                    <th>Заявленный вес (кг)</th>
+                    <th>Отход (%)</th>
+                    <th>Производитель</th>
+                    <th>Дата произв.</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Общие материалы -->
+    <div class="tab-pane fade" id="globalMaterialsPane" role="tabpanel" aria-labelledby="globalMaterials-tab">
+      <div class="mt-4">
+        <h3>Общие материалы</h3>
+        <p class="small-text">Эти материалы доступны всем принтерам «по умолчанию». Укажите стоимость за кг, остаток, заявленный вес, производителя и дату производства.</p>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddGlobalMaterial()">Добавить материал</button>
+          <button class="btn btn-danger btn-sm" onclick="massDelete('globalMaterials')">Массовое удаление</button>
+          <button class="btn btn-warning btn-sm" onclick="massEdit('globalMaterials')">Массовое изменение</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover" id="materialsTable">
+            <thead class="">
+              <tr>
+                <th><input type="checkbox" id="selectAll_globalMaterials" onchange="selectAll(this, 'globalMaterials')"></th>
+                <th>Название</th>
+                <th>Стоим./кг</th>
+                <th>Остаток (кг)</th>
+                <th>Заявленный вес (кг)</th>
+                <th>Отход (%)</th>
+                <th>Производитель</th>
+                <th>Дата произв.</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Общие доп. расходы -->
+    <div class="tab-pane fade" id="globalAdditionalPane" role="tabpanel" aria-labelledby="globalAdditional-tab">
+      <div class="mt-4">
+        <h3>Общие доп. расходы</h3>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddGlobalAdditional()">Добавить расход</button>
+          <button class="btn btn-danger btn-sm" onclick="massDelete('globalAdditional')">Массовое удаление</button>
+          <button class="btn btn-warning btn-sm" onclick="massEdit('globalAdditional')">Массовое изменение</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover" id="additionalGlobalTable">
+            <thead class="">
+              <tr>
+                <th><input type="checkbox" id="selectAll_globalAdditional" onchange="selectAll(this, 'globalAdditional')"></th>
+                <th>Описание</th>
+                <th>Стоим. (₽)</th>
+                <th>Часы окуп.</th>
+                <th>Вкл. в расчёт?</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Калькулятор -->
+    <div class="tab-pane fade show active" id="calculatePane" role="tabpanel" aria-labelledby="calculate-tab">
+      <div class="my-4">
+        <h3>Расчёт стоимости (очередь печати)</h3>
+        <p class="small-text">
+          До 10 моделей на каждый принтер. Здесь можно задать название расчёта, имя клиента и статус заказа.
+        </p>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="calcName" class="form-label">Название расчёта:</label>
+          <input type="text" id="calcName" class="form-control" placeholder="Например: Заказ 123" />
+        </div>
+        <div class="col-md-4">
+          <label for="calcClientName" class="form-label">Клиент (ФИО/компания):</label>
+          <input type="text" id="calcClientName" class="form-control" placeholder="Иванов Иван" />
+        </div>
+        <div class="col-md-4">
+          <label for="calcOrderStatus" class="form-label">Статус заказа:</label>
+          <select id="calcOrderStatus" class="form-select">
+            <option value="new">Новый</option>
+            <option value="inprogress">В работе</option>
+            <option value="done">Завершён</option>
+            <option value="canceled">Отменён</option>
+          </select>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
+          <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcWorkHoursDay" class="form-label">Раб. часов в день:</label>
+          <input type="number" id="calcWorkHoursDay" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcCostKwh" class="form-label">Цена 1 кВт⋅ч (₽):</label>
+          <input type="number" step="0.01" id="calcCostKwh" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcTaxPercent" class="form-label">Налог (%):</label>
+          <input type="number" step="1" id="calcTaxPercent" class="form-control" />
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcShipping" class="form-label">Упаковка/Доставка (₽):</label>
+          <input type="number" step="1" id="calcShipping" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcStartDate" class="form-label">Дата начала:</label>
+          <input type="date" id="calcStartDate" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcParallelPrinting" class="form-label">Учёт параллельной печати?</label>
+          <select id="calcParallelPrinting" class="form-select">
+            <option value="no">Нет</option>
+            <option value="yes">Да</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="calcMarkupPercent" class="form-label">Наценка (%):</label>
+          <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
+        </div>
+      </div>
+      <hr/>
+      <div id="calcPrintersContainer"></div>
+      <div class="mt-3">
+        <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
+      </div>
+      <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
+    </div>
+
+    <!-- Итоги -->
+    <div class="tab-pane fade" id="summaryPane" role="tabpanel" aria-labelledby="summary-tab">
+      <div class="mt-4">
+        <h3>Общий обзор («Итоги»)</h3>
+        <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
+        <div id="summaryContent"></div>
+      </div>
+    </div>
+
+    <!-- История -->
+    <div class="tab-pane fade" id="historyPane" role="tabpanel" aria-labelledby="history-tab">
+      <div class="mt-4">
+        <h3>История расчетов</h3>
+        <p class="small-text">
+          Прошлые расчёты. Кнопки: «JSON» — показать объект, «HTML» — скачать отчёт, «Редакт.» — загрузить данные обратно в калькулятор.
+        </p>
+        <button class="btn btn-danger mb-3" onclick="onClearCalcHistory()">Очистить историю</button>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover" id="historyTable">
+            <thead class="">
+              <tr>
+                <th>Дата/время</th>
+                <th>Название расчёта</th>
+                <th>Клиент</th>
+                <th>Статус</th>
+                <th>Итог (₽)</th>
+                <th>Подробнее</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Импорт/Экспорт -->
+<div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
+        <div class="mt-4">  
+<h3>📡 Быстрая синхронизация (облачная)</h3>
+<button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
+<button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
+<button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
+<input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
+<div id="qrcode" class="mt-2"></div>
+<hr>
+<h3>Экспорт данных</h3>
+
+    <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
+    <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
+    <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
+
+  <hr>
+  <div class="mt-4">
+    <h3>Импорт данных</h3>
+    <textarea id="importArea" class="form-control" rows="5"></textarea>
+    <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
+    <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
+  </div>
+</div>
+  </div>  </div>
+    <!-- Настройка этикетки -->
+ <div class="tab-pane fade" id="labelsettingsPane" role="tabpanel" aria-labelledby="labelsettings-tab">
+  <div class="mt-4">
+    <h3>Настройка этикетки</h3>
+    <div class="mb-3">
+      <label for="companyNameInput" class="form-label">Название компании:</label>
+      <input type="text" id="companyNameInput" class="form-control"/>
+    </div>
+    <div class="mb-3">
+      <label for="chatLinkInput" class="form-label">Ссылка на чат (QR):</label>
+      <input type="text" id="chatLinkInput" class="form-control"/>
+    </div>
+    <!-- Добавляем новые поля -->
+    <div class="mb-3">
+      <label for="labelCostInput" class="form-label">Стоимость 1 этикетки (₽):</label>
+      <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
+    </div>
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="printLabelsCheckbox">
+      <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
+    </div>
+    <button class="btn btn-primary" onclick="saveLabelSettings()">Сохранить</button>
+  </div>
+</div>
+  </div>
+  <div class="footer" style="text-align:center">
+    <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
+    <p class="mb-0">Для сброса можно импортировать пустой JSON или очистить LocalStorage вручную.</p>
+    <a href="index2.html"><h6>Простая версия калькулятора (тык)</h6></a>
+    <p class="mt-3"><span style="text-decoration:line-through">©</span>2025. Ничьи права не защищены. Сделано при участии ИИ</p>
+  </div>
+</div>
+
+<!-- Модальное окно для данных из ссылки -->
+<div class="modal fade" id="incomingDataModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Импорт данных из ссылки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="targetOrderSelect" class="form-label">Выберите расчёт</label>
+          <select id="targetOrderSelect" class="form-select">
+            <option value="new">Создать новый расчёт</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="importLinkApplyBtn">Загрузить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно настроек OrcaSlicer -->
+<div class="modal fade" id="orcaConfigModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Параметры OrcaSlicer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="orcaFieldsContainer"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-info" id="downloadOrcaJsonBtn">Скачать JSON</button>
+        <button type="button" class="btn btn-primary" id="saveOrcaConfigBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const THEME_STORAGE_KEY = "themePreference";
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-bs-theme", theme);
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  const btn = document.getElementById("themeToggle");
+  btn.innerText = theme==="dark" ? "☀️ Светлая тема" : "🌙 Темная тема";
+}
+document.getElementById("themeToggle").addEventListener("click",()=>{
+  const th = document.documentElement.getAttribute("data-bs-theme");
+  setTheme(th==="dark"?"light":"dark");
+});
+const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)||"light";
+setTheme(savedTheme);
+
+const STORAGE_KEY = "ThreeDPrintCalc_Extended_v5";
+let appData = {
+  printers: [
+    {
+      id: 1,
+      name: "FF5M",
+      cost: 35000,
+      hoursToRecoup: 500,
+      power: 350,
+      maintCostHour: 5,
+      additional: [],
+      materials: []
+    }
+  ],
+  // Глобальные материалы: добавлены новые поля: balance (остаток), declaredWeight, manufacturer, productionDate
+  materials: [
+    // Пример материала
+    // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, wastePercent: 5, manufacturer: "XYZ", productionDate: "01.01.2025" }
+  ],
+  additionalGlobal: [],
+  calcSettings: {
+    operatorRate: 200,
+    workHoursDay: 8,
+    startDate: "",
+    costKwh: 6,
+    shipping: 300,
+    taxPercent: 6,
+    parallelPrinting: "no",
+    markupPercent: 0
+  },
+  labelSettings: {
+  companyName: "Компания",
+  chatLink: "https://t.me/dur",
+  costPerLabel: 0,   
+  printLabels: false 
+},
+  calcHistory: []
+};
+
+function loadFromLocalStorage(){
+  try{
+    const s = localStorage.getItem(STORAGE_KEY);
+    if(s){
+      const p = JSON.parse(s);
+      if(p) appData = p;
+    }
+  } catch(e){}
+}
+function saveToLocalStorage(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+function initAll(){
+  loadFromLocalStorage();
+  renderPrintersTable();
+  renderGlobalMaterialsTable();
+  renderGlobalAdditionalTable();
+  renderCalcPrinters();
+  renderHistoryTable();
+  renderSummary();
+  document.getElementById("calcOperatorRate").value = appData.calcSettings.operatorRate || "";
+  document.getElementById("calcWorkHoursDay").value = appData.calcSettings.workHoursDay || "";
+  document.getElementById("calcCostKwh").value = appData.calcSettings.costKwh || "";
+  document.getElementById("calcTaxPercent").value = appData.calcSettings.taxPercent || "";
+  document.getElementById("calcShipping").value = appData.calcSettings.shipping || "";
+  document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
+  document.getElementById("calcParallelPrinting").value = appData.calcSettings.parallelPrinting || "no";
+  document.getElementById("calcMarkupPercent").value = appData.calcSettings.markupPercent || 0;
+  document.getElementById("companyNameInput").value = appData.labelSettings.companyName || "";
+  document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
+  document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
+  document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
+
+
+}
+
+
+// Функции для работы с форматами времени
+function parseTimeInput(input) {
+  if (input.includes(":")) {
+    const [hours, minutes] = input.split(":").map(Number);
+    return hours + (minutes / 60);
+  }
+  return parseFloat(input) || 0;
+}
+
+function formatTimeForDisplay(time) {
+  if (time === undefined || time === null) return "";
+  const hours = Math.floor(time);
+  const minutes = Math.round((time - hours) * 60);
+  return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function handleTimeInput(event) {
+  const input = event.target.value;
+  // Позволяем вводить как Ч:М, так и десятичное число
+  if (input.includes(":")) {
+    const [hours, minutes] = input.split(":").map(Number);
+    if (!isNaN(hours) && !isNaN(minutes)) {
+      return hours + (minutes / 60);
+    }
+  }
+  return parseFloat(input) || 0;
+}
+
+function parseTimeFromLink(str){
+  if(!str) return 0;
+  let m = str.match(/(\d+)h\s*(\d+)m/);
+  if(m) return parseInt(m[1],10) + parseInt(m[2],10)/60;
+  m = str.match(/(\d+)h/);
+  if(m) return parseInt(m[1],10);
+  m = str.match(/(\d+)m/);
+  if(m) return parseInt(m[1],10)/60;
+  return parseTimeInput(str);
+}
+
+document.addEventListener("DOMContentLoaded", initAll);
+
+/* Функции массовых действий */
+function selectAll(source, type) {
+  const checkboxes = document.querySelectorAll("."+type+"_chk");
+  checkboxes.forEach(cb => cb.checked = source.checked);
+}
+function massDelete(type) {
+  if(!confirm("Удалить выбранные элементы?")) return;
+  switch(type) {
+    case 'printers':
+      appData.printers = appData.printers.filter(p => {
+        const chk = document.getElementById("chk_printers_"+p.id);
+        return !(chk && chk.checked);
+      });
+      renderPrintersTable();
+      break;
+    case 'globalMaterials':
+      appData.materials = appData.materials.filter(m => {
+        const chk = document.getElementById("chk_globalMaterials_"+m.id);
+        return !(chk && chk.checked);
+      });
+      renderGlobalMaterialsTable();
+      break;
+    case 'globalAdditional':
+      appData.additionalGlobal = appData.additionalGlobal.filter(a => {
+        const chk = document.getElementById("chk_globalAdditional_"+a.id);
+        return !(chk && chk.checked);
+      });
+      renderGlobalAdditionalTable();
+      break;
+    case 'printerAdditional':
+      {
+        const printerId = getCurrentPrinterId();
+        const printer = appData.printers.find(p => p.id === printerId);
+        if(printer){
+          printer.additional = printer.additional.filter(a => {
+            const chk = document.getElementById("chk_printerAdditional_"+a.id);
+            return !(chk && chk.checked);
+          });
+          onShowPrinterDetails(printerId);
+        }
+      }
+      break;
+    case 'printerMaterials':
+      {
+        const printerId = getCurrentPrinterId();
+        const printer = appData.printers.find(p => p.id === printerId);
+        if(printer){
+          printer.materials = printer.materials.filter(m => {
+            const chk = document.getElementById("chk_printerMaterials_"+m.id);
+            return !(chk && chk.checked);
+          });
+          onShowPrinterDetails(printerId);
+        }
+      }
+      break;
+  }
+  saveToLocalStorage();
+}
+function massEdit(type) {
+  // Для каждого типа запрашиваем новое значение для всех редактируемых полей (исключая название и id)
+  switch(type) {
+    case 'printers':
+      {
+        let newCost = prompt("Введите новую стоимость (₽):");
+        let newHours = prompt("Введите новые часы окупаемости:");
+        let newPower = prompt("Введите новую мощность (Вт):");
+        let newMaint = prompt("Введите новый расход на обслуживание (₽/ч):");
+        if(newCost===null || newHours===null || newPower===null || newMaint===null) return;
+        appData.printers.forEach(p => {
+          const chk = document.getElementById("chk_printers_"+p.id);
+          if(chk && chk.checked) {
+            p.cost = parseFloat(newCost) || p.cost;
+            p.hoursToRecoup = parseFloat(newHours) || p.hoursToRecoup;
+            p.power = parseFloat(newPower) || p.power;
+            p.maintCostHour = parseFloat(newMaint) || p.maintCostHour;
+          }
+        });
+        renderPrintersTable();
+      }
+      break;
+    case 'globalMaterials':
+      {
+        let newCost = prompt("Введите новую стоимость за кг:");
+        let newBalance = prompt("Введите новый остаток (кг):");
+        let newDeclared = prompt("Введите новый заявленный вес (кг):");
+        let newWaste = prompt("Введите новый процент отходов:");
+        let newManuf = prompt("Введите нового производителя:");
+        let newProdDate = prompt("Введите новую дату производства (DD.MM.YYYY):");
+        if(newCost===null || newBalance===null || newDeclared===null || newWaste===null || newManuf===null || newProdDate===null) return;
+        appData.materials.forEach(m => {
+          const chk = document.getElementById("chk_globalMaterials_"+m.id);
+          if(chk && chk.checked) {
+            m.costPerKg = parseFloat(newCost) || m.costPerKg;
+            m.balance = parseFloat(newBalance) || m.balance;
+            m.declaredWeight = parseFloat(newDeclared) || m.declaredWeight;
+            m.wastePercent = parseFloat(newWaste) || m.wastePercent;
+            m.manufacturer = newManuf;
+            m.productionDate = newProdDate;
+          }
+        });
+        renderGlobalMaterialsTable();
+      }
+      break;
+    case 'globalAdditional':
+      {
+        let newCost = prompt("Введите новую стоимость (₽):");
+        let newHours = prompt("Введите новые часы окупаемости:");
+        let newUse = confirm("Включать в расчёт для всех выбранных?");
+        if(newCost===null || newHours===null) return;
+        appData.additionalGlobal.forEach(a => {
+          const chk = document.getElementById("chk_globalAdditional_"+a.id);
+          if(chk && chk.checked) {
+            a.cost = parseFloat(newCost) || a.cost;
+            a.hoursToRecoup = parseFloat(newHours) || a.hoursToRecoup;
+            a.useInCalc = newUse;
+          }
+        });
+        renderGlobalAdditionalTable();
+      }
+      break;
+    case 'printerAdditional':
+      {
+        const printerId = getCurrentPrinterId();
+        const printer = appData.printers.find(p => p.id === printerId);
+        if(printer){
+          let newCost = prompt("Введите новую стоимость (₽):");
+          let newHours = prompt("Введите новые часы окупаемости:");
+          let newUse = confirm("Включать в расчёт для всех выбранных?");
+          if(newCost===null || newHours===null) return;
+          printer.additional.forEach(a => {
+            const chk = document.getElementById("chk_printerAdditional_"+a.id);
+            if(chk && chk.checked) {
+              a.cost = parseFloat(newCost) || a.cost;
+              a.hoursToRecoup = parseFloat(newHours) || a.hoursToRecoup;
+              a.useInCalc = newUse;
+            }
+          });
+          onShowPrinterDetails(printerId);
+        }
+      }
+      break;
+    case 'printerMaterials':
+      {
+        const printerId = getCurrentPrinterId();
+        const printer = appData.printers.find(p => p.id === printerId);
+        if(printer){
+          let newCost = prompt("Введите новую стоимость за кг:");
+          let newBalance = prompt("Введите новый остаток (кг):");
+          let newDeclared = prompt("Введите новый заявленный вес (кг):");
+          let newWaste = prompt("Введите новый процент отходов:");
+          let newManuf = prompt("Введите нового производителя:");
+          let newProdDate = prompt("Введите новую дату производства (DD.MM.YYYY):");
+          if(newCost===null || newBalance===null || newDeclared===null || newWaste===null || newManuf===null || newProdDate===null) return;
+          printer.materials.forEach(m => {
+            const chk = document.getElementById("chk_printerMaterials_"+m.id);
+            if(chk && chk.checked) {
+              m.costPerKg = parseFloat(newCost) || m.costPerKg;
+              m.balance = parseFloat(newBalance) || m.balance;
+              m.declaredWeight = parseFloat(newDeclared) || m.declaredWeight;
+              m.wastePercent = parseFloat(newWaste) || m.wastePercent;
+              m.manufacturer = newManuf;
+              m.productionDate = newProdDate;
+            }
+          });
+          onShowPrinterDetails(printerId);
+        }
+      }
+      break;
+  }
+  saveToLocalStorage();
+}
+function copyElement(type, id) {
+  switch(type) {
+    case 'printers':
+      {
+        const orig = appData.printers.find(p => p.id === id);
+        if(orig){
+          const copy = JSON.parse(JSON.stringify(orig));
+          copy.id = Date.now();
+          copy.name += " (копия)";
+          appData.printers.push(copy);
+          renderPrintersTable();
+        }
+      }
+      break;
+    case 'globalMaterials':
+      {
+        const orig = appData.materials.find(m => m.id === id);
+        if(orig){
+          const copy = JSON.parse(JSON.stringify(orig));
+          copy.id = Date.now();
+          copy.name += " (копия)";
+          appData.materials.push(copy);
+          renderGlobalMaterialsTable();
+        }
+      }
+      break;
+    case 'globalAdditional':
+      {
+        const orig = appData.additionalGlobal.find(a => a.id === id);
+        if(orig){
+          const copy = JSON.parse(JSON.stringify(orig));
+          copy.id = Date.now();
+          copy.description += " (копия)";
+          appData.additionalGlobal.push(copy);
+          renderGlobalAdditionalTable();
+        }
+      }
+      break;
+    case 'printerAdditional':
+      {
+        const printerId = getCurrentPrinterId();
+        const printer = appData.printers.find(p => p.id === printerId);
+        if(printer){
+          const orig = printer.additional.find(a => a.id === id);
+          if(orig){
+            const copy = JSON.parse(JSON.stringify(orig));
+            copy.id = Date.now();
+            copy.description += " (копия)";
+            printer.additional.push(copy);
+            onShowPrinterDetails(printerId);
+          }
+        }
+      }
+      break;
+    case 'printerMaterials':
+      {
+        const printerId = getCurrentPrinterId();
+        const printer = appData.printers.find(p => p.id === printerId);
+        if(printer){
+          const orig = printer.materials.find(m => m.id === id);
+          if(orig){
+            const copy = JSON.parse(JSON.stringify(orig));
+            copy.id = Date.now();
+            copy.name += " (копия)";
+            printer.materials.push(copy);
+            onShowPrinterDetails(printerId);
+          }
+        }
+      }
+      break;
+  }
+  saveToLocalStorage();
+}
+function getCurrentPrinterId(){
+  // Предполагается, что в данный момент отображается детальная информация принтера
+  return parseInt(document.getElementById("printerDetailsId").textContent, 10);
+}
+
+/* Функции для принтеров */
+function renderPrintersTable(){
+  const tbody = document.querySelector("#printersTable tbody");
+  tbody.innerHTML = "";
+  appData.printers.forEach(printer => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" id="chk_printers_${printer.id}" class="printers_chk"><\/td>
+      <td>${printer.name}<\/td>
+      <td>${printer.cost}<\/td>
+      <td>${printer.hoursToRecoup}<\/td>
+      <td>${printer.power}<\/td>
+      <td>${printer.maintCostHour}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditPrinter(${printer.id})">Ред.<\/button>
+          <button class="btn btn-info" onclick="onShowPrinterDetails(${printer.id})">Детали<\/button>
+          <button class="btn btn-warning" onclick="copyElement('printers', ${printer.id})">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeletePrinter(${printer.id})">Удл.<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+function onAddPrinter(){
+  const newId = Date.now();
+  const p = {
+    id: newId,
+    name: "Новый принтер",
+    cost: 0,
+    hoursToRecoup: 1000,
+    power: 0,
+    maintCostHour: 0,
+    additional: [],
+    materials: []
+  };
+  appData.printers.push(p);
+  saveToLocalStorage();
+  renderPrintersTable();
+}
+function onEditPrinter(id){
+  const p = appData.printers.find(x => x.id === id);
+  if(!p) return;
+  const n = prompt("Название принтера:", p.name);
+  if(n === null) return;
+  const c = prompt("Стоимость (₽):", p.cost);
+  if(c === null) return;
+  const h = prompt("Часы окупаемости:", p.hoursToRecoup);
+  if(h === null) return;
+  const pw = prompt("Мощность (Вт):", p.power);
+  if(pw === null) return;
+  const m = prompt("Обсл. (₽/ч):", p.maintCostHour);
+  if(m === null) return;
+  p.name = n;
+  p.cost = parseFloat(c) || 0;
+  p.hoursToRecoup = parseFloat(h) || 1000;
+  p.power = parseFloat(pw) || 0;
+  p.maintCostHour = parseFloat(m) || 0;
+  saveToLocalStorage();
+  renderPrintersTable();
+}
+function onDeletePrinter(id){
+  if(!confirm("Удалить принтер?")) return;
+  appData.printers = appData.printers.filter(x => x.id !== id);
+  saveToLocalStorage();
+  renderPrintersTable();
+  document.getElementById("printerDetails").style.display = "none";
+}
+function onShowPrinterDetails(id){
+  const printer = appData.printers.find(p => p.id === id);
+  if(!printer) return;
+  document.getElementById("printerDetails").style.display = "block";
+  document.getElementById("printerDetailsName").textContent = printer.name;
+  document.getElementById("printerDetailsId").textContent = printer.id;
+  
+  // Дополнительные расходы принтера
+  const tbodyAdd = document.querySelector("#printerAdditionalTable tbody");
+  tbodyAdd.innerHTML = "";
+  printer.additional.forEach(a => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" id="chk_printerAdditional_${a.id}" class="printerAdditional_chk"><\/td>
+      <td>${a.description}<\/td>
+      <td>${a.cost}<\/td>
+      <td>${a.hoursToRecoup}<\/td>
+      <td>${a.useInCalc ? "Да" : "Нет"}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditPrinterAdditional(${printer.id}, ${a.id})">Ред.<\/button>
+          <button class="btn btn-warning" onclick="copyElement('printerAdditional', ${a.id})">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeletePrinterAdditional(${printer.id}, ${a.id})">Удл.<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tbodyAdd.appendChild(tr);
+  });
+  
+  // Материалы принтера
+  const tbodyMat = document.querySelector("#printerMaterialsTable tbody");
+  tbodyMat.innerHTML = "";
+  printer.materials.forEach(m => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" id="chk_printerMaterials_${m.id}" class="printerMaterials_chk"><\/td>
+      <td>${m.name}<\/td>
+      <td>${m.costPerKg}<\/td>
+      <td>${m.balance}<\/td>
+      <td>${m.declaredWeight || "-"}<\/td>
+      <td>${m.wastePercent}<\/td>
+      <td>${m.manufacturer || "-"}<\/td>
+      <td>${m.productionDate || "-"}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditPrinterMaterial(${printer.id}, ${m.id})">Ред.<\/button>
+          <button class="btn btn-success" onclick="openOrcaConfig(${m.id})">Orca<\/button>
+          <button class="btn btn-info" onclick="downloadMaterialLabelHtml(${m.id})">Этикетка<\/button>
+          <button class="btn btn-warning" onclick="copyElement('printerMaterials', ${m.id})">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeletePrinterMaterial(${printer.id}, ${m.id})">Удл.<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tbodyMat.appendChild(tr);
+  });
+  
+  document.getElementById("btnAddPrinterAdditional").onclick = () => onAddPrinterAdditional(printer.id);
+  document.getElementById("btnAddPrinterMaterial").onclick = () => onAddPrinterMaterial(printer.id);
+}
+function onAddPrinterAdditional(printerId){
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return;
+  const nid = Date.now();
+  pr.additional.push({
+    id: nid,
+    description: "Новая статья",
+    cost: 0,
+    hoursToRecoup: 1000,
+    useInCalc: true
+  });
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
+}
+function onEditPrinterAdditional(printerId, addId){
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return;
+  const it = pr.additional.find(a => a.id === addId);
+  if(!it) return;
+  const d = prompt("Описание:", it.description);
+  if(d === null) return;
+  const c = prompt("Стоимость (₽):", it.cost);
+  if(c === null) return;
+  const h = prompt("Часы окупаемости:", it.hoursToRecoup);
+  if(h === null) return;
+  const used = confirm("Включать в расчёт?");
+  it.description = d;
+  it.cost = parseFloat(c) || 0;
+  it.hoursToRecoup = parseFloat(h) || 1000;
+  it.useInCalc = used;
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
+}
+function onDeletePrinterAdditional(printerId, addId){
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return;
+  if(!confirm("Удалить статью?")) return;
+  pr.additional = pr.additional.filter(a => a.id !== addId);
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
+}
+function onAddPrinterMaterial(printerId){
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return;
+  const nid = Date.now();
+  pr.materials.push({
+    id: nid,
+    name: "Новый материал",
+    costPerKg: 0,
+    balance: 0,
+    declaredWeight: 0,
+    wastePercent: 0,
+    manufacturer: "",
+    productionDate: "",
+    orca: defaultOrcaConfig()
+  });
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
+}
+function onEditPrinterMaterial(printerId, matId){
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return;
+  const mat = pr.materials.find(m => m.id === matId);
+  if(!mat) return;
+  const n = prompt("Название:", mat.name);
+  if(n === null) return;
+  const c = prompt("Стоимость за кг:", mat.costPerKg);
+  if(c === null) return;
+  const b = prompt("Остаток (кг):", mat.balance);
+  if(b === null) return;
+  const dW = prompt("Заявленный вес (кг):", mat.declaredWeight);
+  if(dW === null) return;
+  const w = prompt("Отход (%):", mat.wastePercent);
+  if(w === null) return;
+  const manuf = prompt("Производитель:", mat.manufacturer || "");
+  if(manuf === null) return;
+  const prodDate = prompt("Дата производства (DD.MM.YYYY):", mat.productionDate || "");
+  if(prodDate === null) return;
+  mat.name = n;
+  mat.costPerKg = parseFloat(c) || 0;
+  mat.balance = parseFloat(b) || 0;
+  mat.declaredWeight = parseFloat(dW) || 0;
+  mat.wastePercent = parseFloat(w) || 0;
+  mat.manufacturer = manuf;
+  mat.productionDate = prodDate;
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
+}
+function onDeletePrinterMaterial(printerId, matId){
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return;
+  if(!confirm("Удалить материал?")) return;
+  pr.materials = pr.materials.filter(m => m.id !== matId);
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
+}
+
+/* Функции для глобальных материалов */
+function renderGlobalMaterialsTable(){
+  const tb = document.querySelector("#materialsTable tbody");
+  tb.innerHTML = "";
+  appData.materials.forEach(m => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
+      <td>${m.name}<\/td>
+      <td>${m.costPerKg}<\/td>
+      <td>${m.balance}<\/td>
+      <td>${m.declaredWeight || "-"}<\/td>
+      <td>${m.wastePercent}<\/td>
+      <td>${m.manufacturer || "-"}<\/td>
+      <td>${m.productionDate || "-"}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditGlobalMaterial(${m.id})">Ред.<\/button>
+          <button class="btn btn-success" onclick="openOrcaConfig(${m.id})">Orca<\/button>
+          <button class="btn btn-info" onclick="downloadMaterialLabelHtml(${m.id})">Этикетка<\/button>
+          <button class="btn btn-warning" onclick="copyElement('globalMaterials', ${m.id})">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeleteGlobalMaterial(${m.id})">Удл.<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+function onAddGlobalMaterial(){
+  const nid = Date.now();
+  let name = prompt("Название материала:", "Новый материал");
+  if(name === null) return;
+  let cost = prompt("Стоимость за кг:", "0");
+  if(cost === null) return;
+  let balance = prompt("Остаток (кг):", "0");
+  if(balance === null) return;
+  let declared = prompt("Заявленный вес (кг):", "0");
+  if(declared === null) return;
+  let waste = prompt("Отход (%):", "0");
+  if(waste === null) return;
+  let manuf = prompt("Производитель:", "");
+  if(manuf === null) return;
+  let prodDate = prompt("Дата производства (DD.MM.YYYY):", "");
+  if(prodDate === null) return;
+  appData.materials.push({
+    id: nid,
+    name: name,
+    costPerKg: parseFloat(cost) || 0,
+    balance: parseFloat(balance) || 0,
+    declaredWeight: parseFloat(declared) || 0,
+    wastePercent: parseFloat(waste) || 0,
+    manufacturer: manuf,
+    productionDate: prodDate,
+    orca: defaultOrcaConfig()
+  });
+  saveToLocalStorage();
+  renderGlobalMaterialsTable();
+}
+function onEditGlobalMaterial(id){
+  const m = appData.materials.find(x => x.id === id);
+  if(!m) return;
+  const n = prompt("Название материала:", m.name);
+  if(n === null) return;
+  const c = prompt("Стоимость за кг:", m.costPerKg);
+  if(c === null) return;
+  const b = prompt("Остаток (кг):", m.balance);
+  if(b === null) return;
+  const d = prompt("Заявленный вес (кг):", m.declaredWeight);
+  if(d === null) return;
+  const w = prompt("Отход (%):", m.wastePercent);
+  if(w === null) return;
+  const manuf = prompt("Производитель:", m.manufacturer || "");
+  if(manuf === null) return;
+  const prodDate = prompt("Дата производства (DD.MM.YYYY):", m.productionDate || "");
+  if(prodDate === null) return;
+  m.name = n;
+  m.costPerKg = parseFloat(c) || 0;
+  m.balance = parseFloat(b) || 0;
+  m.declaredWeight = parseFloat(d) || 0;
+  m.wastePercent = parseFloat(w) || 0;
+  m.manufacturer = manuf;
+  m.productionDate = prodDate;
+  saveToLocalStorage();
+  renderGlobalMaterialsTable();
+}
+function onDeleteGlobalMaterial(id){
+  if(!confirm("Удалить материал?")) return;
+  appData.materials = appData.materials.filter(x => x.id !== id);
+  saveToLocalStorage();
+  renderGlobalMaterialsTable();
+}
+
+/* Функции для глобальных доп. расходов */
+function renderGlobalAdditionalTable(){
+  const tb = document.querySelector("#additionalGlobalTable tbody");
+  tb.innerHTML = "";
+  appData.additionalGlobal.forEach(a => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="checkbox" id="chk_globalAdditional_${a.id}" class="globalAdditional_chk"><\/td>
+      <td>${a.description}<\/td>
+      <td>${a.cost}<\/td>
+      <td>${a.hoursToRecoup || 1000}<\/td>
+      <td>${a.useInCalc ? "Да" : "Нет"}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditGlobalAdditional(${a.id})">Ред.<\/button>
+          <button class="btn btn-warning" onclick="copyElement('globalAdditional', ${a.id})">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeleteGlobalAdditional(${a.id})">Удл.<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+function onAddGlobalAdditional(){
+  const nid = Date.now();
+  appData.additionalGlobal.push({
+    id: nid,
+    description: "Новая статья",
+    cost: 0,
+    hoursToRecoup: 1000,
+    useInCalc: true
+  });
+  saveToLocalStorage();
+  renderGlobalAdditionalTable();
+}
+function onEditGlobalAdditional(id){
+  const x = appData.additionalGlobal.find(a => a.id === id);
+  if(!x) return;
+  const d = prompt("Описание:", x.description);
+  if(d === null) return;
+  const c = prompt("Стоимость (₽):", x.cost);
+  if(c === null) return;
+  const hh = prompt("Часы окуп.", x.hoursToRecoup || 1000);
+  if(hh === null) return;
+  const used = confirm("Включать в расчёт?");
+  x.description = d;
+  x.cost = parseFloat(c) || 0;
+  x.hoursToRecoup = parseFloat(hh) || 1000;
+  x.useInCalc = used;
+  saveToLocalStorage();
+  renderGlobalAdditionalTable();
+}
+function onDeleteGlobalAdditional(id){
+  if(!confirm("Удалить статью?")) return;
+  appData.additionalGlobal = appData.additionalGlobal.filter(a => a.id !== id);
+  saveToLocalStorage();
+  renderGlobalAdditionalTable();
+}
+
+/* Функции калькуляции */
+function renderCalcPrinters(){
+  const c = document.getElementById("calcPrintersContainer");
+  c.innerHTML = "";
+  appData.printers.forEach(pr => {
+    const block = document.createElement("div");
+
+    block.className = "border p-3 mb-3";
+    block.innerHTML = `
+      <h5>Принтер: ${pr.name} (ID: ${pr.id})<\/h5>
+      <div class="small-text mb-2">
+        Мощность: ${pr.power}Вт, Обсл: ${pr.maintCostHour}₽/ч, Часы окупаемости: ${pr.hoursToRecoup}.
+      <\/div>
+      <table class="table table-bordered table-sm mb-2" id="calcModelsTable_${pr.id}">
+        <thead>
+          <tr>
+            <th>Имя модели<\/th>
+            <th>Статус<\/th>
+            <th>Часы печати<\/th>
+            <th>Вес (г)<\/th>
+            <th>Материал<\/th>
+            <th>Действия<\/th>
+          <\/tr>
+        <\/thead>
+        <tbody><\/tbody>
+      <\/table>
+      <button class="btn btn-sm btn-primary" onclick="addModelRow(${pr.id}, {})">Добавить модель<\/button>
+    `;
+    c.appendChild(block);
+  });
+}
+function addModelRow(printerId, modelData) {
+  const table = document.getElementById(`calcModelsTable_${printerId}`);
+  if(!table) return;
+  const tbody = table.querySelector("tbody");
+  const idx = tbody.rows.length + 1;
+  const statuses = [
+    {val:"new", text:"Новая"},
+    {val:"inprogress", text:"Печать"},
+    {val:"done", text:"Готова"},
+    {val:"canceled", text:"Отменена"}
+  ];
+  const optsStatus = statuses.map(s =>
+    `<option value="${s.val}" ${(modelData.status === s.val) ? "selected" : ""}>${s.text}<\/option>`
+  ).join("");
+  const mats = getAllMaterialsForPrinter(printerId);
+  const optsMat = mats.map(m =>
+    `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name}<\/option>`
+  ).join("");
+  const uniqueId = Date.now() + Math.floor(Math.random()*1000);
+  const nameId = `modelName_${printerId}_${uniqueId}`;
+  const statusId = `modelStatus_${printerId}_${uniqueId}`;
+  const hoursId = `modelHours_${printerId}_${uniqueId}`;
+  const weightId = `modelWeight_${printerId}_${uniqueId}`;
+  const materialId = `modelMaterial_${printerId}_${uniqueId}`;
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /><\/td>
+    <td>
+      <select class="form-select form-select-sm" id="${statusId}">
+        ${optsStatus}
+      <\/select>
+    <\/td>
+    <td><input type="text" class="form-control form-control-sm time-input" 
+             id="${hoursId}" placeholder="ч:м" 
+             value="${modelData.hours ? formatTimeForDisplay(modelData.hours) : ''}" 
+             onblur="this.value = formatTimeForDisplay(handleTimeInput({target: {value: this.value}}))" /><\/td>
+    <td><input type="number" step="0.1" class="form-control form-control-sm" id="${weightId}" placeholder="г" value="${modelData.weight || ''}" /><\/td>
+    <td>
+      <select class="form-select form-select-sm" id="${materialId}">
+        <option value="">-Материал-<\/option>
+        ${optsMat}
+      <\/select>
+    <\/td>
+    <td><button class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">Удл.<\/button><\/td>
+  `;
+  tbody.appendChild(tr);
+}
+function getAllMaterialsForPrinter(printerId){
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return [];
+  // Возвращаем только материалы с ненулевым остатком
+  const globalMats = appData.materials.filter(m => m.balance > 0);
+  const printerMats = pr.materials.filter(m => m.balance > 0);
+  return [...globalMats, ...printerMats];
+}
+
+let lastCalcFullData = null;
+
+let incomingLinkData = null;
+
+
+
+
+function onCalculateAll() {
+  const calcName = document.getElementById("calcName").value.trim();
+  const clientName = document.getElementById("calcClientName").value.trim();
+  const orderStatus = document.getElementById("calcOrderStatus").value;
+  const opRate = parseFloat(document.getElementById("calcOperatorRate").value) || 0;
+  const whDay = parseFloat(document.getElementById("calcWorkHoursDay").value) || 8;
+  const cKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
+  const tPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
+  const ship = parseFloat(document.getElementById("calcShipping").value) || 0;
+  const sDate = document.getElementById("calcStartDate").value;
+  const parallelMode = document.getElementById("calcParallelPrinting").value;
+  const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
+  
+  // Сохранение настроек расчёта
+  appData.calcSettings.operatorRate = opRate;
+  appData.calcSettings.workHoursDay = whDay;
+  appData.calcSettings.costKwh = cKwh;
+  appData.calcSettings.taxPercent = tPercent;
+  appData.calcSettings.shipping = ship;
+  appData.calcSettings.startDate = sDate;
+  appData.calcSettings.parallelPrinting = parallelMode;
+  appData.calcSettings.markupPercent = markupPercent;
+  
+  saveToLocalStorage();
+  
+  // Сохраняем исходные данные моделей для каждого принтера
+  let calcData = {};
+  appData.printers.forEach(pr => {
+    const table = document.getElementById(`calcModelsTable_${pr.id}`);
+    if (!table) return;
+    const rows = table.querySelectorAll("tbody tr");
+    let modelsData = [];
+    rows.forEach(row => {
+      const inpName = row.querySelectorAll("input")[0];
+      const selStatus = row.querySelectorAll("select")[0];
+      const inpH = row.querySelectorAll("input")[1];
+      const inpW = row.querySelectorAll("input")[2];
+      const selM = row.querySelectorAll("select")[1];
+      const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
+      const w = parseFloat(inpW.value) || 0;
+      modelsData.push({
+        name: inpName.value.trim() || "Модель",
+        status: selStatus.value || "new",
+        hours: h,
+        weight: w,
+        materialId: parseInt(selM.value, 10)
+      });
+    });
+    calcData[pr.id] = modelsData;
+  });
+  
+  // Агрегируем суммарное потребление пластика (в граммах) для каждого материала по всему расчёту
+  let materialConsumption = {};
+  
+  // Расчёт затрат по принтерам
+  let detailsByPrinter = [];
+  let sumWithoutTax = 0;
+  let finalTimeAllPrinters = 0;
+  let maxPrinterTime = 0;
+  
+  appData.printers.forEach(pr => {
+    const table = document.getElementById(`calcModelsTable_${pr.id}`);
+    if (!table) return;
+    
+    let prTime = 0;
+    let prCostNoTax = 0;
+    let lines = [];
+    const rows = table.querySelectorAll("tbody tr");
+    rows.forEach(row => {
+      const inpName = row.querySelectorAll("input")[0];
+      const selStatus = row.querySelectorAll("select")[0];
+      const inpH = row.querySelectorAll("input")[1];
+      const inpW = row.querySelectorAll("input")[2];
+      const selM = row.querySelectorAll("select")[1];
+      const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
+      const w = parseFloat(inpW.value) || 0;
+      const mid = parseInt(selM.value, 10);
+      if (!mid || h <= 0 || w <= 0) return;
+      
+      prTime += h;
+      
+      const mat = getAllMaterialsForPrinter(pr.id).find(x => x.id === mid);
+      if (!mat) return;
+      
+      const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
+      const costPrinterPart = h * costPH;
+      // Фактический расход пластика с учётом отходов (в граммах)
+      const realW = w * (1 + (mat.wastePercent / 100));
+      // Агрегируем потребление для данного материала
+      materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
+      
+      const costPerGram = mat.costPerKg / 1000;
+      const costMaterial = realW * costPerGram;
+      
+      const costElectric = (pr.power / 1000) * h * cKwh;
+      const costMaint = pr.maintCostHour * h;
+      const subTotalModel = costPrinterPart + costMaterial + costElectric + costMaint;
+      
+      prCostNoTax += subTotalModel;
+      
+      lines.push({
+        name: inpName.value.trim() || "Модель",
+        status: selStatus.value || "new",
+        hours: h,
+        weight: w,
+        matName: mat.name,
+        realWeight: realW,
+        costPrinterPart: costPrinterPart,
+        costMaterial: costMaterial,
+        costElectric: costElectric,
+        costMaintenance: costMaint,
+        subTotalModel: subTotalModel,
+        materialData: {
+          id: mat.id,
+          declaredWeight: mat.declaredWeight,
+          manufacturer: mat.manufacturer,
+          productionDate: mat.productionDate
+        }
+      });
+    });
+    
+    // Расчёт дополнительных расходов для принтера (по всем его расходным статьям)
+    let printerAdditionalDetails = [];
+    let sumPrAddFull = 0;
+    pr.additional.filter(a => a.useInCalc !== false).forEach(a => { sumPrAddFull += a.cost; });
+    pr.additional.filter(a => a.useInCalc !== false).forEach(a => {
+      let costDistributed = 0;
+      if (pr.hoursToRecoup > 0) {
+        costDistributed = (a.cost / pr.hoursToRecoup) * prTime;
+      }
+      printerAdditionalDetails.push({
+         description: a.description,
+         baseCost: a.cost,
+         hoursToRecoup: a.hoursToRecoup,
+         costDistributed: costDistributed
+      });
+    });
+    // Добавляем сумму дополнительных расходов к итоговой стоимости принтера
+    if (pr.hoursToRecoup > 0 && sumPrAddFull > 0) {
+      prCostNoTax += (sumPrAddFull / pr.hoursToRecoup) * prTime;
+    }
+    
+    if (parallelMode === "no") {
+      finalTimeAllPrinters += prTime;
+    } else {
+      if (prTime > maxPrinterTime) maxPrinterTime = prTime;
+    }
+    
+    sumWithoutTax += prCostNoTax;
+    detailsByPrinter.push({
+      printerId: pr.id,
+      printerName: pr.name,
+      linesDetail: lines,
+      printerTime: prTime,
+      subTotal: prCostNoTax,
+      additionalDetails: printerAdditionalDetails
+    });
+  });
+  
+  // Проверяем для каждого материала, достаточно ли остатка
+  let warnings = [];
+  for (let mid in materialConsumption) {
+    const required = materialConsumption[mid];
+    const mat = findMaterialById(parseInt(mid, 10));
+    if (mat && required > (mat.balance * 1000)) {
+      warnings.push(`Материала "${mat.name}" недостаточно: требуется ${required.toFixed(2)} г, остаток ${(mat.balance * 1000).toFixed(2)} г.`);
+    }
+  }
+  
+  let finalTimeOperator = (parallelMode === "yes") ? maxPrinterTime : finalTimeAllPrinters;
+  const totalOperatorCost = finalTimeOperator * opRate;
+  
+  let sumGlobalAdd = 0;
+  let globalAdditionalDetails = [];
+  appData.additionalGlobal.forEach(g => {
+    if (!g.useInCalc) return;
+    const costPerHour = (g.hoursToRecoup > 0) ? g.cost / g.hoursToRecoup : 0;
+    const cVal = costPerHour * finalTimeOperator;
+    sumGlobalAdd += cVal;
+    globalAdditionalDetails.push({
+      id: g.id,
+      description: g.description,
+      baseCost: g.cost,
+      hoursToRecoup: g.hoursToRecoup,
+      costDistributed: cVal
+    });
+  });
+  
+    let totalLabelsCost = 0;
+  if(appData.labelSettings.printLabels) {
+    const labelCost = appData.labelSettings.costPerLabel || 0;
+    const totalModels = Object.values(calcData).reduce((acc, models) => acc + models.length, 0);
+    totalLabelsCost = totalModels * labelCost;
+  }
+
+  
+  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost;
+  
+  if (markupPercent > 0) {
+    subtotal *= (1 + markupPercent / 100);
+  }
+  const finalSum = subtotal / (1 - tPercent / 100);
+  const taxAmount = finalSum - subtotal;
+  
+  let finDateStr = calcFinishDate(sDate, Math.ceil(finalTimeOperator / (whDay || 8)));
+  
+  let htmlRes = `<strong>Общий результат:<\/strong><br/>`;
+  htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
+  htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
+  htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
+  htmlRes += `Стоимость работы оператора: ${totalOperatorCost.toFixed(2)} ₽<br/>`;
+  htmlRes += `Наценка: ${markupPercent}%.<br/>`;
+  htmlRes += `Упаковка/Доставка: ${ship.toFixed(2)} ₽<br/>`;
+  htmlRes += `Стоимость этикеток: ${totalLabelsCost.toFixed(2)} ₽<br/>`;
+  htmlRes += `Подитог: ${subtotal.toFixed(2)} ₽<br/>`;
+  htmlRes += `Общий налог (${tPercent}%): ${taxAmount.toFixed(2)} ₽<br/>`;
+  htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${finalSum.toFixed(2)} ₽<\/strong><br/>`;
+ 
+  // Вывод цены за 1 грамм
+  const totalWeight = detailsByPrinter.reduce((acc, printer) => 
+    acc + printer.linesDetail.reduce((sum, line) => sum + line.realWeight, 0), 0);
+  const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
+  htmlRes += `<strong>Цена за 1 грамм: ${pricePerGram.toFixed(2)} ₽<\/strong><br/>`;
+
+ if (finDateStr) {
+    htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
+  }
+  if (warnings.length > 0) {
+    htmlRes += `<div class="alert alert-warning mt-2">Предупреждения:<br/>` + warnings.join("<br/>") + `<\/div>`;
+  }
+  htmlRes += `<hr/><strong>Детализация по принтерам:<\/strong><br/>`;
+  detailsByPrinter.forEach(d => {
+
+if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
+  return;
+}
+
+
+	  
+    htmlRes += `<div style="margin-top:1em;">`;
+    htmlRes += `<strong>${d.printerName} (ID: ${d.printerId})<\/strong><br/>`;
+    htmlRes += `Время: ${d.printerTime.toFixed(2)} ч; Сумма: ${d.subTotal.toFixed(2)} ₽<br/>`;
+    if (d.linesDetail.length > 0) {
+      htmlRes += `<div class="table-responsive"><table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
+      htmlRes += `<thead><tr>
+        <th>Модель<\/th>
+        <th>Статус<\/th>
+        <th>Часы<\/th>
+        <th>Вес (г)<\/th>
+        <th>Материал<\/th>
+        <th>Вес+отход<\/th>
+        <th>Амортизация принтера (₽)<\/th>
+        <th>Стоимость материала (₽)<\/th>
+        <th>Электричество (₽)<\/th>
+        <th>Обслуживание (₽)<\/th>
+        <th>Итого (₽)<\/th>
+        <th>Этикетка<\/th>
+      <\/tr><\/thead><tbody>`;
+      d.linesDetail.forEach(ln => {
+        htmlRes += `<tr>
+          <td>${ln.name}<\/td>
+          <td>${ln.status}<\/td>
+          <td>${formatTimeForDisplay(ln.hours)}<\/td>
+          <td>${ln.weight.toFixed(2)}<\/td>
+          <td>${ln.matName}<\/td>
+          <td>${ln.realWeight.toFixed(2)}<\/td>
+          <td>${ln.costPrinterPart.toFixed(2)}<\/td>
+          <td>${ln.costMaterial.toFixed(2)}<\/td>
+          <td>${ln.costElectric.toFixed(2)}<\/td>
+          <td>${ln.costMaintenance.toFixed(2)}<\/td>
+          <td>${ln.subTotalModel.toFixed(2)}<\/td>
+          <td>
+            <button class="btn btn-sm btn-outline-secondary"
+              onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${ln.hours.toFixed(2)}', '${ln.weight.toFixed(2)}')">
+              Этикетка
+            <\/button>
+          <\/td>
+        <\/tr>`;
+      });
+      htmlRes += `<\/tbody><\/table></div>`;
+    }
+
+    // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
+    if (d.additionalDetails && d.additionalDetails.length > 0) {
+      let htmlResadditionalDetails = `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
+      htmlResadditionalDetails += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
+      htmlResadditionalDetails += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
+      let sumPrinterAdditional = 0;
+      d.additionalDetails.forEach(ad => {
+        sumPrinterAdditional += ad.costDistributed;
+        htmlResadditionalDetails += `<tr>
+          <td>${ad.description}<\/td>
+          <td>${ad.baseCost.toFixed(2)}<\/td>
+          <td>${ad.hoursToRecoup}<\/td>
+          <td>${ad.costDistributed.toFixed(2)}<\/td>
+        <\/tr>`;
+      });
+      htmlResadditionalDetails += `<\/tbody><\/table>`;
+      htmlResadditionalDetails += `Доп. расходы для принтера: ${sumPrinterAdditional.toFixed(2)} ₽<br/>`;
+	    if(sumPrinterAdditional > 0)
+	    htmlRes += htmlResadditionalDetails;
+    }
+	  
+    htmlRes += `<\/div>`;
+  });
+  
+  if (globalAdditionalDetails.length > 0) {
+    htmlRes += `<hr/><strong>Глобальные доп. расходы (включённые):<\/strong>`;
+    htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
+    htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
+    globalAdditionalDetails.forEach(gd => {
+      htmlRes += `<tr>
+        <td>${gd.description}<\/td>
+        <td>${gd.baseCost.toFixed(2)}<\/td>
+        <td>${gd.hoursToRecoup}<\/td>
+        <td>${gd.costDistributed.toFixed(2)}<\/td>
+      <\/tr>`;
+    });
+    htmlRes += `<\/tbody><\/table>`;
+    htmlRes += `Глобальные расходы: ${sumGlobalAdd.toFixed(2)} ₽<br/>`;
+  }
+  
+  document.getElementById("calcResult").style.display = "block";
+  document.getElementById("calcResult").innerHTML = htmlRes;
+  
+  lastCalcFullData = {
+    calcName,
+    clientName,
+    orderStatus,
+    total: finalSum,
+    totalHours: finalTimeOperator,
+    taxPercent: tPercent,
+    shipping: ship,
+    detailsByPrinter,
+    costKwh: cKwh,
+    operatorRate: opRate,
+    totalOperatorCost: totalOperatorCost,
+    calcData,
+    globalAdditional: {
+      sumGlobalAdd,
+      taxAmount,
+      details: globalAdditionalDetails
+    },
+    parallelMode,
+    markupPercent
+  };
+  
+  lastCalcFullData.totalLabelsCost = totalLabelsCost;
+  
+  const dtStr = new Date().toLocaleString("ru-RU");
+  const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
+  const newEntry = {
+    timestamp: Date.now(),
+    dateStr: dtStr,
+    calcName,
+    clientName,
+    orderStatus,
+    total: finalSum,
+    totalHours: finalTimeOperator,
+    taxPercent: tPercent,
+    shipping: ship,
+    operatorRate: opRate,
+    costKwh: cKwh,
+    totalOperatorCost: totalOperatorCost,
+    details: detailsByPrinter,
+    calcData,
+    globalAdditional: {
+      sumGlobalAdd,
+      taxAmount,
+      details: globalAdditionalDetails
+    },
+    parallelMode,
+    markupPercent
+  };
+  if (existingIndex !== -1) {
+    appData.calcHistory[existingIndex] = newEntry;
+  } else {
+    appData.calcHistory.push(newEntry);
+  }
+  saveToLocalStorage();
+  renderHistoryTable();
+}
+
+function findMaterialById(mid) {
+  let mat = appData.materials.find(m => m.id === mid);
+  if (mat) return mat;
+  for (let p of appData.printers) {
+    mat = p.materials.find(m => m.id === mid);
+    if (mat) return mat;
+  }
+  return null;
+}
+
+function findMaterialByName(name) {
+  if (!name) return null;
+  let mat = appData.materials.find(m => m.name === name);
+  if (mat) return mat;
+  for (let p of appData.printers) {
+    mat = p.materials.find(m => m.name === name);
+    if (mat) return mat;
+  }
+  return null;
+}
+
+function defaultOrcaConfig(){
+  return {
+    filament_id: '',
+    setting_id: '',
+    name: '',
+    from: 'system',
+    instantiation: 'true',
+    inherits: '',
+    filament_flow_ratio: '0.98',
+    filament_max_volumetric_speed: '15',
+    slow_down_layer_time: '8',
+    support_material_interface_fan_speed: '80',
+    slow_down_min_speed: '20',
+    filament_start_gcode: '; filament start gcode\n',
+    filament_end_gcode: '; filament end gcode\n',
+    filament_diameter: '1.75',
+    enable_pressure_advance: '1',
+    pressure_advance: '0.04',
+    filament_density: '1.04',
+    temperature_vitrification: '100',
+    hot_plate_temp_initial_layer: '105',
+    hot_plate_temp: '105',
+    compatible_printers: ''
+  };
+}
+
+function calcFinishDate(sv, days){
+  if(!sv) return "";
+  try{
+    const d = new Date(sv);
+    d.setDate(d.getDate()+days);
+    return d.toLocaleDateString("ru-RU");
+  } catch(e){
+    return "";
+  }
+}
+function renderHistoryTable(){
+  const tb = document.querySelector("#historyTable tbody");
+  tb.innerHTML = "";
+  appData.calcHistory.forEach(h => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${h.dateStr}<\/td>
+      <td>${h.calcName || "(Без названия)"}<\/td>
+      <td>${h.clientName || "(Не указан)"}<\/td>
+      <td>
+        <select class="form-select form-select-sm" onchange="onChangeCalcHistoryStatus(${h.timestamp}, this.value)">
+          <option value="new" ${h.orderStatus==="new"?"selected":""}>Новый<\/option>
+          <option value="inprogress" ${h.orderStatus==="inprogress"?"selected":""}>В работе<\/option>
+          <option value="done" ${h.orderStatus==="done"?"selected":""}>Завершён<\/option>
+          <option value="canceled" ${h.orderStatus==="canceled"?"selected":""}>Отменён<\/option>
+        <\/select>
+      <\/td>
+      <td>${h.total.toFixed(2)}<\/td>
+      <td>
+        <button class="btn btn-sm btn-warning" onclick="onEditCalcHistory(${h.timestamp})">Редакт.<\/button>
+        <button class="btn btn-sm btn-danger" onclick="onDeleteCalcHistoryEntry(${h.timestamp})">Удалить<\/button>
+      <\/td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+function onDeleteCalcHistoryEntry(timestamp) {
+  if(!confirm("Удалить выбранный расчет из истории?")) return;
+  appData.calcHistory = appData.calcHistory.filter(entry => entry.timestamp !== timestamp);
+  saveToLocalStorage();
+  renderHistoryTable();
+}
+function onClearCalcHistory(){
+  if(!confirm("Очистить всю историю?")) return;
+  appData.calcHistory = [];
+  saveToLocalStorage();
+  renderHistoryTable();
+}
+function onExportHistory(){
+  const js = JSON.stringify(appData.calcHistory, null, 2);
+  document.getElementById("exportArea").value = js;
+}
+function onImportHistory(){
+  const s = document.getElementById("importArea").value.trim();
+  if(!s) {
+    if(confirm("Пустая строка. Очистить все данные?")){
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+    return;
+  }
+  try{
+    const obj = JSON.parse(s);
+    if(!Array.isArray(obj)){
+      alert("Ожидается массив.");
+      return;
+    }
+    appData.calcHistory = obj;
+    saveToLocalStorage();
+    renderHistoryTable();
+    alert("Импорт истории завершён.");
+  } catch(e){
+    alert("Ошибка импорта истории: " + e);
+  }
+}
+
+function onChangeCalcHistoryStatus(timestamp, newStatus){
+  const it = appData.calcHistory.find(x => x.timestamp === timestamp);
+  if(!it) return;
+  it.orderStatus = newStatus;
+  saveToLocalStorage();
+}
+
+/* Функции импорта/экспорта JSON */
+function onExportJson(){
+  const s = JSON.stringify(appData, null, 2);
+  document.getElementById("exportArea").value = s;
+}
+function onImportJson(){
+  const s = document.getElementById("importArea").value.trim();
+  if(!s){
+    if(confirm("Пустая строка. Очистить все данные?")){
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+    return;
+  }
+  try{
+    const obj = JSON.parse(s);
+    appData = obj;
+    saveToLocalStorage();
+    initAll();
+    alert("Импорт выполнен.");
+  } catch(e){
+    alert("Ошибка: " + e);
+  }
+}
+function saveLabelSettings(){
+  const cn = document.getElementById("companyNameInput").value.trim();
+  const cl = document.getElementById("chatLinkInput").value.trim();
+  const cost = parseFloat(document.getElementById("labelCostInput").value) || 0;
+  const print = document.getElementById("printLabelsCheckbox").checked;
+  
+  appData.labelSettings = {
+    companyName: cn || "Моя компания",
+    chatLink: cl || "https://t.me/example",
+    costPerLabel: cost,
+    printLabels: print
+  };
+  saveToLocalStorage();
+  alert("Сохранено");
+}
+
+/* Функция генерации QR-кода */
+function generateQRCodeCanvas(data, size, callback){
+  const tempDiv = document.createElement("div");
+  new QRCode(tempDiv, {
+    text: data,
+    width: size,
+    height: size,
+    correctLevel: QRCode.CorrectLevel.H
+  });
+  setTimeout(() => {
+    const qrCanvas = tempDiv.querySelector("canvas");
+    callback(qrCanvas);
+  }, 100);
+}
+
+function downloadThermoLabelHtml(modelName, printerName, materialName, hours, weight) {
+  const qrSize = 100;
+  generateQRCodeCanvas(appData.labelSettings.chatLink, qrSize, function(qrCanvas) {
+    const qrDataUrl = qrCanvas ? qrCanvas.toDataURL("image/png") : "";
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=58mm, initial-scale=1">
+  <title>Этикетка<\/title>
+  <style>
+    body { width: 58mm; height: 40mm; margin: 0; padding: 0; font-family: sans-serif; }
+    #labelContainer {
+      width: 58mm;
+      height: 40mm;
+      padding: 2mm;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .label-header {
+      text-align: center;
+      font-size: 12pt;
+      font-weight: bold;
+      margin-bottom: 2mm;
+    }
+    .label-content {
+      font-size: 10pt;
+      line-height: 1.2;
+    }
+    .label-content div { margin-bottom: 1mm; }
+    .qr-code {
+      position: absolute;
+      bottom: 2mm;
+      right: 2mm;
+      width: 20mm;
+      height: 20mm;
+    }
+  <\/style>
+<\/head>
+<body>
+<div id="labelContainer">
+  <div class="label-header">${appData.labelSettings.companyName}<\/div>
+  <div class="label-content">
+    <div style="text-align: center;">${modelName}<\/div>
+    <div>${printerName}<\/div>
+    <div>${materialName}<\/div>
+    <div>${formatTimeForDisplay(hours)}<\/div>
+    <div>${weight} г<\/div>
+    <div>${new Date().toLocaleDateString("ru-RU")}<\/div>
+  <\/div>
+  <img class="qr-code" src="${qrDataUrl}" alt="QR-код">
+<\/div>
+<\/body>
+<\/html>
+    `.trim();
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ThermoLabel_${modelName}_${Date.now()}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
+}
+
+/* Новая функция для генерации этикетки материала в формате 30x20 мм */
+function downloadMaterialLabelHtml(materialId) {
+  // Ищем материал сначала в глобальных, затем в материалах принтеров
+  let mat = appData.materials.find(m => m.id === materialId);
+  if(!mat) {
+    // Если не найден в глобальных, проверяем у каждого принтера
+    for(let p of appData.printers) {
+      mat = p.materials.find(m => m.id === materialId);
+      if(mat) break;
+    }
+  }
+  if(!mat) { alert("Материал не найден."); return; }
+  
+  // Формируем HTML для этикетки (30x20 мм)
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=30mm, initial-scale=1">
+  <title>Этикетка<\/title>
+  <style>
+    body { width: 30mm; height: 20mm; margin: 0; padding: 0; font-family: sans-serif; font-size: 8pt; }
+    #labelContainer {
+      width: 30mm;
+      height: 20mm;
+      padding: 1mm;
+      box-sizing: border-box;
+      position: relative;
+      border: 1px solid #000;
+    }
+    .label-header { text-align: center; font-weight: bold; margin-bottom: 1mm; }
+    .label-content div { margin-bottom: 0.5mm; }
+  <\/style>
+<\/head>
+<body>
+  <div id="labelContainer">
+    <div class="label-header">${mat.name}<\/div>
+    <div class="label-content">
+      <div>${mat.declaredWeight || "-"} кг<\/div>
+      <div>${mat.manufacturer || "-"}<\/div>
+      <div>${mat.productionDate || "-"}<\/div>
+    <\/div>
+  <\/div>
+<\/body>
+<\/html>
+  `.trim();
+  
+  const blob = new Blob([htmlContent], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `MaterialLabel_${mat.name}_${Date.now()}.html`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/* Настройки OrcaSlicer для материала */
+let currentOrcaMaterialId = null;
+const ORCA_FIELDS = [
+  'filament_id','setting_id','name','from','instantiation','inherits','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','filament_start_gcode','filament_end_gcode','filament_diameter','enable_pressure_advance','pressure_advance','filament_density','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','compatible_printers'
+];
+const ORCA_TEXTAREA_FIELDS = ['filament_start_gcode','filament_end_gcode','compatible_printers'];
+
+function ensureOrcaFieldsHtml(){
+  const c = document.getElementById('orcaFieldsContainer');
+  if(c.dataset.inited) return;
+  ORCA_FIELDS.forEach(f=>{
+    const div = document.createElement('div');
+    div.className = 'mb-3';
+    const label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = f;
+    label.setAttribute('for','orca_'+f);
+    div.appendChild(label);
+    if(ORCA_TEXTAREA_FIELDS.includes(f)){
+      const ta = document.createElement('textarea');
+      ta.className = 'form-control';
+      ta.id = 'orca_'+f;
+      ta.rows = 2;
+      div.appendChild(ta);
+    } else {
+      const inp = document.createElement('input');
+      inp.className = 'form-control';
+      inp.id = 'orca_'+f;
+      div.appendChild(inp);
+    }
+    c.appendChild(div);
+  });
+  c.dataset.inited = '1';
+}
+
+function openOrcaConfig(matId){
+  const mat = findMaterialById(matId);
+  if(!mat) return;
+  currentOrcaMaterialId = matId;
+  if(!mat.orca) mat.orca = defaultOrcaConfig();
+  ensureOrcaFieldsHtml();
+  ORCA_FIELDS.forEach(f=>{
+    const el = document.getElementById('orca_'+f);
+    if(el) el.value = mat.orca[f] || '';
+  });
+  const modal = new bootstrap.Modal(document.getElementById('orcaConfigModal'));
+  modal.show();
+}
+
+function saveOrcaConfig(){
+  if(currentOrcaMaterialId===null) return;
+  const mat = findMaterialById(currentOrcaMaterialId);
+  if(!mat) return;
+  if(!mat.orca) mat.orca = {};
+  ORCA_FIELDS.forEach(f=>{
+    const el = document.getElementById('orca_'+f);
+    mat.orca[f] = el ? el.value : '';
+  });
+  saveToLocalStorage();
+  const modalEl = document.getElementById('orcaConfigModal');
+  bootstrap.Modal.getInstance(modalEl).hide();
+}
+
+function downloadOrcaJson(){
+  if(currentOrcaMaterialId===null) return;
+  const mat = findMaterialById(currentOrcaMaterialId);
+  if(!mat) return;
+  const cfg = Object.assign({type:'filament'}, mat.orca||{});
+  const arrFields = ['filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','filament_start_gcode','filament_end_gcode','filament_diameter','enable_pressure_advance','pressure_advance','filament_density','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp'];
+  arrFields.forEach(k=>{ if(cfg[k]!==undefined) cfg[k]=[cfg[k]]; });
+  if(cfg.compatible_printers)
+    cfg.compatible_printers = cfg.compatible_printers.split(',').map(s=>s.trim()).filter(Boolean);
+  else cfg.compatible_printers = [];
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = (cfg.name||'filament')+'.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function downloadFullDetailedCalculation(){
+  if(!lastCalcFullData){ alert("Нет данных расчёта."); return; }
+  const h = generateMaxDetailedCalcHtml(lastCalcFullData);
+  const b = new Blob([h], {type:"text/html"});
+  const u = URL.createObjectURL(b);
+  const l = document.createElement("a");
+  l.href = u;
+  l.download = `FullDetailedCalc_${Date.now()}.html`;
+  document.body.appendChild(l);
+  l.click();
+  document.body.removeChild(l);
+  URL.revokeObjectURL(u);
+}
+function generateMaxDetailedCalcHtml(d) {
+  let s = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Подробный расчёт<\/title>
+  <style>
+    body { font-family: sans-serif; margin:20px; }
+    .printer-block { margin:10px 0; padding:5px; border:1px dashed #999; }
+    table { border-collapse: collapse; }
+    td, th { border:1px solid #999; padding:4px 6px; }
+  <\/style>
+<\/head>
+<body>
+  <h1>Подробный расчёт<\/h1>
+  <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${d.orderStatus || "?"}<\/p>
+  <p>Итог: <strong>${d.total.toFixed(2)} ₽<\/strong><\/p>
+  <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${d.totalOperatorCost.toFixed(2)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
+  <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
+  <p>Подитог: ${(d.total - d.globalAdditional.taxAmount).toFixed(2)} ₽, Общий налог: ${d.globalAdditional.taxAmount.toFixed(2)} ₽<\/p>
+  <hr/>
+`;
+  d.detailsByPrinter.forEach(pr => {
+    s += `<div class="printer-block">
+      <strong>Принтер: ${pr.printerName} (ID: ${pr.printerId})<\/strong><br/>
+      Время: ${formatTimeForDisplay(pr.printerTime)} ч<br/>
+    `;
+    if(pr.linesDetail && pr.linesDetail.length>0){
+      s += `<table style="margin-top:5px;">
+        <thead><tr>
+          <th>Модель<\/th>
+          <th>Статус<\/th>
+          <th>Часы<\/th>
+          <th>Вес (г)<\/th>
+          <th>Материал<\/th>
+          <th>Вес с браком<\/th>
+          <th>Сумма<\/th>
+        <\/tr><\/thead>
+        <tbody>`;
+      pr.linesDetail.forEach(ln => {
+        s += `<tr>
+          <td>${ln.name}<\/td>
+          <td>${ln.status}<\/td>
+          <td>${ln.hours.toFixed(2)}<\/td>
+          <td>${ln.weight.toFixed(2)}<\/td>
+          <td>${ln.matName}<\/td>
+          <td>${ln.realWeight.toFixed(2)}<\/td>
+          <td>${ln.subTotalModel.toFixed(2)}<\/td>
+        <\/tr>`;
+      });
+      s += `<\/tbody><\/table>`;
+    }
+    s += `<\/div>`;
+  });
+  s += `<\/body><\/html>`;
+  return s;
+}
+function onEditCalcHistory(timestamp){
+  const it = appData.calcHistory.find(x => x.timestamp === timestamp);
+  if(!it){ alert("Нет такого элемента в истории"); return; }
+  document.getElementById("calcName").value = it.calcName || "";
+  document.getElementById("calcClientName").value = it.clientName || "";
+  document.getElementById("calcOrderStatus").value = it.orderStatus || "new";
+  document.getElementById("calcOperatorRate").value = it.operatorRate || "";
+  document.getElementById("calcWorkHoursDay").value = appData.calcSettings.workHoursDay || "";
+  document.getElementById("calcCostKwh").value = it.costKwh || "";
+  document.getElementById("calcTaxPercent").value = it.taxPercent || "";
+  document.getElementById("calcShipping").value = it.shipping || "";
+  document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
+  document.getElementById("calcParallelPrinting").value = it.parallelMode || "no";
+  document.getElementById("calcMarkupPercent").value = it.markupPercent || 0;
+  
+  if(it.calcData){
+    for(const printerId in it.calcData){
+      const table = document.getElementById(`calcModelsTable_${printerId}`);
+      if(!table) continue;
+      const tbody = table.querySelector("tbody");
+      tbody.innerHTML = "";
+      it.calcData[printerId].forEach(model => {
+        addModelRow(parseInt(printerId, 10), model);
+      });
+    }
+  }
+  const tabEl = document.querySelector('#calculate-tab');
+  const tab = new bootstrap.Tab(tabEl);
+  tab.show();
+}
+
+function ensureIconsLoaded() {
+  if (!document.querySelector('link[href*="bootstrap-icons"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
+    document.head.appendChild(link);
+  }
+}
+
+	
+function renderSummary() {
+ensureIconsLoaded();
+// Вспомогательные функции форматирования
+  const formatCurrency = (value) => new Intl.NumberFormat('ru-RU', { 
+    style: 'currency', 
+    currency: 'RUB',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+
+  const formatNumber = (value, decimals = 2) => 
+    new Intl.NumberFormat('ru-RU', { 
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals 
+    }).format(value);
+
+  // 1. Расчет капитальных вложений
+  const calculateCapitalInvestments = () => {
+    const capital = {
+      printersCost: appData.printers.reduce((sum, p) => sum + p.cost, 0),
+      printersAdds: appData.printers.reduce(
+        (sum, p) => sum + p.additional.reduce((aSum, a) => aSum + a.cost, 0), 0),
+      printersMats: appData.printers.reduce(
+        (sum, p) => sum + p.materials.reduce((mSum, m) => mSum + (m.costPerKg * m.declaredWeight), 0), 0),
+      globalMats: appData.materials.reduce(
+        (sum, m) => sum + (m.costPerKg * m.declaredWeight), 0),
+      globalAdds: appData.additionalGlobal.reduce((sum, a) => sum + a.cost, 0)
+    };
+
+    capital.total = Object.values(capital).reduce((sum, val) => sum + val, 0);
+    return capital;
+  };
+
+  // 2. Анализ завершенных заказов
+  const analyzeCompletedOrders = () => {
+    const completedOrders = appData.calcHistory.filter(o => o.orderStatus === "done");
+    const results = {
+      totalRevenue: 0,
+      totalTax: 0,
+      totalCost: 0,
+      totalPrintHours: 0,
+      totalElectricityCost: 0,
+      totalOperatorExpenses: 0,
+      materialStats: {},
+      printerStats: {},
+      completedOrdersCount: completedOrders.length
+    };
+
+    // Инициализация статистики принтеров
+    appData.printers.forEach(p => {
+      results.printerStats[p.id] = {
+        name: p.name,
+        hours: 0,
+        cost: 0,
+        prints: 0
+      };
+    });
+
+    completedOrders.forEach(order => {
+      results.totalRevenue += order.total || 0;
+      
+      // Расчет налогов
+      if (order.taxAmount !== undefined) {
+        results.totalTax += order.taxAmount;
+      } else if (order.taxPercent !== undefined && order.taxPercent > 0) {
+        results.totalTax += order.total * (order.taxPercent / 100);
+      }
+
+      // Учет расходов на оператора
+      results.totalOperatorExpenses += order.totalOperatorCost || 0;
+
+      // Обработка деталей заказа
+      order.details?.forEach(printer => {
+        const printerId = printer.printerId;
+        
+        if (!results.printerStats[printerId]) {
+          results.printerStats[printerId] = {
+            name: printer.printerName,
+            hours: 0,
+            cost: 0,
+            prints: 0
+          };
+        }
+        
+        printer.linesDetail?.forEach(model => {
+          if (model.materialData?.id) {
+            const materialId = model.materialData.id;
+            
+            // Статистика по материалам
+            if (!results.materialStats[materialId]) {
+              const mat = findMaterialById(materialId);
+              results.materialStats[materialId] = {
+                name: mat ? `${mat.name} | ${mat.manufacturer}` : 
+                          `${model.matName} | ${model.materialData?.manufacturer || 'N/A'}`,
+                totalGrams: 0,
+                totalCost: 0
+              };
+            }
+            
+            results.materialStats[materialId].totalGrams += model.realWeight || 0;
+            results.materialStats[materialId].totalCost += model.costMaterial || 0;
+            
+            // Учет затрат
+            results.totalCost += model.costPrinterPart || 0;
+            results.totalCost += model.costElectric || 0;
+            results.totalCost += model.costMaintenance || 0;
+            
+            // Статистика по принтерам
+            results.printerStats[printerId].hours += model.hours || 0;
+            results.printerStats[printerId].cost += model.costPrinterPart || 0;
+            results.printerStats[printerId].prints++;
+            
+            results.totalElectricityCost += model.costElectric || 0;
+            results.totalPrintHours += model.hours || 0;
+          }
+        });
+      });
+      
+      // Глобальные расходы
+      results.totalCost += order.globalAdditional?.sumGlobalAdd || 0;
+      results.totalCost += order.shipping || 0;
+      results.totalCost += order.totalOperatorCost || 0;
+    });
+
+    return results;
+  };
+
+  // 3. Расчет ключевых показателей
+  const calculateKPIs = (capital, ordersAnalysis) => {
+    const {
+      totalRevenue,
+      totalCost,
+      totalTax,
+      totalPrintHours,
+      totalElectricityCost,
+      materialStats,
+      completedOrdersCount
+    } = ordersAnalysis;
+    
+    const netProfit = totalRevenue - totalCost - totalTax;
+    const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    
+    // Расчет показателей по материалам
+    const totalMaterialCost = Object.values(materialStats).reduce(
+      (sum, m) => sum + m.totalCost, 0);
+    const totalGrams = Object.values(materialStats).reduce(
+      (sum, m) => sum + m.totalGrams, 0);
+
+    return {
+      netProfit,
+      profitability,
+      profitPerHour: totalPrintHours > 0 ? netProfit / totalPrintHours : 0,
+      payback: netProfit - capital.total,
+      avgOrderRevenue: completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0,
+      netProfitPerOrder: completedOrdersCount > 0 ? netProfit / completedOrdersCount : 0,
+      materialCostPerRevenue: totalRevenue > 0 ? (totalMaterialCost / totalRevenue) * 100 : 0,
+      marginPercent: totalRevenue > 0 ? 
+        ((totalRevenue - totalMaterialCost - totalElectricityCost) / totalRevenue) * 100 : 0,
+      netProfitPerGram: totalGrams > 0 ? netProfit / (totalGrams / 1000) : 0,
+      costPerGram: totalGrams > 0 ? totalCost / (totalGrams / 1000) : 0,
+      printerUtilization: appData.printers.length > 0 ? 
+        (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0,
+      costPerHour: totalPrintHours > 0 ? totalCost / totalPrintHours : 0,
+      materialCostPerHour: totalPrintHours > 0 ? totalMaterialCost / totalPrintHours : 0,
+      totalMaterialCost,
+      totalGrams
+    };
+  };
+
+  // Генерация HTML
+  const generateHTML = (capital, ordersAnalysis, kpis) => {
+    const {
+      completedOrdersCount,
+      totalRevenue,
+      totalTax,
+      totalCost,
+      totalOperatorExpenses,
+      materialStats,
+      printerStats
+    } = ordersAnalysis;
+
+    const {
+      netProfit,
+      profitability,
+      profitPerHour,
+      payback,
+      avgOrderRevenue,
+      netProfitPerOrder,
+      materialCostPerRevenue,
+      marginPercent,
+      netProfitPerGram,
+      costPerGram,
+      printerUtilization,
+      costPerHour,
+      materialCostPerHour
+    } = kpis;
+
+    // Форматирование данных для таблиц
+    const materialRows = Object.values(materialStats).map(m => `
+      <tr>
+        <td>${m.name}</td>
+        <td class="text-end">${formatNumber(m.totalGrams / 1000, 3)} кг</td>
+        <td class="text-end">${formatCurrency(m.totalCost)}</td>
+        <td class="text-end">${m.totalGrams > 0 ? 
+          formatCurrency(m.totalCost / (m.totalGrams / 1000)) : '0.00'} ₽/кг</td>
+      </tr>
+    `).join('');
+
+    const printerRows = Object.values(printerStats).map(p => `
+      <tr>
+        <td>${p.name}</td>
+        <td class="text-end">${formatNumber(p.hours, 1)} ч</td>
+        <td class="text-end">${formatCurrency(p.cost)}</td>
+        <td class="text-end">${p.hours > 0 ? 
+          formatCurrency(p.cost / p.hours) : '0.00'} ₽/ч</td>
+        <td class="text-end">${p.prints}</td>
+      </tr>
+    `).join('');
+
+    // Генерация карточек KPI
+    const kpiCards = [
+      {title: 'Рентабельность', value: profitability, unit: '%', 
+       desc: '(Чистая прибыль / Выручка)', icon: 'bi-graph-up'},
+      {title: 'Прибыль в час', value: profitPerHour, unit: '₽/ч', 
+       desc: '(Чистая прибыль / Часы печати)', icon: 'bi-speedometer2'},
+      {title: 'Маржинальность', value: marginPercent, unit: '%', 
+       desc: '(Выручка - Материалы - Электричество)', icon: 'bi-percent'},
+      {title: 'Материалы / Выручка', value: materialCostPerRevenue, unit: '%', 
+       desc: 'Доля затрат на материалы', icon: 'bi-coin'},
+      {title: 'Средний чек', value: avgOrderRevenue, unit: '₽', 
+       desc: '(Выручка / Заказы)', icon: 'bi-receipt'},
+      {title: 'Прибыль / заказ', value: netProfitPerOrder, unit: '₽', 
+       desc: '(Чистая прибыль / Заказы)', icon: 'bi-box-seam'},
+      {title: 'Себестоимость печати', value: costPerGram, unit: '₽/кг', 
+       desc: '(Общие затраты / Материалы)', icon: 'bi-printer'},
+      {title: 'Прибыль / кг', value: netProfitPerGram, unit: '₽/кг', 
+       desc: '(Чистая прибыль / Материалы)', icon: 'bi-box'},
+      {title: 'Электричество', value: ordersAnalysis.totalElectricityCost, unit: '₽', 
+       desc: 'Общие затраты', icon: 'bi-lightning'},
+      {title: 'Себестоимость часа', value: costPerHour, unit: '₽/ч', 
+       desc: '(Затраты / Часы печати)', icon: 'bi-clock'},
+      {title: 'Материалы / час', value: materialCostPerHour, unit: '₽/ч', 
+       desc: 'Расход материалов', icon: 'bi-hourglass-split'},
+      {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', 
+       desc: '(Использование / Потенциал)', icon: 'bi-cpu'}
+    ].map(card => `
+      <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center">
+              <i class="bi ${card.icon} fs-3 text-primary me-3"></i>
+              <div>
+                <h5 class="mb-0">${formatNumber(card.value, 1)}${card.unit}</h5>
+                <small class="text-muted">${card.title}</small>
+              </div>
+            </div>
+            <div class="mt-2 text-muted small">${card.desc}</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+    <div class="container-fluid p-0">
+      <!-- Капитальные вложения -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Капитальные вложения</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <h6>Принтеры:</h6>
+              <p>Всего: ${appData.printers.length} шт</p>
+              <p>Сумма: <strong>${formatCurrency(capital.printersCost)}</strong></p>
+            </div>
+            <div class="col-md-4">
+              <h6>Материалы:</h6>
+              <p>Принтерные: <strong>${formatCurrency(capital.printersMats)}</strong></p>
+              <p>Глобальные: <strong>${formatCurrency(capital.globalMats)}</strong></p>
+            </div>
+            <div class="col-md-4">
+              <h6>Дополнительно:</h6>
+              <p>Принтерные: <strong>${formatCurrency(capital.printersAdds)}</strong></p>
+              <p>Глобальные: <strong>${formatCurrency(capital.globalAdds)}</strong></p>
+            </div>
+          </div>
+          <div class="alert alert-primary mt-3 mb-0">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>Общие капитальные вложения:</span>
+              <strong class="fs-5">${formatCurrency(capital.total)}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Финансовые результаты -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Финансовые результаты</h5>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Показатели могут требовать проверки. 
+            <a href="https://github.com/nazbav/3d-price/issues/1" class="alert-link">Подробнее здесь</a>
+          </div>
+          
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Завершённых заказов</h6>
+                <h3 class="text-center">${completedOrdersCount}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Общая выручка</h6>
+                <h3 class="text-center text-success">${formatCurrency(totalRevenue)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Общие расходы</h6>
+                <h3 class="text-center text-danger">${formatCurrency(totalCost)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Чистая прибыль</h6>
+                <h3 class="text-center ${netProfit >= 0 ? 'text-success' : 'text-danger'}">
+                  ${formatCurrency(netProfit)}
+                </h3>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h6>Детализация расходов</h6>
+                  <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Налоги:</span>
+                      <span>${formatCurrency(totalTax)}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Расходы на оператора:</span>
+                      <span>${formatCurrency(totalOperatorExpenses)}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Окупаемость (прибыль - вложения):</span>
+                      <span class="${payback >= 0 ? 'text-success' : 'text-danger'}">
+                        ${formatCurrency(payback)}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-body">
+                  <h6>Эффективность</h6>
+                  <div class="progress mb-2" style="height: 25px">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: ${Math.min(100, profitability)}%" 
+                         aria-valuenow="${profitability}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      Рентабельность: ${formatNumber(profitability, 1)}%
+                    </div>
+                  </div>
+                  <div class="progress mb-2" style="height: 25px">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                         style="width: ${Math.min(100, marginPercent)}%" 
+                         aria-valuenow="${marginPercent}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      Маржинальность: ${formatNumber(marginPercent, 1)}%
+                    </div>
+                  </div>
+                  <div class="progress" style="height: 25px">
+                    <div class="progress-bar bg-info" role="progressbar" 
+                         style="width: ${Math.min(100, printerUtilization)}%" 
+                         aria-valuenow="${printerUtilization}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      Загрузка: ${formatNumber(printerUtilization, 1)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Статистика -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-boxes me-2"></i>Расход материалов</h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="">
+                    <tr>
+                      <th>Материал</th>
+                      <th class="text-end">Расход</th>
+                      <th class="text-end">Стоимость</th>
+                      <th class="text-end">₽/кг</th>
+                    </tr>
+                  </thead>
+                  <tbody>${materialRows}</tbody>
+                  <tfoot class="">
+                    <tr>
+                      <th>Итого</th>
+                      <th class="text-end">${formatNumber(kpis.totalGrams / 1000, 3)} кг</th>
+                      <th class="text-end">${formatCurrency(kpis.totalMaterialCost)}</th>
+                      <th class="text-end">${kpis.totalGrams > 0 ? 
+                        formatCurrency(kpis.totalMaterialCost / (kpis.totalGrams / 1000)) : '0.00'} ₽/кг</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-printer me-2"></i>Затраты по принтерам</h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="">
+                    <tr>
+                      <th>Принтер</th>
+                      <th class="text-end">Время</th>
+                      <th class="text-end">Амортизация</th>
+                      <th class="text-end">₽/час</th>
+                      <th class="text-end">Моделей</th>
+                    </tr>
+                  </thead>
+                  <tbody>${printerRows}</tbody>
+                  <tfoot class="">
+                    <tr>
+                      <th>Итого</th>
+                      <th class="text-end">${formatNumber(ordersAnalysis.totalPrintHours, 1)} ч</th>
+                      <th class="text-end">${formatCurrency(Object.values(printerStats).reduce((sum, p) => sum + p.cost, 0))}</th>
+                      <th class="text-end">${ordersAnalysis.totalPrintHours > 0 ? 
+                        formatCurrency(Object.values(printerStats).reduce((sum, p) => sum + p.cost, 0) / ordersAnalysis.totalPrintHours) : '0.00'} ₽/ч</th>
+                      <th class="text-end">${Object.values(printerStats).reduce((sum, p) => sum + p.prints, 0)}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- KPI -->
+      <div class="card shadow-sm">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Ключевые показатели эффективности</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            ${kpiCards}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  // Выполнение расчетов
+  const capital = calculateCapitalInvestments();
+  const ordersAnalysis = analyzeCompletedOrders();
+  const kpis = calculateKPIs(capital, ordersAnalysis);
+
+  // Рендеринг результата
+  const summaryContent = document.getElementById("summaryContent");
+  summaryContent.innerHTML = generateHTML(capital, ordersAnalysis, kpis);
+}
+
+function parseIncomingLinkParams(params){
+  const prName = params.get('printer');
+  if(!prName) return;
+  const statuses = params.getAll('model_status[]');
+  const names = params.getAll('model_name[]');
+  const times = params.getAll('model_time[]');
+  const weights = params.getAll('model_weight[]');
+  const mats = params.getAll('model_filament[]');
+  const models = [];
+  for(let i=0;i<names.length;i++){
+    models.push({
+      name:names[i]||'' ,
+      status:statuses[i]||'new',
+      timeStr:times[i]||'',
+      weight:weights[i]||'',
+      matName:mats[i]||''
+    });
+  }
+  incomingLinkData = {printerName: prName, models};
+  showIncomingDataModal();
+}
+
+function showIncomingDataModal(){
+  const sel = document.getElementById('targetOrderSelect');
+  sel.innerHTML = '<option value="new">Создать новый расчёт</option>';
+  appData.calcHistory.forEach(h=>{
+    const opt = document.createElement('option');
+    opt.value = h.timestamp;
+    opt.textContent = h.calcName || h.dateStr;
+    sel.appendChild(opt);
+  });
+  const modal = new bootstrap.Modal(document.getElementById('incomingDataModal'));
+  document.getElementById('importLinkApplyBtn').onclick = applyIncomingData;
+  modal.show();
+}
+
+function applyIncomingData(){
+  const sel = document.getElementById('targetOrderSelect');
+  const val = sel.value;
+  const modalEl = document.getElementById('incomingDataModal');
+  const modal = bootstrap.Modal.getInstance(modalEl);
+  modal.hide();
+  if(val !== 'new'){
+    onEditCalcHistory(parseInt(val,10));
+  } else {
+    document.getElementById('calcName').value = '';
+    document.getElementById('calcClientName').value = '';
+    document.getElementById('calcOrderStatus').value = 'new';
+    appData.printers.forEach(pr=>{
+      const tb = document.querySelector(`#calcModelsTable_${pr.id} tbody`);
+      if(tb) tb.innerHTML='';
+    });
+  }
+  if(incomingLinkData){
+    const pr = appData.printers.find(p=>p.name===incomingLinkData.printerName);
+    if(!pr){
+      alert('Не найден принтер '+incomingLinkData.printerName);
+    } else {
+      incomingLinkData.models.forEach(m=>{
+        const mat = findMaterialByName(m.matName);
+        addModelRow(pr.id, {
+          name: m.name,
+          status: m.status,
+          hours: parseTimeFromLink(m.timeStr),
+          weight: parseFloat(m.weight)||0,
+          materialId: mat?mat.id:''
+        });
+      });
+    }
+  }
+  const tabEl = document.querySelector('#calculate-tab');
+  const tab = new bootstrap.Tab(tabEl);
+  tab.show();
+  incomingLinkData = null;
+}
+
+</script>
+
+<!-- Supabase & QR -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script>
+const SUPABASE_URL = "https://kvvxfytrlgihewmsvwkj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2dnhmeXRybGdpaGV3bXN2d2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NDExMzIsImV4cCI6MjA2MTUxNzEzMn0.bvXmrh3XZivLVyg4irGo82pLAhlrSapzmxcDKLEAjLo";
+
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // ✅ исправлено
+
+let syncId = localStorage.getItem("sync_id") || crypto.randomUUID();
+let encryptionKey = localStorage.getItem("encryption_key") || crypto.randomUUID() + crypto.randomUUID();
+localStorage.setItem("sync_id", syncId);
+localStorage.setItem("encryption_key", encryptionKey);
+
+async function encryptData(data, key) {
+  const text = JSON.stringify(data);
+  const enc = new TextEncoder().encode(text);
+  const cryptoKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(key.slice(0, 32)), "AES-GCM", false, ["encrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, enc);
+  return btoa(JSON.stringify({ iv: Array.from(iv), data: Array.from(new Uint8Array(cipher)) }));
+}
+
+async function decryptData(encrypted, key) {
+  const parsed = JSON.parse(atob(encrypted));
+  const iv = new Uint8Array(parsed.iv);
+  const data = new Uint8Array(parsed.data);
+  const cryptoKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(key.slice(0, 32)), "AES-GCM", false, ["decrypt"]);
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, data);
+  return JSON.parse(new TextDecoder().decode(decrypted));
+}
+
+async function saveSettingsToCloud() {
+  const encrypted = await encryptData(appData, encryptionKey);
+  const { error } = await _supabase
+    .from('user_settings')
+    .upsert({
+      sync_id: syncId,
+      encrypted_data: encrypted,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'sync_id' });
+
+  if (error) alert("Ошибка сохранения: " + error.message);
+  else alert("✅ Данные сохранены в облако.");
+}
+
+async function loadSettingsFromCloud() {
+  const { data, error } = await _supabase
+    .from('user_settings')
+    .select('*')
+    .eq('sync_id', syncId)
+    .single();
+
+  if (error || !data) {
+    alert("Ошибка загрузки: " + error?.message);
+    return;
+  }
+
+  // Проверка времени
+  const createdAt = new Date(data.created_at);
+  const now = new Date();
+  if ((now - createdAt) > 5 * 60 * 1000) { // 5 минут
+    alert("Данные устарели и были удалены");
+    await _supabase.from('user_settings').delete().eq('sync_id', syncId);
+    return;
+  }
+
+  try {
+    const decrypted = await decryptData(data.encrypted_data, encryptionKey);
+    appData = decrypted;
+    saveToLocalStorage();
+    initAll();
+    alert("✅ Настройки загружены.");
+  } catch (e) {
+    alert("Ошибка расшифровки.");
+  }
+}
+
+function generateSyncLinkAndQR() {
+  const url = new URL(window.location.href);
+  url.searchParams.set("sync_id", syncId);
+  url.searchParams.set("key", encryptionKey);
+  const link = url.toString();
+  document.getElementById("syncLinkDisplay").value = link;
+  const qrcodeDiv = document.getElementById("qrcode");
+  qrcodeDiv.innerHTML = "";
+  new QRCode(qrcodeDiv, {
+    text: link,
+    width: 256,
+    height: 256,
+    colorDark: "#000000",
+    colorLight: "#ffffff"
+  });
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const params = new URLSearchParams(window.location.search);
+  const incomingId = params.get("sync_id");
+  const incomingKey = params.get("key");
+
+  if (incomingId && incomingKey) {
+    localStorage.setItem("sync_id", incomingId);
+    localStorage.setItem("encryption_key", incomingKey);
+    syncId = incomingId;
+    encryptionKey = incomingKey;
+    await loadSettingsFromCloud();
+  }
+  document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
+  document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
+  parseIncomingLinkParams(params);
+  if(params.toString()){
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});
+</script>
+
+</body>
+</html>
