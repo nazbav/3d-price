@@ -3,7 +3,13 @@ import os
 import re
 import urllib.parse
 import webbrowser
-import uuid
+import random
+import string
+
+def generate_uuid():
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8)) + \
+           ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
 
 if len(sys.argv) < 2:
     print(f"Usage: {os.path.basename(sys.argv[0])} <gcode_file>")
@@ -19,7 +25,7 @@ model_code = None
 if lines and lines[0].startswith('; MODEL_CODE: '):
     model_code = lines[0].split('=', 1)[1].strip()
 else:
-    model_code = uuid.uuid4().hex
+    model_code = generate_uuid()
     lines.insert(0, f'; MODEL_CODE: {model_code}\n')
     with open(file_path, 'w', encoding='utf-8') as fw:
         fw.writelines(lines)
