@@ -43,7 +43,8 @@ def convert_filament(data):
     for k in ORCA_FIELDS:
         if k in data:
             orca[k] = normalize_value(data[k], k)
-    name = data.get('filament_settings_id') or data.get('name') or 'material'
+    name_val = data.get('filament_settings_id') or data.get('name') or ''
+    name = normalize_value(name_val, 'filament_settings_id') or 'material'
     return name, orca
 
 def convert_machine(data):
@@ -51,7 +52,8 @@ def convert_machine(data):
     for k in PRINTER_FIELDS:
         if k in data:
             orca[k] = normalize_value(data[k], k)
-    name = data.get('printer_settings_id') or data.get('name') or 'printer'
+    name_val = data.get('printer_settings_id') or data.get('name') or ''
+    name = normalize_value(name_val, 'printer_settings_id') or 'printer'
     return name, orca
 
 def main():
