@@ -385,7 +385,7 @@
 <h3>Экспорт данных</h3>
 
     <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
-    <button class="btn btn-info" id="downloadJsonFileBtn" onclick="downloadJsonFile()">Скачать JSON файл</button>
+    <button class="btn btn-info" id="downloadJsonFileBtn">Скачать JSON файл</button>
     <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
     <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
 
@@ -3292,9 +3292,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('savePrinterJsonBtn').onclick = savePrinterJson;
   document.getElementById('importPrinterJsonBtn').onclick = ()=>document.getElementById('orcaPrinterJsonFile').click();
   document.getElementById('orcaPrinterJsonFile').addEventListener('change',e=>importPrinterJson(e.target.files[0]));
+  document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
+  document.getElementById('downloadPrinterJsonBtn').onclick = downloadPrinterJson;
+  document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
+  document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
   document.getElementById('importJsonFile').addEventListener('change', importFromFile);
-  
+
   document.getElementById('downloadOrcaInfoBtn').onclick = downloadOrcaInfo;
   document.getElementById('downloadPrinterInfoBtn').onclick = downloadPrinterInfo;
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
