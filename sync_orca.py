@@ -11,30 +11,6 @@ DEFAULT_INPUT = 'calc_data.json'
 DEFAULT_OUTPUT = 'calc_data_synced.json'
 
 
-def build_system_filament_map(system_root):
-    mapping = {}
-    for fp in glob.glob(os.path.join(system_root, '**', '*.json'), recursive=True):
-        cfg = load_json(fp)
-        if not cfg or 'name' not in cfg:
-            continue
-        name = cfg['name']
-        if name not in mapping:
-            mapping[name] = cfg
-    return mapping
-
-def merge_inherited(cfg, mapping, seen=None):
-    if seen is None:
-        seen = set()
-    parent = cfg.get('inherits')
-    if not parent or parent in seen:
-        return cfg
-    base = mapping.get(parent)
-    if base:
-        seen.add(parent)
-        base = merge_inherited(dict(base), mapping, seen)
-        for k, v in base.items():
-            cfg.setdefault(k, v)
-    return cfg
 
 def load_json(path):
     try:
@@ -48,9 +24,7 @@ def normalize_name(value):
         return value[0] if value else ''
     return value or ''
 
-def convert_filament(data, mapping=None):
-    if mapping:
-        data = merge_inherited(dict(data), mapping)
+def convert_filament(data):
     name_val = data.get('filament_settings_id') or data.get('name')
     name = normalize_name(name_val) or 'material'
     return name, data
@@ -78,13 +52,11 @@ def main():
 
     mat_map = {m.get('name','').lower(): m for m in data.get('materials', [])}
     fil_dir = os.path.join(args.orca_path, 'filament')
-    system_dir = os.path.join(os.environ.get('APPDATA', ''), 'OrcaSlicer', 'system')
-    system_filaments = build_system_filament_map(system_dir)
     for fp in glob.glob(os.path.join(fil_dir, '*.json')):
         cfg = load_json(fp)
         if not cfg:
             continue
-        name, orca = convert_filament(cfg, system_filaments)
+        name, orca = convert_filament(cfg)
         key = name.lower()
         if key in mat_map:
             mat_map[key]['orca'] = orca
