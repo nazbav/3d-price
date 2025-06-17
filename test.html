@@ -583,6 +583,53 @@
   </div>
 </div>
 
+<!-- Модальное окно доп. расхода -->
+<div class="modal fade" id="additionalModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Доп. расход</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Описание</label>
+          <input type="text" class="form-control" id="addDescInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Стоимость (₽)</label>
+          <input type="number" class="form-control" id="addCostInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Часы окупаемости</label>
+          <input type="number" class="form-control" id="addHoursInput">
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="addUseInput" checked>
+          <label class="form-check-label" for="addUseInput">Включать в расчёт</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="saveAdditionalBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно подтверждения -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-body" id="confirmMessage"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Нет</button>
+        <button type="button" class="btn btn-danger" id="confirmOkBtn">Да</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const THEME_STORAGE_KEY = "themePreference";
@@ -1103,45 +1150,33 @@ function onShowPrinterDetails(id){
   document.getElementById("btnAddPrinterMaterial").onclick = () => onAddPrinterMaterial(printer.id);
 }
 function onAddPrinterAdditional(printerId){
-  const pr = appData.printers.find(p => p.id === printerId);
-  if(!pr) return;
-  const nid = Date.now();
-  pr.additional.push({
-    id: nid,
-    description: "Новая статья",
-    cost: 0,
-    hoursToRecoup: 1000,
-    useInCalc: true
-  });
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
+  currentAdditionalContext = {type:'printer', printerId: printerId, id:null};
+  document.getElementById('addDescInput').value = '';
+  document.getElementById('addCostInput').value = '0';
+  document.getElementById('addHoursInput').value = '1000';
+  document.getElementById('addUseInput').checked = true;
+  new bootstrap.Modal(document.getElementById('additionalModal')).show();
 }
 function onEditPrinterAdditional(printerId, addId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
   const it = pr.additional.find(a => a.id === addId);
   if(!it) return;
-  const d = prompt("Описание:", it.description);
-  if(d === null) return;
-  const c = prompt("Стоимость (₽):", it.cost);
-  if(c === null) return;
-  const h = prompt("Часы окупаемости:", it.hoursToRecoup);
-  if(h === null) return;
-  const used = confirm("Включать в расчёт?");
-  it.description = d;
-  it.cost = parseFloat(c) || 0;
-  it.hoursToRecoup = parseFloat(h) || 1000;
-  it.useInCalc = used;
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
+  currentAdditionalContext = {type:'printer', printerId: printerId, id:addId};
+  document.getElementById('addDescInput').value = it.description;
+  document.getElementById('addCostInput').value = it.cost;
+  document.getElementById('addHoursInput').value = it.hoursToRecoup;
+  document.getElementById('addUseInput').checked = it.useInCalc;
+  new bootstrap.Modal(document.getElementById('additionalModal')).show();
 }
 function onDeletePrinterAdditional(printerId, addId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
-  if(!confirm("Удалить статью?")) return;
-  pr.additional = pr.additional.filter(a => a.id !== addId);
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
+  showConfirm('Удалить статью?', ()=>{
+    pr.additional = pr.additional.filter(a => a.id !== addId);
+    saveToLocalStorage();
+    onShowPrinterDetails(printerId);
+  });
 }
 function onAddPrinterMaterial(printerId){
   const pr = appData.printers.find(p => p.id === printerId);
@@ -1228,6 +1263,20 @@ function renderGlobalMaterialsTable(){
   });
 }
 let currentMaterialEditId = null;
+let currentAdditionalContext = null;
+let confirmAction = null;
+
+function showConfirm(msg, action){
+  document.getElementById('confirmMessage').textContent = msg;
+  confirmAction = action;
+  new bootstrap.Modal(document.getElementById('confirmModal')).show();
+}
+
+function confirmOk(){
+  if(confirmAction) confirmAction();
+  confirmAction = null;
+  bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+}
 function onAddGlobalMaterial(){
   currentMaterialEditId = null;
   document.getElementById('matNameInput').value = '';
@@ -1299,39 +1348,71 @@ function renderGlobalAdditionalTable(){
   });
 }
 function onAddGlobalAdditional(){
-  const nid = Date.now();
-  appData.additionalGlobal.push({
-    id: nid,
-    description: "Новая статья",
-    cost: 0,
-    hoursToRecoup: 1000,
-    useInCalc: true
-  });
-  saveToLocalStorage();
-  renderGlobalAdditionalTable();
+  currentAdditionalContext = {type:'global', printerId:null, id:null};
+  document.getElementById('addDescInput').value = '';
+  document.getElementById('addCostInput').value = '0';
+  document.getElementById('addHoursInput').value = '1000';
+  document.getElementById('addUseInput').checked = true;
+  new bootstrap.Modal(document.getElementById('additionalModal')).show();
 }
 function onEditGlobalAdditional(id){
   const x = appData.additionalGlobal.find(a => a.id === id);
   if(!x) return;
-  const d = prompt("Описание:", x.description);
-  if(d === null) return;
-  const c = prompt("Стоимость (₽):", x.cost);
-  if(c === null) return;
-  const hh = prompt("Часы окуп.", x.hoursToRecoup || 1000);
-  if(hh === null) return;
-  const used = confirm("Включать в расчёт?");
-  x.description = d;
-  x.cost = parseFloat(c) || 0;
-  x.hoursToRecoup = parseFloat(hh) || 1000;
-  x.useInCalc = used;
-  saveToLocalStorage();
-  renderGlobalAdditionalTable();
+  currentAdditionalContext = {type:'global', printerId:null, id:id};
+  document.getElementById('addDescInput').value = x.description;
+  document.getElementById('addCostInput').value = x.cost;
+  document.getElementById('addHoursInput').value = x.hoursToRecoup || 1000;
+  document.getElementById('addUseInput').checked = x.useInCalc;
+  new bootstrap.Modal(document.getElementById('additionalModal')).show();
 }
 function onDeleteGlobalAdditional(id){
-  if(!confirm("Удалить статью?")) return;
-  appData.additionalGlobal = appData.additionalGlobal.filter(a => a.id !== id);
-  saveToLocalStorage();
-  renderGlobalAdditionalTable();
+  showConfirm('Удалить статью?', ()=>{
+    appData.additionalGlobal = appData.additionalGlobal.filter(a => a.id !== id);
+    saveToLocalStorage();
+    renderGlobalAdditionalTable();
+  });
+}
+
+function saveAdditionalFromModal(){
+  const desc = document.getElementById('addDescInput').value;
+  const cost = parseFloat(document.getElementById('addCostInput').value) || 0;
+  const hours = parseFloat(document.getElementById('addHoursInput').value) || 1000;
+  const used = document.getElementById('addUseInput').checked;
+  if(!currentAdditionalContext) return;
+  if(currentAdditionalContext.type === 'global'){
+    let item;
+    if(currentAdditionalContext.id === null){
+      item = {id: Date.now()};
+      appData.additionalGlobal.push(item);
+    } else {
+      item = appData.additionalGlobal.find(a => a.id === currentAdditionalContext.id);
+    }
+    if(!item) return;
+    item.description = desc;
+    item.cost = cost;
+    item.hoursToRecoup = hours;
+    item.useInCalc = used;
+    saveToLocalStorage();
+    renderGlobalAdditionalTable();
+  } else {
+    const pr = appData.printers.find(p => p.id === currentAdditionalContext.printerId);
+    if(!pr) return;
+    let item;
+    if(currentAdditionalContext.id === null){
+      item = {id: Date.now()};
+      pr.additional.push(item);
+    } else {
+      item = pr.additional.find(a => a.id === currentAdditionalContext.id);
+    }
+    if(!item) return;
+    item.description = desc;
+    item.cost = cost;
+    item.hoursToRecoup = hours;
+    item.useInCalc = used;
+    saveToLocalStorage();
+    onShowPrinterDetails(currentAdditionalContext.printerId);
+  }
+  bootstrap.Modal.getInstance(document.getElementById('additionalModal')).hide();
 }
 
 /* Функции калькуляции */
@@ -3203,6 +3284,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
+  document.getElementById('saveAdditionalBtn').onclick = saveAdditionalFromModal;
+  document.getElementById('confirmOkBtn').onclick = confirmOk;
 
   document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
   document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
