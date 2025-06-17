@@ -1736,7 +1736,7 @@ function getAllMaterialsForPrinter(printerId, includeAll=false){
     if(!includeAll && m.balance <= 0) return false;
     return !m.printers || m.printers.length===0 || m.printers.some(pid => String(pid) === String(printerId));
   });
-  const printerMats = pr.materials.filter(m => includeAll || m.balance > 0);
+  const printerMats = pr ? pr.materials.filter(m => includeAll || m.balance > 0) : [];
   return [...globalMats, ...printerMats];
 }
 
@@ -2856,8 +2856,9 @@ function onEditCalcHistory(timestamp){
       if(!table) continue;
       const tbody = table.querySelector("tbody");
       tbody.innerHTML = "";
+      const prIdNum = isNaN(printerId) ? printerId : parseInt(printerId, 10);
       it.calcData[printerId].forEach(model => {
-        addModelRow(printerId, model);
+        addModelRow(prIdNum, model);
       });
     }
   }
