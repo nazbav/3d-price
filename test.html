@@ -835,15 +835,15 @@ function loadFromLocalStorage(){
     const s = localStorage.getItem(STORAGE_KEY);
     if(s){
       const p = JSON.parse(s);
-      if(p) appData = p;
-      // ensure printers arrays
+      if(p) appData = migrateOldData(p);
+      // ensure arrays exist
       if(!Array.isArray(appData.printers)) appData.printers = [];
       if(!Array.isArray(appData.materials)) appData.materials = [];
       if(!Array.isArray(appData.additionalGlobal)) appData.additionalGlobal = [];
       if(!Array.isArray(appData.clients)) appData.clients = [];
       if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
-      (appData.materials||[]).forEach(m=>{if(!m.printers) m.printers=[];});
-      (appData.additionalGlobal||[]).forEach(a=>{if(!a.printers) a.printers=[];});
+      appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
+      appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
     }
   } catch(e){}
 }
