@@ -451,81 +451,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <ul class="nav nav-tabs" id="orcaTabNav" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="orca-prof-tab" data-bs-toggle="tab" data-bs-target="#orca-prof" type="button" role="tab">Профиль прутка</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-cool-tab" data-bs-toggle="tab" data-bs-target="#orca-cool" type="button" role="tab">Охлаждение</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-ovr-tab" data-bs-toggle="tab" data-bs-target="#orca-ovr" type="button" role="tab">Переопределения</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-adv-tab" data-bs-toggle="tab" data-bs-target="#orca-adv" type="button" role="tab">Дополнительно</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-extr-tab" data-bs-toggle="tab" data-bs-target="#orca-extr" type="button" role="tab">Экструдер ММ</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-dep-tab" data-bs-toggle="tab" data-bs-target="#orca-dep" type="button" role="tab">Зависимости</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-note-tab" data-bs-toggle="tab" data-bs-target="#orca-note" type="button" role="tab">Заметки</button>
-          </li>
-        </ul>
-        <div class="tab-content pt-3" id="orcaTabContent">
-          <div class="tab-pane fade show active" id="orca-prof" role="tabpanel">
-            <div id="orcaProfFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-cool" role="tabpanel">
-            <div id="orcaCoolFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-ovr" role="tabpanel">
-            <div id="orcaOvrFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-adv" role="tabpanel">
-            <div id="orcaAdvFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-extr" role="tabpanel">
-            <div id="orcaExtrFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-dep" role="tabpanel">
-            <div id="orcaDepFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-note" role="tabpanel">
-            <div id="orcaNoteFields"></div>
-          </div>
-        </div>
+        <div id="orcaFieldsContainer"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-        <input type="file" id="orcaJsonFileInput" class="form-control d-none" accept=".json" />
-        <button type="button" class="btn btn-outline-secondary" id="importOrcaJsonBtn">Импорт JSON</button>
         <button type="button" class="btn btn-info" id="downloadOrcaJsonBtn">Скачать JSON</button>
         <button type="button" class="btn btn-primary" id="saveOrcaConfigBtn">Сохранить</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Модальное окно настроек принтера OrcaSlicer -->
-<div class="modal fade" id="orcaPrinterModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Настройки принтера OrcaSlicer</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div id="orcaPrinterFields"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-        <input type="file" id="orcaPrinterFileInput" class="form-control d-none" accept=".json" />
-        <button type="button" class="btn btn-outline-secondary" id="importPrinterJsonBtn">Импорт JSON</button>
-        <button type="button" class="btn btn-info" id="downloadPrinterJsonBtn">Скачать JSON</button>
-        <button type="button" class="btn btn-primary" id="savePrinterJsonBtn">Сохранить</button>
       </div>
     </div>
   </div>
@@ -546,10 +477,6 @@ document.getElementById("themeToggle").addEventListener("click",()=>{
 });
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)||"light";
 setTheme(savedTheme);
-
-function ucfirst(str){
-  return str.charAt(0).toUpperCase()+str.slice(1);
-}
 
 const STORAGE_KEY = "ThreeDPrintCalc_Extended_v5";
 let appData = {
@@ -933,7 +860,6 @@ function renderPrintersTable(){
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditPrinter(${printer.id})">Ред.<\/button>
-          <button class="btn btn-success" onclick="openPrinterOrca(${printer.id})">Orca<\/button>
           <button class="btn btn-info" onclick="onShowPrinterDetails(${printer.id})">Детали<\/button>
           <button class="btn btn-warning" onclick="copyElement('printers', ${printer.id})">Копировать<\/button>
           <button class="btn btn-danger" onclick="onDeletePrinter(${printer.id})">Удл.<\/button>
@@ -1794,7 +1720,6 @@ function findMaterialByName(name) {
 
 function defaultOrcaConfig(){
   return {
-    type: 'filament',
     filament_id: '',
     setting_id: '',
     name: '',
@@ -2086,47 +2011,37 @@ function downloadMaterialLabelHtml(materialId) {
 
 /* Настройки OrcaSlicer для материала */
 let currentOrcaMaterialId = null;
-const ORCA_GROUPS = {
-  profile: ['type','filament_id','setting_id','name','from','instantiation','inherits','filament_diameter','filament_density','filament_start_gcode','filament_end_gcode'],
-  cooling: ['filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed'],
-  overrides: ['enable_pressure_advance','pressure_advance','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp'],
-  advanced: [],
-  extrmm: [],
-  deps: [],
-  notes: ['compatible_printers']
-};
-const ORCA_FIELDS = Object.values(ORCA_GROUPS).flat();
+const ORCA_FIELDS = [
+  'filament_id','setting_id','name','from','instantiation','inherits','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','filament_start_gcode','filament_end_gcode','filament_diameter','enable_pressure_advance','pressure_advance','filament_density','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','compatible_printers'
+];
 const ORCA_TEXTAREA_FIELDS = ['filament_start_gcode','filament_end_gcode','compatible_printers'];
 
 function ensureOrcaFieldsHtml(){
-  if(document.getElementById('orcaProfFields').dataset.inited) return;
-  for(const [grp, fields] of Object.entries(ORCA_GROUPS)){
-    const container = document.getElementById('orca'+ucfirst(grp)+'Fields');
-    if(!container) continue;
-    fields.forEach(f=>{
-      const div = document.createElement('div');
-      div.className = 'mb-3';
-      const label = document.createElement('label');
-      label.className = 'form-label';
-      label.textContent = f;
-      label.setAttribute('for','orca_'+f);
-      div.appendChild(label);
-      if(ORCA_TEXTAREA_FIELDS.includes(f)){
-        const ta = document.createElement('textarea');
-        ta.className = 'form-control';
-        ta.id = 'orca_'+f;
-        ta.rows = 2;
-        div.appendChild(ta);
-      } else {
-        const inp = document.createElement('input');
-        inp.className = 'form-control';
-        inp.id = 'orca_'+f;
-        div.appendChild(inp);
-      }
-      container.appendChild(div);
-    });
-  }
-  document.getElementById('orcaProfFields').dataset.inited = '1';
+  const c = document.getElementById('orcaFieldsContainer');
+  if(c.dataset.inited) return;
+  ORCA_FIELDS.forEach(f=>{
+    const div = document.createElement('div');
+    div.className = 'mb-3';
+    const label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = f;
+    label.setAttribute('for','orca_'+f);
+    div.appendChild(label);
+    if(ORCA_TEXTAREA_FIELDS.includes(f)){
+      const ta = document.createElement('textarea');
+      ta.className = 'form-control';
+      ta.id = 'orca_'+f;
+      ta.rows = 2;
+      div.appendChild(ta);
+    } else {
+      const inp = document.createElement('input');
+      inp.className = 'form-control';
+      inp.id = 'orca_'+f;
+      div.appendChild(inp);
+    }
+    c.appendChild(div);
+  });
+  c.dataset.inited = '1';
 }
 
 function openOrcaConfig(matId){
@@ -2135,8 +2050,7 @@ function openOrcaConfig(matId){
   currentOrcaMaterialId = matId;
   if(!mat.orca) mat.orca = defaultOrcaConfig();
   ensureOrcaFieldsHtml();
-  const fields = Object.values(ORCA_GROUPS).flat();
-  fields.forEach(f=>{
+  ORCA_FIELDS.forEach(f=>{
     const el = document.getElementById('orca_'+f);
     if(el) el.value = mat.orca[f] || '';
   });
@@ -2149,8 +2063,7 @@ function saveOrcaConfig(){
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
   if(!mat.orca) mat.orca = {};
-  const fields = Object.values(ORCA_GROUPS).flat();
-  fields.forEach(f=>{
+  ORCA_FIELDS.forEach(f=>{
     const el = document.getElementById('orca_'+f);
     mat.orca[f] = el ? el.value : '';
   });
@@ -2178,133 +2091,6 @@ function downloadOrcaJson(){
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-}
-
-function importOrcaJson(file){
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      ORCA_FIELDS.forEach(f => {
-        if(data[f] !== undefined){
-          let val = data[f];
-          if(Array.isArray(val)) val = val.join(f==='compatible_printers'?', ':'');
-          const el = document.getElementById('orca_'+f);
-          if(el) el.value = val;
-        }
-      });
-    } catch(err){
-      alert('Ошибка чтения файла: '+err);
-    }
-  };
-  reader.readAsText(file);
-}
-
-/* Настройки OrcaSlicer для принтера */
-let currentOrcaPrinterId = null;
-const ORCA_PRINTER_FIELDS = ['before_layer_change_gcode','change_filament_gcode','machine_start_gcode','machine_end_gcode','print_host','print_host_webui','printer_settings_id'];
-const PRINTER_TEXTAREA_FIELDS = ['before_layer_change_gcode','change_filament_gcode','machine_start_gcode','machine_end_gcode'];
-
-function defaultPrinterConfig(){
-  return {
-    before_layer_change_gcode:'',
-    change_filament_gcode:'',
-    machine_start_gcode:'',
-    machine_end_gcode:'',
-    print_host:'',
-    print_host_webui:'',
-    printer_settings_id:''
-  };
-}
-
-function ensureOrcaPrinterFields(){
-  const c=document.getElementById('orcaPrinterFields');
-  if(c.dataset.inited) return;
-  ORCA_PRINTER_FIELDS.forEach(f=>{
-    const div=document.createElement('div');
-    div.className='mb-3';
-    const label=document.createElement('label');
-    label.className='form-label';
-    label.textContent=f;
-    label.setAttribute('for','printer_'+f);
-    div.appendChild(label);
-    if(PRINTER_TEXTAREA_FIELDS.includes(f)){
-      const ta=document.createElement('textarea');
-      ta.className='form-control';
-      ta.id='printer_'+f;
-      ta.rows=2;
-      div.appendChild(ta);
-    }else{
-      const inp=document.createElement('input');
-      inp.className='form-control';
-      inp.id='printer_'+f;
-      div.appendChild(inp);
-    }
-    c.appendChild(div);
-  });
-  c.dataset.inited='1';
-}
-
-function openPrinterOrca(id){
-  const pr=appData.printers.find(p=>p.id===id);
-  if(!pr) return;
-  currentOrcaPrinterId=id;
-  if(!pr.orca) pr.orca=defaultPrinterConfig();
-  ensureOrcaPrinterFields();
-  ORCA_PRINTER_FIELDS.forEach(f=>{
-    const el=document.getElementById('printer_'+f);
-    if(el) el.value=pr.orca[f]||'';
-  });
-  new bootstrap.Modal(document.getElementById('orcaPrinterModal')).show();
-}
-
-function savePrinterJson(){
-  if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
-  if(!pr) return;
-  if(!pr.orca) pr.orca={};
-  ORCA_PRINTER_FIELDS.forEach(f=>{
-    const el=document.getElementById('printer_'+f);
-    pr.orca[f]=el?el.value:'';
-  });
-  saveToLocalStorage();
-  bootstrap.Modal.getInstance(document.getElementById('orcaPrinterModal')).hide();
-}
-
-function downloadPrinterJson(){
-  if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
-  if(!pr) return;
-  const blob=new Blob([JSON.stringify(pr.orca||{},null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;
-  link.download=(pr.orca.name||pr.name||'printer')+'.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-function importPrinterJson(file){
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    try{
-      const data=JSON.parse(reader.result);
-      ORCA_PRINTER_FIELDS.forEach(f=>{
-        if(data[f]!==undefined){
-          const val=data[f];
-          const el=document.getElementById('printer_'+f);
-          if(el) el.value=Array.isArray(val)?val.join('\n'):val;
-        }
-      });
-    }catch(err){
-      alert('Ошибка чтения файла: '+err);
-    }
-  };
-  reader.readAsText(file);
 }
 
 function downloadFullDetailedCalculation(){
@@ -3096,26 +2882,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
-
   document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
   document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
-  document.getElementById('importOrcaJsonBtn').onclick = ()=>{
-    document.getElementById('orcaJsonFileInput').click();
-  };
-  document.getElementById('orcaJsonFileInput').addEventListener('change', (e)=>{
-    importOrcaJson(e.target.files[0]);
-    e.target.value='';
-  });
-  document.getElementById('savePrinterJsonBtn').onclick = savePrinterJson;
-  document.getElementById('downloadPrinterJsonBtn').onclick = downloadPrinterJson;
-  document.getElementById('importPrinterJsonBtn').onclick = ()=>{
-    document.getElementById('orcaPrinterFileInput').click();
-  };
-  document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
-    importPrinterJson(e.target.files[0]);
-    e.target.value='';
-  });
-
   parseIncomingLinkParams(params);
   if(params.toString()){
     window.history.replaceState({}, document.title, window.location.pathname);
