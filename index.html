@@ -3167,14 +3167,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
+  
   document.getElementById('downloadOrcaInfoBtn').onclick = downloadOrcaInfo;
   document.getElementById('downloadPrinterInfoBtn').onclick = downloadPrinterInfo;
-  };
-  document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
-    importPrinterJson(e.target.files[0]);
-    e.target.value='';
-  });
-
+  // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
+  //   importPrinterJson(e.target.files[0]);
+  //   e.target.value='';
+  // });
   parseIncomingLinkParams(params);
   if(params.toString()){
     window.history.replaceState({}, document.title, window.location.pathname);
