@@ -641,6 +641,59 @@ function generateUUID(){
   return Math.random().toString(36).substr(2,8)+Math.random().toString(36).substr(2,8);
 }
 
+/* Перенос данных из старого формата */
+function migrateOldData(obj){
+  if(!Array.isArray(obj.printers)) obj.printers = [];
+  if(!Array.isArray(obj.materials)) obj.materials = [];
+  if(!Array.isArray(obj.additionalGlobal)) obj.additionalGlobal = [];
+  if(!Array.isArray(obj.clients)) obj.clients = [];
+  if(!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
+
+  // Перенос материалов и расходов из принтеров
+  obj.printers.forEach(pr=>{
+    if(Array.isArray(pr.materials)){
+      pr.materials.forEach(m=>{
+        if(!obj.materials.some(g=>g.id===m.id)){
+          m.printers = [String(pr.id)];
+          obj.materials.push(m);
+        }
+      });
+    }
+    if(Array.isArray(pr.additional)){
+      pr.additional.forEach(a=>{
+        if(!obj.additionalGlobal.some(g=>g.id===a.id)){
+          a.printers = [String(pr.id)];
+          obj.additionalGlobal.push(a);
+        }
+      });
+    }
+    pr.materials = [];
+    pr.additional = [];
+  });
+
+  // Перенос клиентов из истории
+  const nameMap = {};
+  obj.calcHistory.forEach(h=>{
+    const nm = h.clientName;
+    if(!nm) return;
+    let c = obj.clients.find(x=>x.name===nm);
+    if(!c){
+      if(nameMap[nm]){
+        c = nameMap[nm];
+      }else{
+        c = {id: generateUUID(), name: nm};
+        obj.clients.push(c);
+        nameMap[nm] = c;
+      }
+    }
+    if(!h.clientId) h.clientId = c.id;
+  });
+
+  obj.materials.forEach(m=>{ if(!m.printers) m.printers=[]; });
+  obj.additionalGlobal.forEach(a=>{ if(!a.printers) a.printers=[]; });
+  return obj;
+}
+
 function ucfirst(str){
   return str.charAt(0).toUpperCase()+str.slice(1);
 }
@@ -2260,7 +2313,7 @@ function onImportJson(){
   }
   try{
     const obj = JSON.parse(s);
-    appData = obj;
+    appData = migrateOldData(obj);
     saveToLocalStorage();
     initAll();
     alert("Импорт выполнен.");
