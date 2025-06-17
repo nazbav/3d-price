@@ -385,6 +385,7 @@
 <h3>Экспорт данных</h3>
 
     <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
+    <button class="btn btn-info" id="downloadJsonFileBtn" onclick="downloadJsonFile()">Скачать JSON файл</button>
     <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
     <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
 
@@ -392,7 +393,9 @@
   <div class="mt-4">
     <h3>Импорт данных</h3>
     <textarea id="importArea" class="form-control" rows="5"></textarea>
+    <input type="file" id="importJsonFile" class="form-control mt-2" accept=".json">
     <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
+    <button class="btn btn-info mt-2" onclick="importFromFile()">Импорт из файла</button>
     <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
   </div>
 </div>
@@ -580,6 +583,23 @@
   </div>
 </div>
 
+<!-- Универсальное модальное окно для ввода данных -->
+<div class="modal fade" id="multiPromptModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="multiPromptTitle"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="multiPromptBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="multiPromptOk">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const THEME_STORAGE_KEY = "themePreference";
@@ -598,6 +618,41 @@ setTheme(savedTheme);
 
 function ucfirst(str){
   return str.charAt(0).toUpperCase()+str.slice(1);
+}
+
+let multiPromptResolve = null;
+function showMultiPrompt(title, fields){
+  return new Promise(res=>{
+    multiPromptResolve = res;
+    const body = document.getElementById('multiPromptBody');
+    body.innerHTML = '';
+    document.getElementById('multiPromptTitle').textContent = title;
+    fields.forEach(f=>{
+      const div = document.createElement('div');
+      div.className = 'mb-2';
+      const lbl = document.createElement('label');
+      lbl.className = 'form-label';
+      lbl.textContent = f.label;
+      const inp = document.createElement('input');
+      inp.className = 'form-control';
+      inp.type = f.type||'text';
+      inp.id = 'mp_'+f.id;
+      if(f.type==='checkbox'){ inp.type='checkbox'; inp.checked=!!f.value; }
+      else inp.value = f.value||'';
+      div.appendChild(lbl); div.appendChild(inp); body.appendChild(div);
+    });
+    const modal = new bootstrap.Modal(document.getElementById('multiPromptModal'));
+    document.getElementById('multiPromptOk').onclick = () => {
+      const result={};
+      fields.forEach(f=>{
+        const el=document.getElementById('mp_'+f.id);
+        result[f.id] = (f.type==='checkbox')? el.checked : el.value;
+      });
+      modal.hide();
+      res(result);
+    };
+    modal.show();
+  });
 }
 
 const STORAGE_KEY = "ThreeDPrintCalc_Extended_v5";
@@ -776,23 +831,23 @@ function massDelete(type) {
   }
   saveToLocalStorage();
 }
-function massEdit(type) {
-  // Для каждого типа запрашиваем новое значение для всех редактируемых полей (исключая название и id)
+async function massEdit(type) {
   switch(type) {
-    case 'printers':
-      {
-        let newCost = prompt("Введите новую стоимость (₽):");
-        let newHours = prompt("Введите новые часы окупаемости:");
-        let newPower = prompt("Введите новую мощность (Вт):");
-        let newMaint = prompt("Введите новый расход на обслуживание (₽/ч):");
-        if(newCost===null || newHours===null || newPower===null || newMaint===null) return;
-        appData.printers.forEach(p => {
-          const chk = document.getElementById("chk_printers_"+p.id);
-          if(chk && chk.checked) {
-            p.cost = parseFloat(newCost) || p.cost;
-            p.hoursToRecoup = parseFloat(newHours) || p.hoursToRecoup;
-            p.power = parseFloat(newPower) || p.power;
-            p.maintCostHour = parseFloat(newMaint) || p.maintCostHour;
+    case 'printers': {
+        const vals = await showMultiPrompt('Массовое редактирование принтеров', [
+          {id:'cost',label:'Стоимость (₽)',type:'number'},
+          {id:'hours',label:'Часы окупаемости',type:'number'},
+          {id:'power',label:'Мощность (Вт)',type:'number'},
+          {id:'maint',label:'Расход на обслуживание (₽/ч)',type:'number'}
+        ]);
+        if(!vals) return;
+        appData.printers.forEach(p=>{
+          const chk=document.getElementById('chk_printers_'+p.id);
+          if(chk&&chk.checked){
+            if(vals.cost) p.cost=parseFloat(vals.cost)||p.cost;
+            if(vals.hours) p.hoursToRecoup=parseFloat(vals.hours)||p.hoursToRecoup;
+            if(vals.power) p.power=parseFloat(vals.power)||p.power;
+            if(vals.maint) p.maintCostHour=parseFloat(vals.maint)||p.maintCostHour;
           }
         });
         renderPrintersTable();
@@ -800,22 +855,24 @@ function massEdit(type) {
       break;
     case 'globalMaterials':
       {
-        let newCost = prompt("Введите новую стоимость за кг:");
-        let newBalance = prompt("Введите новый остаток (кг):");
-        let newDeclared = prompt("Введите новый заявленный вес (кг):");
-        let newWaste = prompt("Введите новый процент отходов:");
-        let newManuf = prompt("Введите нового производителя:");
-        let newProdDate = prompt("Введите новую дату производства (DD.MM.YYYY):");
-        if(newCost===null || newBalance===null || newDeclared===null || newWaste===null || newManuf===null || newProdDate===null) return;
-        appData.materials.forEach(m => {
-          const chk = document.getElementById("chk_globalMaterials_"+m.id);
-          if(chk && chk.checked) {
-            m.costPerKg = parseFloat(newCost) || m.costPerKg;
-            m.balance = parseFloat(newBalance) || m.balance;
-            m.declaredWeight = parseFloat(newDeclared) || m.declaredWeight;
-            m.wastePercent = parseFloat(newWaste) || m.wastePercent;
-            m.manufacturer = newManuf;
-            m.productionDate = newProdDate;
+        const vals = await showMultiPrompt('Массовое редактирование материалов',[
+          {id:'cost',label:'Стоимость за кг',type:'number'},
+          {id:'balance',label:'Остаток (кг)',type:'number'},
+          {id:'declared',label:'Заявленный вес (кг)',type:'number'},
+          {id:'waste',label:'Отход (%)',type:'number'},
+          {id:'manuf',label:'Производитель'},
+          {id:'prodDate',label:'Дата производства'}
+        ]);
+        if(!vals) return;
+        appData.materials.forEach(m=>{
+          const chk=document.getElementById('chk_globalMaterials_'+m.id);
+          if(chk&&chk.checked){
+            if(vals.cost) m.costPerKg=parseFloat(vals.cost)||m.costPerKg;
+            if(vals.balance) m.balance=parseFloat(vals.balance)||m.balance;
+            if(vals.declared) m.declaredWeight=parseFloat(vals.declared)||m.declaredWeight;
+            if(vals.waste) m.wastePercent=parseFloat(vals.waste)||m.wastePercent;
+            if(vals.manuf) m.manufacturer=vals.manuf;
+            if(vals.prodDate) m.productionDate=vals.prodDate;
           }
         });
         renderGlobalMaterialsTable();
@@ -823,16 +880,18 @@ function massEdit(type) {
       break;
     case 'globalAdditional':
       {
-        let newCost = prompt("Введите новую стоимость (₽):");
-        let newHours = prompt("Введите новые часы окупаемости:");
-        let newUse = confirm("Включать в расчёт для всех выбранных?");
-        if(newCost===null || newHours===null) return;
-        appData.additionalGlobal.forEach(a => {
-          const chk = document.getElementById("chk_globalAdditional_"+a.id);
-          if(chk && chk.checked) {
-            a.cost = parseFloat(newCost) || a.cost;
-            a.hoursToRecoup = parseFloat(newHours) || a.hoursToRecoup;
-            a.useInCalc = newUse;
+        const vals = await showMultiPrompt('Глобальные расходы',[
+          {id:'cost',label:'Стоимость (₽)',type:'number'},
+          {id:'hours',label:'Часы окупаемости',type:'number'},
+          {id:'use',label:'Включать в расчёт',type:'checkbox',value:true}
+        ]);
+        if(!vals) return;
+        appData.additionalGlobal.forEach(a=>{
+          const chk=document.getElementById('chk_globalAdditional_'+a.id);
+          if(chk&&chk.checked){
+            if(vals.cost) a.cost=parseFloat(vals.cost)||a.cost;
+            if(vals.hours) a.hoursToRecoup=parseFloat(vals.hours)||a.hoursToRecoup;
+            a.useInCalc=vals.use;
           }
         });
         renderGlobalAdditionalTable();
@@ -840,19 +899,21 @@ function massEdit(type) {
       break;
     case 'printerAdditional':
       {
-        const printerId = getCurrentPrinterId();
-        const printer = appData.printers.find(p => p.id === printerId);
+        const printerId=getCurrentPrinterId();
+        const printer=appData.printers.find(p=>p.id===printerId);
         if(printer){
-          let newCost = prompt("Введите новую стоимость (₽):");
-          let newHours = prompt("Введите новые часы окупаемости:");
-          let newUse = confirm("Включать в расчёт для всех выбранных?");
-          if(newCost===null || newHours===null) return;
-          printer.additional.forEach(a => {
-            const chk = document.getElementById("chk_printerAdditional_"+a.id);
-            if(chk && chk.checked) {
-              a.cost = parseFloat(newCost) || a.cost;
-              a.hoursToRecoup = parseFloat(newHours) || a.hoursToRecoup;
-              a.useInCalc = newUse;
+          const vals=await showMultiPrompt('Расходы принтера',[
+            {id:'cost',label:'Стоимость (₽)',type:'number'},
+            {id:'hours',label:'Часы окупаемости',type:'number'},
+            {id:'use',label:'Включать в расчёт',type:'checkbox',value:true}
+          ]);
+          if(!vals) return;
+          printer.additional.forEach(a=>{
+            const chk=document.getElementById('chk_printerAdditional_'+a.id);
+            if(chk&&chk.checked){
+              if(vals.cost) a.cost=parseFloat(vals.cost)||a.cost;
+              if(vals.hours) a.hoursToRecoup=parseFloat(vals.hours)||a.hoursToRecoup;
+              a.useInCalc=vals.use;
             }
           });
           onShowPrinterDetails(printerId);
@@ -861,25 +922,27 @@ function massEdit(type) {
       break;
     case 'printerMaterials':
       {
-        const printerId = getCurrentPrinterId();
-        const printer = appData.printers.find(p => p.id === printerId);
+        const printerId=getCurrentPrinterId();
+        const printer=appData.printers.find(p=>p.id===printerId);
         if(printer){
-          let newCost = prompt("Введите новую стоимость за кг:");
-          let newBalance = prompt("Введите новый остаток (кг):");
-          let newDeclared = prompt("Введите новый заявленный вес (кг):");
-          let newWaste = prompt("Введите новый процент отходов:");
-          let newManuf = prompt("Введите нового производителя:");
-          let newProdDate = prompt("Введите новую дату производства (DD.MM.YYYY):");
-          if(newCost===null || newBalance===null || newDeclared===null || newWaste===null || newManuf===null || newProdDate===null) return;
-          printer.materials.forEach(m => {
-            const chk = document.getElementById("chk_printerMaterials_"+m.id);
-            if(chk && chk.checked) {
-              m.costPerKg = parseFloat(newCost) || m.costPerKg;
-              m.balance = parseFloat(newBalance) || m.balance;
-              m.declaredWeight = parseFloat(newDeclared) || m.declaredWeight;
-              m.wastePercent = parseFloat(newWaste) || m.wastePercent;
-              m.manufacturer = newManuf;
-              m.productionDate = newProdDate;
+          const vals=await showMultiPrompt('Материалы принтера',[
+            {id:'cost',label:'Стоимость за кг',type:'number'},
+            {id:'balance',label:'Остаток (кг)',type:'number'},
+            {id:'declared',label:'Заявленный вес (кг)',type:'number'},
+            {id:'waste',label:'Отход (%)',type:'number'},
+            {id:'manuf',label:'Производитель'},
+            {id:'prodDate',label:'Дата производства'}
+          ]);
+          if(!vals) return;
+          printer.materials.forEach(m=>{
+            const chk=document.getElementById('chk_printerMaterials_'+m.id);
+            if(chk&&chk.checked){
+              if(vals.cost) m.costPerKg=parseFloat(vals.cost)||m.costPerKg;
+              if(vals.balance) m.balance=parseFloat(vals.balance)||m.balance;
+              if(vals.declared) m.declaredWeight=parseFloat(vals.declared)||m.declaredWeight;
+              if(vals.waste) m.wastePercent=parseFloat(vals.waste)||m.wastePercent;
+              if(vals.manuf) m.manufacturer=vals.manuf;
+              if(vals.prodDate) m.productionDate=vals.prodDate;
             }
           });
           onShowPrinterDetails(printerId);
@@ -1113,22 +1176,22 @@ function onAddPrinterAdditional(printerId){
   saveToLocalStorage();
   onShowPrinterDetails(printerId);
 }
-function onEditPrinterAdditional(printerId, addId){
+async function onEditPrinterAdditional(printerId, addId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
   const it = pr.additional.find(a => a.id === addId);
   if(!it) return;
-  const d = prompt("Описание:", it.description);
-  if(d === null) return;
-  const c = prompt("Стоимость (₽):", it.cost);
-  if(c === null) return;
-  const h = prompt("Часы окупаемости:", it.hoursToRecoup);
-  if(h === null) return;
-  const used = confirm("Включать в расчёт?");
-  it.description = d;
-  it.cost = parseFloat(c) || 0;
-  it.hoursToRecoup = parseFloat(h) || 1000;
-  it.useInCalc = used;
+  const vals = await showMultiPrompt('Статья принтера',[
+    {id:'desc',label:'Описание',value:it.description},
+    {id:'cost',label:'Стоимость (₽)',type:'number',value:it.cost},
+    {id:'hours',label:'Часы окупаемости',type:'number',value:it.hoursToRecoup},
+    {id:'use',label:'Включать в расчёт',type:'checkbox',value:it.useInCalc}
+  ]);
+  if(!vals) return;
+  it.description = vals.desc;
+  it.cost = parseFloat(vals.cost)||0;
+  it.hoursToRecoup = parseFloat(vals.hours)||1000;
+  it.useInCalc = vals.use;
   saveToLocalStorage();
   onShowPrinterDetails(printerId);
 }
@@ -1158,32 +1221,28 @@ function onAddPrinterMaterial(printerId){
   saveToLocalStorage();
   onShowPrinterDetails(printerId);
 }
-function onEditPrinterMaterial(printerId, matId){
+async function onEditPrinterMaterial(printerId, matId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
   const mat = pr.materials.find(m => m.id === matId);
   if(!mat) return;
-  const n = prompt("Название:", mat.name);
-  if(n === null) return;
-  const c = prompt("Стоимость за кг:", mat.costPerKg);
-  if(c === null) return;
-  const b = prompt("Остаток (кг):", mat.balance);
-  if(b === null) return;
-  const dW = prompt("Заявленный вес (кг):", mat.declaredWeight);
-  if(dW === null) return;
-  const w = prompt("Отход (%):", mat.wastePercent);
-  if(w === null) return;
-  const manuf = prompt("Производитель:", mat.manufacturer || "");
-  if(manuf === null) return;
-  const prodDate = prompt("Дата производства (DD.MM.YYYY):", mat.productionDate || "");
-  if(prodDate === null) return;
-  mat.name = n;
-  mat.costPerKg = parseFloat(c) || 0;
-  mat.balance = parseFloat(b) || 0;
-  mat.declaredWeight = parseFloat(dW) || 0;
-  mat.wastePercent = parseFloat(w) || 0;
-  mat.manufacturer = manuf;
-  mat.productionDate = prodDate;
+  const vals = await showMultiPrompt('Материал принтера',[
+    {id:'name',label:'Название',value:mat.name},
+    {id:'cost',label:'Стоимость за кг',type:'number',value:mat.costPerKg},
+    {id:'bal',label:'Остаток (кг)',type:'number',value:mat.balance},
+    {id:'decl',label:'Заявленный вес (кг)',type:'number',value:mat.declaredWeight},
+    {id:'waste',label:'Отход (%)',type:'number',value:mat.wastePercent},
+    {id:'manuf',label:'Производитель',value:mat.manufacturer||''},
+    {id:'prod',label:'Дата производства',value:mat.productionDate||''}
+  ]);
+  if(!vals) return;
+  mat.name = vals.name;
+  mat.costPerKg = parseFloat(vals.cost)||0;
+  mat.balance = parseFloat(vals.bal)||0;
+  mat.declaredWeight = parseFloat(vals.decl)||0;
+  mat.wastePercent = parseFloat(vals.waste)||0;
+  mat.manufacturer = vals.manuf;
+  mat.productionDate = vals.prod;
   saveToLocalStorage();
   onShowPrinterDetails(printerId);
 }
@@ -1307,20 +1366,20 @@ function onAddGlobalAdditional(){
   saveToLocalStorage();
   renderGlobalAdditionalTable();
 }
-function onEditGlobalAdditional(id){
+async function onEditGlobalAdditional(id){
   const x = appData.additionalGlobal.find(a => a.id === id);
   if(!x) return;
-  const d = prompt("Описание:", x.description);
-  if(d === null) return;
-  const c = prompt("Стоимость (₽):", x.cost);
-  if(c === null) return;
-  const hh = prompt("Часы окуп.", x.hoursToRecoup || 1000);
-  if(hh === null) return;
-  const used = confirm("Включать в расчёт?");
-  x.description = d;
-  x.cost = parseFloat(c) || 0;
-  x.hoursToRecoup = parseFloat(hh) || 1000;
-  x.useInCalc = used;
+  const vals = await showMultiPrompt('Расход',[
+    {id:'desc',label:'Описание',value:x.description},
+    {id:'cost',label:'Стоимость (₽)',type:'number',value:x.cost},
+    {id:'hours',label:'Часы окуп.',type:'number',value:x.hoursToRecoup||1000},
+    {id:'use',label:'Включать в расчёт',type:'checkbox',value:x.useInCalc}
+  ]);
+  if(!vals) return;
+  x.description = vals.desc;
+  x.cost = parseFloat(vals.cost)||0;
+  x.hoursToRecoup = parseFloat(vals.hours)||1000;
+  x.useInCalc = vals.use;
   saveToLocalStorage();
   renderGlobalAdditionalTable();
 }
@@ -1946,6 +2005,23 @@ function onChangeCalcHistoryStatus(timestamp, newStatus){
 function onExportJson(){
   const s = JSON.stringify(appData, null, 2);
   document.getElementById("exportArea").value = s;
+}
+
+function downloadJsonFile(){
+  const blob = new Blob([JSON.stringify(appData,null,2)],{type:'application/json'});
+  downloadBlob(blob,'calc_data.json');
+}
+
+function importFromFile(){
+  const inp=document.getElementById('importJsonFile');
+  if(!inp.files.length) return;
+  const file=inp.files[0];
+  const reader=new FileReader();
+  reader.onload=()=>{
+    document.getElementById('importArea').value=reader.result;
+    onImportJson();
+  };
+  reader.readAsText(file);
 }
 function onImportJson(){
   const s = document.getElementById("importArea").value.trim();
@@ -3167,6 +3243,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
+  document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
+  document.getElementById('importJsonFile').addEventListener('change', importFromFile);
   
   document.getElementById('downloadOrcaInfoBtn').onclick = downloadOrcaInfo;
   document.getElementById('downloadPrinterInfoBtn').onclick = downloadPrinterInfo;
