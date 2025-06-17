@@ -455,6 +455,8 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <input type="file" id="orcaJsonFileInput" class="form-control d-none" accept=".json" />
+        <button type="button" class="btn btn-outline-secondary" id="importOrcaJsonBtn">Импорт JSON</button>
         <button type="button" class="btn btn-info" id="downloadOrcaJsonBtn">Скачать JSON</button>
         <button type="button" class="btn btn-primary" id="saveOrcaConfigBtn">Сохранить</button>
       </div>
@@ -1720,6 +1722,7 @@ function findMaterialByName(name) {
 
 function defaultOrcaConfig(){
   return {
+    type: 'filament',
     filament_id: '',
     setting_id: '',
     name: '',
@@ -2012,7 +2015,7 @@ function downloadMaterialLabelHtml(materialId) {
 /* Настройки OrcaSlicer для материала */
 let currentOrcaMaterialId = null;
 const ORCA_FIELDS = [
-  'filament_id','setting_id','name','from','instantiation','inherits','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','filament_start_gcode','filament_end_gcode','filament_diameter','enable_pressure_advance','pressure_advance','filament_density','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','compatible_printers'
+  'type','filament_id','setting_id','name','from','instantiation','inherits','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','filament_start_gcode','filament_end_gcode','filament_diameter','enable_pressure_advance','pressure_advance','filament_density','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','compatible_printers'
 ];
 const ORCA_TEXTAREA_FIELDS = ['filament_start_gcode','filament_end_gcode','compatible_printers'];
 
@@ -2091,6 +2094,27 @@ function downloadOrcaJson(){
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+function importOrcaJson(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      ORCA_FIELDS.forEach(f => {
+        if(data[f] !== undefined){
+          let val = data[f];
+          if(Array.isArray(val)) val = val.join(f==='compatible_printers'?', ':'');
+          const el = document.getElementById('orca_'+f);
+          if(el) el.value = val;
+        }
+      });
+    } catch(err){
+      alert('Ошибка чтения файла: '+err);
+    }
+  };
+  reader.readAsText(file);
 }
 
 function downloadFullDetailedCalculation(){
@@ -2884,6 +2908,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
   document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
+  document.getElementById('importOrcaJsonBtn').onclick = ()=>{
+    document.getElementById('orcaJsonFileInput').click();
+  };
+  document.getElementById('orcaJsonFileInput').addEventListener('change', (e)=>{
+    importOrcaJson(e.target.files[0]);
+    e.target.value='';
+  });
   parseIncomingLinkParams(params);
   if(params.toString()){
     window.history.replaceState({}, document.title, window.location.pathname);
