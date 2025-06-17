@@ -1,0 +1,4 @@
+- fixed initialization when printers array missing in localStorage
+- added saveBrandingSettings and saveCalcSettings
+- ensured arrays exist for materials, expenses, clients, history
+- updated settings saving to persist work hours, operator rate, kWh cost and tax

@@ -747,7 +747,7 @@ let appData = {
   // Глобальные материалы: добавлены новые поля: balance (остаток), declaredWeight, manufacturer, productionDate
   materials: [
     // Пример материала
-    // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, wastePercent: 5, manufacturer: "XYZ", productionDate: "01.01.2025" }
+    // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, wastePercent: 5, manufacturer: "XYZ", productionDate: "01.01.2025", printers: [] }
   ],
   additionalGlobal: [],
   calcSettings: {
@@ -777,6 +777,11 @@ function loadFromLocalStorage(){
       const p = JSON.parse(s);
       if(p) appData = p;
       // ensure printers arrays
+      if(!Array.isArray(appData.printers)) appData.printers = [];
+      if(!Array.isArray(appData.materials)) appData.materials = [];
+      if(!Array.isArray(appData.additionalGlobal)) appData.additionalGlobal = [];
+      if(!Array.isArray(appData.clients)) appData.clients = [];
+      if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
       (appData.materials||[]).forEach(m=>{if(!m.printers) m.printers=[];});
       (appData.additionalGlobal||[]).forEach(a=>{if(!a.printers) a.printers=[];});
     }
@@ -2263,18 +2268,23 @@ function onImportJson(){
     alert("Ошибка: " + e);
   }
 }
-function saveLabelSettings(){
+function saveBrandingSettings(){
   const cn = document.getElementById("companyNameInput").value.trim();
   const cl = document.getElementById("chatLinkInput").value.trim();
-  const cost = parseFloat(document.getElementById("labelCostInput").value) || 0;
-  const print = document.getElementById("printLabelsCheckbox").checked;
-  
-  appData.labelSettings = {
-    companyName: cn || "Моя компания",
-    chatLink: cl || "https://t.me/example",
-    costPerLabel: cost,
-    printLabels: print
-  };
+  const hours = parseFloat(document.getElementById("calcWorkHoursDay").value) || 0;
+  appData.labelSettings.companyName = cn || "Моя компания";
+  appData.labelSettings.chatLink = cl || "https://t.me/example";
+  appData.calcSettings.workHoursDay = hours;
+  saveToLocalStorage();
+  alert("Сохранено");
+}
+
+function saveCalcSettings(){
+  appData.labelSettings.printLabels = document.getElementById("printLabelsCheckbox").checked;
+  appData.labelSettings.costPerLabel = parseFloat(document.getElementById("labelCostInput").value) || 0;
+  appData.calcSettings.operatorRate = parseFloat(document.getElementById("calcOperatorRate").value) || 0;
+  appData.calcSettings.costKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
+  appData.calcSettings.taxPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
   saveToLocalStorage();
   alert("Сохранено");
 }
