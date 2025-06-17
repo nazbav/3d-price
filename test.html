@@ -1666,7 +1666,9 @@ function renderCalcPrinters(){
       <table class="table table-bordered table-sm mb-2" id="calcModelsTable_${pr.id}">
         <thead>
           <tr>
+            <th>Код<\/th>
             <th>Имя модели<\/th>
+            <th>Иконка<\/th>
             <th>Статус<\/th>
             <th>Часы печати<\/th>
             <th>Вес (г)<\/th>
@@ -1705,10 +1707,14 @@ function addModelRow(printerId, modelData) {
   const hoursId = `modelHours_${printerId}_${uniqueId}`;
   const weightId = `modelWeight_${printerId}_${uniqueId}`;
   const materialId = `modelMaterial_${printerId}_${uniqueId}`;
-  const tr = document.createElement("tr");
-  tr.dataset.modelId = modelData.id || uniqueId;
+  const tr = document.createElement('tr');
+  const code = modelData.id || uniqueId;
+  tr.dataset.modelId = code;
+  tr.dataset.thumbnail = modelData.thumbnail || '';
   tr.innerHTML = `
+    <td>${code}<\/td>
     <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /><\/td>
+    <td>${modelData.thumbnail ? `<img src="data:image/png;base64,${modelData.thumbnail}" style="height:40px;"/>` : ''}<\/td>
     <td>
       <select class="form-select form-select-sm" id="${statusId}">
         ${optsStatus}
@@ -1861,6 +1867,8 @@ function onCalculateAll() {
       prCostNoTax += subTotalModel;
       
       lines.push({
+        id: row.dataset.modelId || generateUUID(),
+        thumbnail: row.dataset.thumbnail || '',
         name: inpName.value.trim() || "Модель",
         status: selStatus.value || "new",
         hours: h,
@@ -2015,7 +2023,9 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     if (d.linesDetail.length > 0) {
       htmlRes += `<div class="table-responsive"><table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
       htmlRes += `<thead><tr>
+        <th>Код<\/th>
         <th>Модель<\/th>
+        <th>Иконка<\/th>
         <th>Статус<\/th>
         <th>Часы<\/th>
         <th>Вес (г)<\/th>
@@ -2030,7 +2040,9 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
       <\/tr><\/thead><tbody>`;
       d.linesDetail.forEach(ln => {
         htmlRes += `<tr>
+          <td>${ln.id || ''}<\/td>
           <td>${ln.name}<\/td>
+          <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
           <td>${ln.status}<\/td>
           <td>${formatTimeForDisplay(ln.hours)}<\/td>
           <td>${ln.weight.toFixed(2)}<\/td>
@@ -2807,7 +2819,9 @@ function generateMaxDetailedCalcHtml(d) {
     if(pr.linesDetail && pr.linesDetail.length>0){
       s += `<table style="margin-top:5px;">
         <thead><tr>
+          <th>Код<\/th>
           <th>Модель<\/th>
+          <th>Иконка<\/th>
           <th>Статус<\/th>
           <th>Часы<\/th>
           <th>Вес (г)<\/th>
@@ -2818,7 +2832,9 @@ function generateMaxDetailedCalcHtml(d) {
         <tbody>`;
       pr.linesDetail.forEach(ln => {
         s += `<tr>
+          <td>${ln.id || ''}<\/td>
           <td>${ln.name}<\/td>
+          <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
           <td>${ln.status}<\/td>
           <td>${ln.hours.toFixed(2)}<\/td>
           <td>${ln.weight.toFixed(2)}<\/td>
@@ -3374,17 +3390,21 @@ function parseIncomingLinkParams(params){
   if(!prName) return;
   const statuses = params.getAll('model_status[]');
   const names = params.getAll('model_name[]');
+  const ids = params.getAll('model_id[]');
+  const thumbs = params.getAll('model_thumbnail[]');
   const times = params.getAll('model_time[]');
   const weights = params.getAll('model_weight[]');
   const mats = params.getAll('model_filament[]');
   const models = [];
   for(let i=0;i<names.length;i++){
     models.push({
-      name:names[i]||'' ,
-      status:statuses[i]||'new',
-      timeStr:times[i]||'',
-      weight:weights[i]||'',
-      matName:mats[i]||''
+      id: ids[i] || generateUUID(),
+      name: names[i] || '',
+      thumbnail: thumbs[i] || '',
+      status: statuses[i] || 'new',
+      timeStr: times[i] || '',
+      weight: weights[i] || '',
+      matName: mats[i] || ''
     });
   }
   incomingLinkData = {printerName: prName, models};
@@ -3430,7 +3450,9 @@ function applyIncomingData(){
       incomingLinkData.models.forEach(m=>{
         const mat = findMaterialByName(m.matName);
         addModelRow(pr.id, {
+          id: m.id,
           name: m.name,
+          thumbnail: m.thumbnail,
           status: m.status,
           hours: parseTimeFromLink(m.timeStr),
           weight: parseFloat(m.weight)||0,
