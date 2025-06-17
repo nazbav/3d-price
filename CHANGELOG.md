@@ -10,3 +10,4 @@
 - applied short alphanumeric UUIDs for printers, models and orders
 - fixed material selection when editing history by listing zero balance items
 - display order code in history table and calculation results
+- run migrateOldData when loading from localStorage to upgrade existing configs
