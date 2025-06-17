@@ -1731,6 +1731,7 @@ function addModelRow(printerId, modelData) {
 }
 function getAllMaterialsForPrinter(printerId, includeAll=false){
   const pr = appData.printers.find(p => String(p.id) === String(printerId));
+  if(!pr) return [];
   const globalMats = appData.materials.filter(m => {
     if(!includeAll && m.balance <= 0) return false;
     return !m.printers || m.printers.length===0 || m.printers.some(pid => String(pid) === String(printerId));
