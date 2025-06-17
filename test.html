@@ -1807,6 +1807,7 @@ function onCalculateAll() {
       const w = parseFloat(inpW.value) || 0;
       modelsData.push({
         id: row.dataset.modelId || generateUUID(),
+        thumbnail: row.dataset.thumbnail || '',
         name: inpName.value.trim() || "Модель",
         status: selStatus.value || "new",
         hours: h,
