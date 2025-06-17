@@ -2260,24 +2260,37 @@ function saveOrcaConfig(){
   bootstrap.Modal.getInstance(modalEl).hide();
 }
 
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function downloadOrcaJson(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
   const cfg = Object.assign({type:'filament'}, mat.orca||{});
-  const arrFields=['filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed'];
-  arrFields.forEach(k=>{ if(cfg[k]!==undefined) cfg[k]=[cfg[k]]; });
-  if(cfg.compatible_printers)
-    cfg.compatible_printers = cfg.compatible_printers.split(',').map(s=>s.trim()).filter(Boolean);
-  const blob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = (cfg.name||'filament')+'.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const notArray=['type','filament_id','setting_id','name','from','instantiation','inherits','version','author','based_on','profile_type','shared_with','uuid'];
+  for(const k of Object.keys(cfg)){
+    if(notArray.includes(k)) continue;
+    if(k==='compatible_printers'){
+      if(typeof cfg[k]==='string') cfg[k]=cfg[k].split(',').map(s=>s.trim()).filter(Boolean);
+      continue;
+    }
+    if(!Array.isArray(cfg[k])) cfg[k]=[String(cfg[k])];
+  }
+  const jsonBlob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
+  downloadBlob(jsonBlob,(cfg.name||'filament')+'.json');
+  const baseId = cfg.setting_id || cfg.filament_id || '';
+  const infoLines = `sync_info = update\nuser_id = \nsetting_id = \nbase_id = ${baseId}\nupdated_time = ${Math.floor(Date.now()/1000)}`;
+  const infoBlob = new Blob([infoLines],{type:'text/plain'});
+  downloadBlob(infoBlob,(cfg.name||'filament')+'.info');
 }
 
 function importOrcaJson(file){
@@ -2381,15 +2394,13 @@ function downloadPrinterJson(){
   if(currentOrcaPrinterId===null) return;
   const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
   if(!pr) return;
-  const blob=new Blob([JSON.stringify(pr.orca||{},null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;
-  link.download=(pr.orca.name||pr.name||'printer')+'.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const cfg=pr.orca||{};
+  const jsonBlob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
+  const name=(cfg.printer_settings_id||cfg.name||pr.name||'printer');
+  downloadBlob(jsonBlob,name+'.json');
+  const baseId=cfg.printer_settings_id||'';
+  const infoLines=`sync_info = update\nuser_id = \nsetting_id = \nbase_id = ${baseId}\nupdated_time = ${Math.floor(Date.now()/1000)}`;
+  downloadBlob(new Blob([infoLines],{type:'text/plain'}),name+'.info');
 }
 
 function importPrinterJson(file){
