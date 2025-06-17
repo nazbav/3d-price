@@ -469,6 +469,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
         <input type="file" id="orcaJsonFileInput" class="form-control d-none" accept=".json" />
+        <button type="button" class="btn btn-outline-secondary" id="addOrcaFieldBtn">Добавить поле</button>
         <button type="button" class="btn btn-outline-secondary" id="importOrcaJsonBtn">Импорт JSON</button>
         <button type="button" class="btn btn-info" id="downloadOrcaJsonBtn">Скачать JSON</button>
         <button type="button" class="btn btn-primary" id="saveOrcaConfigBtn">Сохранить</button>
@@ -491,6 +492,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
         <input type="file" id="orcaPrinterFileInput" class="form-control d-none" accept=".json" />
+        <button type="button" class="btn btn-outline-secondary" id="addPrinterFieldBtn">Добавить поле</button>
         <button type="button" class="btn btn-outline-secondary" id="importPrinterJsonBtn">Импорт JSON</button>
         <button type="button" class="btn btn-info" id="downloadPrinterJsonBtn">Скачать JSON</button>
         <button type="button" class="btn btn-primary" id="savePrinterJsonBtn">Сохранить</button>
@@ -2134,13 +2136,15 @@ const ORCA_FIELDS = [
 ];
 const ORCA_TEXTAREA_FIELDS = ['filament_start_gcode','filament_end_gcode','compatible_printers','notes','filament_runout_gcode','flow_rate_overrides'];
 
-function createOrcaField(f, container){
+function createOrcaField(f, container, removable=false){
   const div=document.createElement('div');
-  div.className='mb-3';
+  div.className='mb-3 d-flex align-items-start orca-field';
+  div.dataset.field=f;
   const label=document.createElement('label');
   label.className='form-label';
   label.textContent=f;
   label.setAttribute('for','orca_'+f);
+  label.style.minWidth='180px';
   div.appendChild(label);
   let el;
   if(ORCA_TEXTAREA_FIELDS.includes(f)){
@@ -2153,14 +2157,23 @@ function createOrcaField(f, container){
   }
   el.id='orca_'+f;
   el.dataset.orcaField=f;
+  el.style.flex='1 1 auto';
   div.appendChild(el);
+  if(removable){
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn btn-danger btn-sm ms-2';
+    btn.textContent='✖';
+    btn.onclick=()=>{div.remove(); ORCA_FIELDS=ORCA_FIELDS.filter(x=>x!==f);};
+    div.appendChild(btn);
+  }
   container.appendChild(div);
 }
 
 function ensureOrcaFieldsHtml(){
   const container=document.getElementById('orcaFields');
   if(container.dataset.inited) return;
-  ORCA_FIELDS.forEach(f=>createOrcaField(f, container));
+  ORCA_FIELDS.forEach(f=>createOrcaField(f, container,false));
   container.dataset.inited='1';
 }
 
@@ -2178,7 +2191,7 @@ function openOrcaConfig(matId){
   for(const k of Object.keys(mat.orca)){
     if(!fields.includes(k)){
       ORCA_FIELDS.push(k);
-      createOrcaField(k, document.getElementById('orcaExtraFields'));
+      createOrcaField(k, document.getElementById('orcaExtraFields'), true);
       document.getElementById('orca_'+k).value = mat.orca[k];
     }
   }
@@ -2190,10 +2203,11 @@ function saveOrcaConfig(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  if(!mat.orca) mat.orca = {};
+  const cfg={};
   document.querySelectorAll('#orcaConfigModal .orca-input').forEach(el=>{
-    mat.orca[el.dataset.orcaField]=el.value;
+    cfg[el.dataset.orcaField]=el.value;
   });
+  mat.orca=cfg;
   saveToLocalStorage();
   const modalEl = document.getElementById('orcaConfigModal');
   bootstrap.Modal.getInstance(modalEl).hide();
@@ -2233,7 +2247,7 @@ function importOrcaJson(file){
         let el = document.getElementById('orca_'+k);
         if(!el){
           ORCA_FIELDS.push(k);
-          createOrcaField(k, document.getElementById('orcaExtraFields'));
+          createOrcaField(k, document.getElementById('orcaExtraFields'), true);
           el = document.getElementById('orca_'+k);
         }
         if(el){
@@ -2266,31 +2280,45 @@ function defaultPrinterConfig(){
   };
 }
 
+function createPrinterField(f, removable=false){
+  const c=document.getElementById('orcaPrinterFields');
+  const div=document.createElement('div');
+  div.className='mb-3 d-flex align-items-start printer-field';
+  div.dataset.field=f;
+  const label=document.createElement('label');
+  label.className='form-label';
+  label.textContent=f;
+  label.setAttribute('for','printer_'+f);
+  label.style.minWidth='180px';
+  div.appendChild(label);
+  let el;
+  if(PRINTER_TEXTAREA_FIELDS.includes(f)){
+    el=document.createElement('textarea');
+    el.className='form-control';
+    el.rows=2;
+  }else{
+    el=document.createElement('input');
+    el.className='form-control';
+  }
+  el.id='printer_'+f;
+  el.dataset.printerField=f;
+  el.style.flex='1 1 auto';
+  div.appendChild(el);
+  if(removable){
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn btn-danger btn-sm ms-2';
+    btn.textContent='✖';
+    btn.onclick=()=>{div.remove(); ORCA_PRINTER_FIELDS.splice(ORCA_PRINTER_FIELDS.indexOf(f),1);};
+    div.appendChild(btn);
+  }
+  c.appendChild(div);
+}
+
 function ensureOrcaPrinterFields(){
   const c=document.getElementById('orcaPrinterFields');
   if(c.dataset.inited) return;
-  ORCA_PRINTER_FIELDS.forEach(f=>{
-    const div=document.createElement('div');
-    div.className='mb-3';
-    const label=document.createElement('label');
-    label.className='form-label';
-    label.textContent=f;
-    label.setAttribute('for','printer_'+f);
-    div.appendChild(label);
-    if(PRINTER_TEXTAREA_FIELDS.includes(f)){
-      const ta=document.createElement('textarea');
-      ta.className='form-control';
-      ta.id='printer_'+f;
-      ta.rows=2;
-      div.appendChild(ta);
-    }else{
-      const inp=document.createElement('input');
-      inp.className='form-control';
-      inp.id='printer_'+f;
-      div.appendChild(inp);
-    }
-    c.appendChild(div);
-  });
+  ORCA_PRINTER_FIELDS.forEach(f=>createPrinterField(f,false));
   c.dataset.inited='1';
 }
 
@@ -2304,6 +2332,14 @@ function openPrinterOrca(id){
     const el=document.getElementById('printer_'+f);
     if(el) el.value=pr.orca[f]||'';
   });
+  for(const k of Object.keys(pr.orca)){
+    if(!ORCA_PRINTER_FIELDS.includes(k)){
+      ORCA_PRINTER_FIELDS.push(k);
+      createPrinterField(k,true);
+      const el=document.getElementById('printer_'+k);
+      if(el) el.value=pr.orca[k];
+    }
+  }
   new bootstrap.Modal(document.getElementById('orcaPrinterModal')).show();
 }
 
@@ -2312,9 +2348,8 @@ function savePrinterJson(){
   const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
   if(!pr) return;
   if(!pr.orca) pr.orca={};
-  ORCA_PRINTER_FIELDS.forEach(f=>{
-    const el=document.getElementById('printer_'+f);
-    pr.orca[f]=el?el.value:'';
+  document.querySelectorAll('#orcaPrinterModal [data-printer-field]').forEach(el=>{
+    pr.orca[el.dataset.printerField]=el.value;
   });
   saveToLocalStorage();
   bootstrap.Modal.getInstance(document.getElementById('orcaPrinterModal')).hide();
@@ -2339,13 +2374,17 @@ function importPrinterJson(file){
   reader.onload=()=>{
     try{
       const data=JSON.parse(reader.result);
-      ORCA_PRINTER_FIELDS.forEach(f=>{
-        if(data[f]!==undefined){
-          const val=data[f];
-          const el=document.getElementById('printer_'+f);
-          if(el) el.value=Array.isArray(val)?val.join('\n'):val;
+      for(const [k,v] of Object.entries(data)){
+        let el=document.getElementById('printer_'+k);
+        if(!el){
+          ORCA_PRINTER_FIELDS.push(k);
+          createPrinterField(k,true);
+          el=document.getElementById('printer_'+k);
         }
-      });
+        if(el){
+          el.value=Array.isArray(v)?v.join('\n'):v;
+        }
+      }
     }catch(err){
       alert('Ошибка чтения файла: '+err);
     }
@@ -3142,6 +3181,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
+  document.getElementById('addOrcaFieldBtn').onclick = ()=>{
+    const name=prompt('Имя параметра');
+    if(!name) return;
+    if(!ORCA_FIELDS.includes(name)){
+      ORCA_FIELDS.push(name);
+      createOrcaField(name, document.getElementById('orcaExtraFields'), true);
+    }
+  };
+  document.getElementById('addPrinterFieldBtn').onclick=()=>{
+    const name=prompt('Имя параметра');
+    if(!name) return;
+    if(!ORCA_PRINTER_FIELDS.includes(name)){
+      ORCA_PRINTER_FIELDS.push(name);
+      createPrinterField(name,true);
+    }
+  };
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
 
