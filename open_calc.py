@@ -16,11 +16,11 @@ with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
     lines = f.readlines()
 
 model_code = None
-if lines and lines[0].startswith('; MODEL_CODE='):
+if lines and lines[0].startswith('; MODEL_CODE: '):
     model_code = lines[0].split('=', 1)[1].strip()
 else:
     model_code = uuid.uuid4().hex
-    lines.insert(0, f'; MODEL_CODE={model_code}\n')
+    lines.insert(0, f'; MODEL_CODE: {model_code}\n')
     with open(file_path, 'w', encoding='utf-8') as fw:
         fw.writelines(lines)
 
