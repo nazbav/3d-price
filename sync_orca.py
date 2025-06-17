@@ -56,10 +56,19 @@ def main():
         cfg = load_json(fp)
         if not cfg:
             continue
+        info_path = os.path.splitext(fp)[0] + '.info'
+        info_text = ''
+        if os.path.exists(info_path):
+            try:
+                with open(info_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    info_text = f.read()
+            except Exception:
+                info_text = ''
         name, orca = convert_filament(cfg)
         key = name.lower()
         if key in mat_map:
             mat_map[key]['orca'] = orca
+            mat_map[key]['orcaInfo'] = info_text
         else:
             mat_map[key] = {
                 'id': int(time.time()*1000) + len(mat_map),
@@ -70,7 +79,8 @@ def main():
                 'wastePercent': 0,
                 'manufacturer': '',
                 'productionDate': '',
-                'orca': orca
+                'orca': orca,
+                'orcaInfo': info_text
             }
     data['materials'] = list(mat_map.values())
 
@@ -80,10 +90,19 @@ def main():
         cfg = load_json(fp)
         if not cfg:
             continue
+        info_path = os.path.splitext(fp)[0] + '.info'
+        info_text = ''
+        if os.path.exists(info_path):
+            try:
+                with open(info_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    info_text = f.read()
+            except Exception:
+                info_text = ''
         name, orca = convert_machine(cfg)
         key = name.lower()
         if key in pr_map:
             pr_map[key]['orca'] = orca
+            pr_map[key]['orcaInfo'] = info_text
         else:
             pr_map[key] = {
                 'id': int(time.time()*1000) + len(pr_map),
@@ -94,7 +113,8 @@ def main():
                 'maintCostHour': 0,
                 'additional': [],
                 'materials': [],
-                'orca': orca
+                'orca': orca,
+                'orcaInfo': info_text
             }
     data['printers'] = list(pr_map.values())
 
