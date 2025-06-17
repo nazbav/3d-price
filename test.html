@@ -58,6 +58,13 @@
         История
       </button>
     </li>
+    <li class="nav-item">
+      <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
+              data-bs-target="#clientsPane" type="button" role="tab"
+              aria-controls="clientsPane" aria-selected="false">
+        Клиенты
+      </button>
+    </li>
 
     <li class="nav-item">
       <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
@@ -80,10 +87,10 @@
       </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" id="labelsettings-tab" data-bs-toggle="tab"
-              data-bs-target="#labelsettingsPane" type="button" role="tab"
-              aria-controls="labelsettingsPane" aria-selected="false">
-        Этикетка
+      <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
+              data-bs-target="#settingsPane" type="button" role="tab"
+              aria-controls="settingsPane" aria-selected="false">
+        Настройки
       </button>
     </li>
 	<li class="nav-item">
@@ -118,15 +125,16 @@
           <button class="btn btn-warning btn-sm" onclick="massEdit('printers')">Массовое изменение</button>
         </div>
         <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('printersTable', this.value)">
           <table class="table table-bordered table-hover" id="printersTable">
             <thead class="">
               <tr>
                 <th><input type="checkbox" id="selectAll_printers" onchange="selectAll(this, 'printers')"></th>
-                <th>Название</th>
-                <th>Стоимость (₽)</th>
-                <th>Часы окуп.</th>
-                <th>Мощн. (Вт)</th>
-                <th>Обсл. (₽/ч)</th>
+                <th onclick="sortTable('printersTable',1)">Название</th>
+                <th onclick="sortTable('printersTable',2)">Стоимость (₽)</th>
+                <th onclick="sortTable('printersTable',3)">Часы окуп.</th>
+                <th onclick="sortTable('printersTable',4)">Мощн. (Вт)</th>
+                <th onclick="sortTable('printersTable',5)">Обсл. (₽/ч)</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -137,59 +145,7 @@
       <hr/>
       <div id="printerDetails" style="display: none;">
         <h4>Расходы и материалы для принтера <span id="printerDetailsName"></span> (ID: <span id="printerDetailsId"></span>)</h4>
-        <div class="row">
-          <div class="col-md-6">
-            <h5>Доп. расходы (индивидуальные)</h5>
-            <p class="small-text">Укажите стоимость, часы окупаемости и отметьте, участвует ли расход в расчёте.</p>
-            <div class="mb-2">
-              <button class="btn btn-sm btn-success" id="btnAddPrinterAdditional">Добавить</button>
-              <button class="btn btn-danger btn-sm" onclick="massDelete('printerAdditional')">Массовое удаление</button>
-              <button class="btn btn-warning btn-sm" onclick="massEdit('printerAdditional')">Массовое изменение</button>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-bordered table-hover" id="printerAdditionalTable">
-                <thead>
-                  <tr>
-                    <th><input type="checkbox" id="selectAll_printerAdditional" onchange="selectAll(this, 'printerAdditional')"></th>
-                    <th>Описание</th>
-                    <th>Стоим. (₽)</th>
-                    <th>Часы окуп.</th>
-                    <th>Вкл. в расчёт?</th>
-                    <th>Действия</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <h5>Материалы (индивидуальные)</h5>
-            <p class="small-text">Укажите стоимость за кг, остаток (в кг), заявленный вес, процент отходов, производителя и дату производства.</p>
-            <div class="mb-2">
-              <button class="btn btn-sm btn-success" id="btnAddPrinterMaterial">Добавить</button>
-              <button class="btn btn-danger btn-sm" onclick="massDelete('printerMaterials')">Массовое удаление</button>
-              <button class="btn btn-warning btn-sm" onclick="massEdit('printerMaterials')">Массовое изменение</button>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-bordered table-hover" id="printerMaterialsTable">
-                <thead>
-                  <tr>
-                    <th><input type="checkbox" id="selectAll_printerMaterials" onchange="selectAll(this, 'printerMaterials')"></th>
-                    <th>Название</th>
-                    <th>Стоим./кг</th>
-                    <th>Остаток (кг)</th>
-                    <th>Заявленный вес (кг)</th>
-                    <th>Отход (%)</th>
-                    <th>Производитель</th>
-                    <th>Дата произв.</th>
-                    <th>Действия</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <div class="alert alert-info">Индивидуальные материалы и расходы теперь настраиваются в разделе «Общие материалы» и «Общие доп. расходы» с привязкой к принтерам.</div>
       </div>
     </div>
 
@@ -204,17 +160,18 @@
           <button class="btn btn-warning btn-sm" onclick="massEdit('globalMaterials')">Массовое изменение</button>
         </div>
         <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('materialsTable', this.value)">
           <table class="table table-bordered table-hover" id="materialsTable">
             <thead class="">
               <tr>
                 <th><input type="checkbox" id="selectAll_globalMaterials" onchange="selectAll(this, 'globalMaterials')"></th>
-                <th>Название</th>
-                <th>Стоим./кг</th>
-                <th>Остаток (кг)</th>
-                <th>Заявленный вес (кг)</th>
-                <th>Отход (%)</th>
-                <th>Производитель</th>
-                <th>Дата произв.</th>
+                <th onclick="sortTable('materialsTable',1)">Название</th>
+                <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
+                <th onclick="sortTable('materialsTable',3)">Остаток (кг)</th>
+                <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
+                <th onclick="sortTable('materialsTable',5)">Отход (%)</th>
+                <th onclick="sortTable('materialsTable',6)">Производитель</th>
+                <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -234,14 +191,15 @@
           <button class="btn btn-warning btn-sm" onclick="massEdit('globalAdditional')">Массовое изменение</button>
         </div>
         <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('additionalGlobalTable', this.value)">
           <table class="table table-bordered table-hover" id="additionalGlobalTable">
             <thead class="">
               <tr>
                 <th><input type="checkbox" id="selectAll_globalAdditional" onchange="selectAll(this, 'globalAdditional')"></th>
-                <th>Описание</th>
-                <th>Стоим. (₽)</th>
-                <th>Часы окуп.</th>
-                <th>Вкл. в расчёт?</th>
+                <th onclick="sortTable('additionalGlobalTable',1)">Описание</th>
+                <th onclick="sortTable('additionalGlobalTable',2)">Стоим. (₽)</th>
+                <th onclick="sortTable('additionalGlobalTable',3)">Часы окуп.</th>
+                <th onclick="sortTable('additionalGlobalTable',4)">Вкл. в расчёт?</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -266,7 +224,11 @@
         </div>
         <div class="col-md-4">
           <label for="calcClientName" class="form-label">Клиент (ФИО/компания):</label>
-          <input type="text" id="calcClientName" class="form-control" placeholder="Иванов Иван" />
+          <div class="input-group">
+            <input type="text" id="calcClientName" list="clientsList" class="form-control" placeholder="Иванов Иван" />
+            <button class="btn btn-outline-secondary" type="button" onclick="quickAddClient()">+</button>
+          </div>
+          <datalist id="clientsList"></datalist>
         </div>
         <div class="col-md-4">
           <label for="calcOrderStatus" class="form-label">Статус заказа:</label>
@@ -278,24 +240,7 @@
           </select>
         </div>
       </div>
-      <div class="row mb-3">
-        <div class="col-md-3">
-          <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
-          <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
-        </div>
-        <div class="col-md-3">
-          <label for="calcWorkHoursDay" class="form-label">Раб. часов в день:</label>
-          <input type="number" id="calcWorkHoursDay" class="form-control" />
-        </div>
-        <div class="col-md-3">
-          <label for="calcCostKwh" class="form-label">Цена 1 кВт⋅ч (₽):</label>
-          <input type="number" step="0.01" id="calcCostKwh" class="form-control" />
-        </div>
-        <div class="col-md-3">
-          <label for="calcTaxPercent" class="form-label">Налог (%):</label>
-          <input type="number" step="1" id="calcTaxPercent" class="form-control" />
-        </div>
-      </div>
+      <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
       <div class="row mb-3">
         <div class="col-md-3">
           <label for="calcShipping" class="form-label">Упаковка/Доставка (₽):</label>
@@ -343,14 +288,15 @@
         </p>
         <button class="btn btn-danger mb-3" onclick="onClearCalcHistory()">Очистить историю</button>
         <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('historyTable', this.value)">
           <table class="table table-bordered table-hover" id="historyTable">
             <thead class="">
               <tr>
-                <th>Дата/время</th>
-                <th>Название расчёта</th>
-                <th>Клиент</th>
-                <th>Статус</th>
-                <th>Итог (₽)</th>
+                <th onclick="sortTable('historyTable',0)">Дата/время</th>
+                <th onclick="sortTable('historyTable',1)">Название расчёта</th>
+                <th onclick="sortTable('historyTable',2)">Клиент</th>
+                <th onclick="sortTable('historyTable',3)">Статус</th>
+                <th onclick="sortTable('historyTable',4)">Итог (₽)</th>
                 <th>Подробнее</th>
               </tr>
             </thead>
@@ -372,16 +318,33 @@
       </div>
     </div>
 
+    <!-- Клиенты -->
+    <div class="tab-pane fade" id="clientsPane" role="tabpanel" aria-labelledby="clients-tab">
+      <div class="mt-4">
+        <h3>Клиенты</h3>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddClient()">Добавить клиента</button>
+        </div>
+        <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('clientsTable', this.value)">
+          <table class="table table-bordered table-hover" id="clientsTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('clientsTable',0)">Имя</th>
+                <th onclick="sortTable('clientsTable',1)">Телефон</th>
+                <th onclick="sortTable('clientsTable',2)">Ссылки</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Импорт/Экспорт -->
 <div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
-        <div class="mt-4">  
-<h3>📡 Быстрая синхронизация (облачная)</h3>
-<button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
-<button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
-<button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
-<input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
-<div id="qrcode" class="mt-2"></div>
-<hr>
+        <div class="mt-4">
 <h3>Экспорт данных</h3>
 
     <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
@@ -400,28 +363,68 @@
   </div>
 </div>
   </div>  </div>
-    <!-- Настройка этикетки -->
- <div class="tab-pane fade" id="labelsettingsPane" role="tabpanel" aria-labelledby="labelsettings-tab">
-  <div class="mt-4">
-    <h3>Настройка этикетки</h3>
-    <div class="mb-3">
-      <label for="companyNameInput" class="form-label">Название компании:</label>
-      <input type="text" id="companyNameInput" class="form-control"/>
+    <!-- Настройки -->
+<div class="tab-pane fade" id="settingsPane" role="tabpanel" aria-labelledby="settings-tab">
+  <div class="row mt-4">
+    <div class="col-md-3 mb-3">
+      <div class="nav flex-column nav-pills" id="settingsSubTab" role="tablist">
+        <button class="nav-link active" id="brand-set-tab" data-bs-toggle="pill" data-bs-target="#brandSet" type="button" role="tab">Брендинг</button>
+        <button class="nav-link" id="calc-set-tab" data-bs-toggle="pill" data-bs-target="#calcSet" type="button" role="tab">Калькуляция</button>
+        <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Облачный экспорт</button>
+      </div>
     </div>
-    <div class="mb-3">
-      <label for="chatLinkInput" class="form-label">Ссылка на чат (QR):</label>
-      <input type="text" id="chatLinkInput" class="form-control"/>
+    <div class="col-md-9">
+      <div class="tab-content" id="settingsSubTabContent">
+        <div class="tab-pane fade show active" id="brandSet" role="tabpanel">
+          <h3>Брендинг</h3>
+          <div class="mb-3">
+            <label for="companyNameInput" class="form-label">Название компании:</label>
+            <input type="text" id="companyNameInput" class="form-control"/>
+          </div>
+          <div class="mb-3">
+            <label for="chatLinkInput" class="form-label">Ссылка на чат (QR):</label>
+            <input type="text" id="chatLinkInput" class="form-control"/>
+          </div>
+          <div class="mb-3">
+            <label for="calcWorkHoursDay" class="form-label">Раб. часов в день:</label>
+            <input type="number" id="calcWorkHoursDay" class="form-control" />
+          </div>
+          <button class="btn btn-primary" onclick="saveBrandingSettings()">Сохранить</button>
+        </div>
+        <div class="tab-pane fade" id="calcSet" role="tabpanel">
+          <h3>Калькуляция</h3>
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="printLabelsCheckbox">
+            <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
+          </div>
+          <div class="mb-3">
+            <label for="labelCostInput" class="form-label">Стоимость 1 этикетки (₽):</label>
+            <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
+          </div>
+          <div class="mb-3">
+            <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
+            <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label for="calcCostKwh" class="form-label">Цена 1 кВт⋅ч (₽):</label>
+            <input type="number" step="0.01" id="calcCostKwh" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label for="calcTaxPercent" class="form-label">Налог (%):</label>
+            <input type="number" step="1" id="calcTaxPercent" class="form-control" />
+          </div>
+          <button class="btn btn-primary" onclick="saveCalcSettings()">Сохранить</button>
+        </div>
+        <div class="tab-pane fade" id="cloudSet" role="tabpanel">
+          <h3>Облачный экспорт</h3>
+          <button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
+          <button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
+          <button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
+          <input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
+          <div id="qrcode" class="mt-2"></div>
+        </div>
+      </div>
     </div>
-    <!-- Добавляем новые поля -->
-    <div class="mb-3">
-      <label for="labelCostInput" class="form-label">Стоимость 1 этикетки (₽):</label>
-      <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
-    </div>
-    <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="printLabelsCheckbox">
-      <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
-    </div>
-    <button class="btn btn-primary" onclick="saveLabelSettings()">Сохранить</button>
   </div>
 </div>
   </div>
@@ -628,6 +631,10 @@ document.getElementById("themeToggle").addEventListener("click",()=>{
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)||"light";
 setTheme(savedTheme);
 
+function generateUUID(){
+  return Math.random().toString(36).substr(2,8)+Math.random().toString(36).substr(2,8);
+}
+
 function ucfirst(str){
   return str.charAt(0).toUpperCase()+str.slice(1);
 }
@@ -715,8 +722,9 @@ let appData = {
   companyName: "Компания",
   chatLink: "https://t.me/dur",
   costPerLabel: 0,   
-  printLabels: false 
+  printLabels: false
 },
+  clients: [],
   calcHistory: []
 };
 
@@ -737,6 +745,7 @@ function initAll(){
   renderPrintersTable();
   renderGlobalMaterialsTable();
   renderGlobalAdditionalTable();
+  renderClientsTable();
   renderCalcPrinters();
   renderHistoryTable();
   updateHistoryStats();
@@ -803,6 +812,31 @@ document.addEventListener("DOMContentLoaded", initAll);
 function selectAll(source, type) {
   const checkboxes = document.querySelectorAll("."+type+"_chk");
   checkboxes.forEach(cb => cb.checked = source.checked);
+}
+
+function filterTable(tableId, query){
+  const tb = document.getElementById(tableId);
+  if(!tb) return;
+  const val = query.toLowerCase();
+  tb.querySelectorAll('tbody tr').forEach(tr=>{
+    tr.style.display = tr.innerText.toLowerCase().includes(val)?'' :'none';
+  });
+}
+
+function sortTable(tableId, col){
+  const tb=document.getElementById(tableId);
+  if(!tb) return;
+  const rows=Array.from(tb.querySelectorAll('tbody tr'));
+  const asc=tb.dataset.sortCol==col && tb.dataset.sortDir==='asc'?false:true;
+  rows.sort((a,b)=>{
+    const va=a.children[col].innerText;
+    const vb=b.children[col].innerText;
+    return asc?va.localeCompare(vb,'ru',{numeric:true}):vb.localeCompare(va,'ru',{numeric:true});
+  });
+  const tbody=tb.querySelector('tbody');
+  rows.forEach(r=>tbody.appendChild(r));
+  tb.dataset.sortCol=col;
+  tb.dataset.sortDir=asc?'asc':'desc';
 }
 function massDelete(type) {
   if(!confirm("Удалить выбранные элементы?")) return;
@@ -985,7 +1019,7 @@ function copyElement(type, id) {
         const orig = appData.printers.find(p => p.id === id);
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
-          copy.id = Date.now();
+          copy.id = generateUUID();
           copy.name += " (копия)";
           appData.printers.push(copy);
           renderPrintersTable();
@@ -997,7 +1031,7 @@ function copyElement(type, id) {
         const orig = appData.materials.find(m => m.id === id);
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
-          copy.id = Date.now();
+          copy.id = generateUUID();
           copy.name += " (копия)";
           appData.materials.push(copy);
           renderGlobalMaterialsTable();
@@ -1009,7 +1043,7 @@ function copyElement(type, id) {
         const orig = appData.additionalGlobal.find(a => a.id === id);
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
-          copy.id = Date.now();
+          copy.id = generateUUID();
           copy.description += " (копия)";
           appData.additionalGlobal.push(copy);
           renderGlobalAdditionalTable();
@@ -1021,10 +1055,10 @@ function copyElement(type, id) {
         const printerId = getCurrentPrinterId();
         const printer = appData.printers.find(p => p.id === printerId);
         if(printer){
-          const orig = printer.additional.find(a => a.id === id);
+          const orig = printer.additional.find(a => a.id == id);
           if(orig){
             const copy = JSON.parse(JSON.stringify(orig));
-            copy.id = Date.now();
+            copy.id = generateUUID();
             copy.description += " (копия)";
             printer.additional.push(copy);
             onShowPrinterDetails(printerId);
@@ -1037,10 +1071,10 @@ function copyElement(type, id) {
         const printerId = getCurrentPrinterId();
         const printer = appData.printers.find(p => p.id === printerId);
         if(printer){
-          const orig = printer.materials.find(m => m.id === id);
+          const orig = printer.materials.find(m => m.id == id);
           if(orig){
             const copy = JSON.parse(JSON.stringify(orig));
-            copy.id = Date.now();
+            copy.id = generateUUID();
             copy.name += " (копия)";
             printer.materials.push(copy);
             onShowPrinterDetails(printerId);
@@ -1053,7 +1087,7 @@ function copyElement(type, id) {
 }
 function getCurrentPrinterId(){
   // Предполагается, что в данный момент отображается детальная информация принтера
-  return parseInt(document.getElementById("printerDetailsId").textContent, 10);
+  return document.getElementById("printerDetailsId").textContent;
 }
 
 /* Функции для принтеров */
@@ -1083,7 +1117,7 @@ function renderPrintersTable(){
   });
 }
 function onAddPrinter(){
-  const newId = Date.now();
+  const newId = generateUUID();
   const p = {
     id: newId,
     name: "Новый принтер",
@@ -1191,7 +1225,7 @@ function onShowPrinterDetails(id){
 function onAddPrinterAdditional(printerId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
-  const nid = Date.now();
+  const nid = generateUUID();
   pr.additional.push({
     id: nid,
     description: "Новая статья",
@@ -1232,7 +1266,7 @@ function onDeletePrinterAdditional(printerId, addId){
 function onAddPrinterMaterial(printerId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
-  const nid = Date.now();
+  const nid = generateUUID();
   pr.materials.push({
     id: nid,
     name: "Новый материал",
@@ -1338,7 +1372,7 @@ function onEditGlobalMaterial(id){
 }
 function saveMaterialFromModal(){
   const isNew = currentMaterialEditId === null;
-  let m = isNew ? {id: Date.now(), orca: defaultOrcaConfig()} : appData.materials.find(x=>x.id===currentMaterialEditId);
+  let m = isNew ? {id: generateUUID(), orca: defaultOrcaConfig()} : appData.materials.find(x=>x.id==currentMaterialEditId);
   if(!m) return;
   m.name = document.getElementById('matNameInput').value;
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
@@ -1384,7 +1418,7 @@ function renderGlobalAdditionalTable(){
   });
 }
 function onAddGlobalAdditional(){
-  const nid = Date.now();
+  const nid = generateUUID();
   appData.additionalGlobal.push({
     id: nid,
     description: "Новая статья",
@@ -1417,6 +1451,79 @@ function onDeleteGlobalAdditional(id){
   appData.additionalGlobal = appData.additionalGlobal.filter(a => a.id !== id);
   saveToLocalStorage();
   renderGlobalAdditionalTable();
+}
+
+/* Функции для клиентов */
+function renderClientsTable(){
+  const tb = document.querySelector("#clientsTable tbody");
+  if(!tb) return;
+  tb.innerHTML="";
+  appData.clients.forEach(c=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${c.name}</td>
+      <td>${c.phone||""}</td>
+      <td>${c.links||""}</td>
+      <td><div class="btn-group-sm">
+        <button class="btn btn-secondary" onclick="onEditClient('${c.id}')">Ред.</button>
+        <button class="btn btn-danger" onclick="onDeleteClient('${c.id}')">Удл.</button>
+      </div></td>`;
+    tb.appendChild(tr);
+  });
+  renderClientOptions();
+}
+
+function renderClientOptions(){
+  const dl=document.getElementById('clientsList');
+  if(!dl) return;
+  dl.innerHTML='';
+  appData.clients.forEach(c=>{
+    const opt=document.createElement('option');
+    opt.value=c.name;
+    dl.appendChild(opt);
+  });
+}
+
+async function onAddClient(){
+  const vals=await showMultiPrompt('Клиент',[
+    {id:'name',label:'Имя'},
+    {id:'phone',label:'Телефон'},
+    {id:'links',label:'Ссылки'}
+  ]);
+  if(!vals) return;
+  appData.clients.push({id:generateUUID(),name:vals.name,phone:vals.phone,links:vals.links});
+  saveToLocalStorage();
+  renderClientsTable();
+}
+
+async function onEditClient(id){
+  const c=appData.clients.find(x=>x.id==id);
+  if(!c) return;
+  const vals=await showMultiPrompt('Клиент',[{id:'name',label:'Имя',value:c.name},{id:'phone',label:'Телефон',value:c.phone||''},{id:'links',label:'Ссылки',value:c.links||''}]);
+  if(!vals) return;
+  c.name=vals.name;
+  c.phone=vals.phone;
+  c.links=vals.links;
+  saveToLocalStorage();
+  renderClientsTable();
+}
+
+function onDeleteClient(id){
+  if(!confirm('Удалить клиента?')) return;
+  appData.clients=appData.clients.filter(c=>c.id!=id);
+  saveToLocalStorage();
+  renderClientsTable();
+}
+
+function quickAddClient(){
+  const name=document.getElementById('calcClientName').value.trim();
+  if(!name) return;
+  if(!appData.clients.find(c=>c.name===name)){
+    appData.clients.push({id:generateUUID(),name});
+    saveToLocalStorage();
+    renderClientsTable();
+  }
+  renderClientOptions();
 }
 
 /* Функции калькуляции */
@@ -1468,13 +1575,14 @@ function addModelRow(printerId, modelData) {
   const optsMat = mats.map(m =>
     `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name}<\/option>`
   ).join("");
-  const uniqueId = Date.now() + Math.floor(Math.random()*1000);
+  const uniqueId = generateUUID();
   const nameId = `modelName_${printerId}_${uniqueId}`;
   const statusId = `modelStatus_${printerId}_${uniqueId}`;
   const hoursId = `modelHours_${printerId}_${uniqueId}`;
   const weightId = `modelWeight_${printerId}_${uniqueId}`;
   const materialId = `modelMaterial_${printerId}_${uniqueId}`;
   const tr = document.createElement("tr");
+  tr.dataset.modelId = modelData.id || uniqueId;
   tr.innerHTML = `
     <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /><\/td>
     <td>
@@ -1515,7 +1623,18 @@ let incomingLinkData = null;
 
 function onCalculateAll() {
   const calcName = document.getElementById("calcName").value.trim();
-  const clientName = document.getElementById("calcClientName").value.trim();
+  let clientName = document.getElementById("calcClientName").value.trim();
+  let clientId = "";
+  if(clientName){
+    let c = appData.clients.find(x=>x.name===clientName);
+    if(!c){
+      c = {id: generateUUID(), name: clientName};
+      appData.clients.push(c);
+      renderClientsTable();
+      saveToLocalStorage();
+    }
+    clientId = c.id;
+  }
   const orderStatus = document.getElementById("calcOrderStatus").value;
   const opRate = parseFloat(document.getElementById("calcOperatorRate").value) || 0;
   const whDay = parseFloat(document.getElementById("calcWorkHoursDay").value) || 8;
@@ -1554,11 +1673,12 @@ function onCalculateAll() {
       const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
       modelsData.push({
+        id: row.dataset.modelId || generateUUID(),
         name: inpName.value.trim() || "Модель",
         status: selStatus.value || "new",
         hours: h,
         weight: w,
-        materialId: parseInt(selM.value, 10)
+        materialId: selM.value
       });
     });
     calcData[pr.id] = modelsData;
@@ -1589,7 +1709,7 @@ function onCalculateAll() {
       const selM = row.querySelectorAll("select")[1];
       const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
-      const mid = parseInt(selM.value, 10);
+      const mid = selM.value;
       if (!mid || h <= 0 || w <= 0) return;
       
       prTime += h;
@@ -1676,7 +1796,7 @@ function onCalculateAll() {
   let warnings = [];
   for (let mid in materialConsumption) {
     const required = materialConsumption[mid];
-    const mat = findMaterialById(parseInt(mid, 10));
+    const mat = findMaterialById(mid);
     if (mat && required > (mat.balance * 1000)) {
       warnings.push(`Материала "${mat.name}" недостаточно: требуется ${required.toFixed(2)} г, остаток ${(mat.balance * 1000).toFixed(2)} г.`);
     }
@@ -1839,8 +1959,10 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   document.getElementById("calcResult").innerHTML = htmlRes;
   
   lastCalcFullData = {
+    id: generateUUID(),
     calcName,
     clientName,
+    clientId,
     orderStatus,
     total: finalSum,
     totalHours: finalTimeOperator,
@@ -1865,10 +1987,12 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   const dtStr = new Date().toLocaleString("ru-RU");
   const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
   const newEntry = {
+    id: generateUUID(),
     timestamp: Date.now(),
     dateStr: dtStr,
     calcName,
     clientName,
+    clientId,
     orderStatus,
     total: finalSum,
     totalHours: finalTimeOperator,
@@ -1898,10 +2022,10 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
 }
 
 function findMaterialById(mid) {
-  let mat = appData.materials.find(m => m.id === mid);
+  let mat = appData.materials.find(m => m.id == mid);
   if (mat) return mat;
   for (let p of appData.printers) {
-    mat = p.materials.find(m => m.id === mid);
+    mat = p.materials.find(m => m.id == mid);
     if (mat) return mat;
   }
   return null;
@@ -2589,7 +2713,7 @@ function onEditCalcHistory(timestamp){
       const tbody = table.querySelector("tbody");
       tbody.innerHTML = "";
       it.calcData[printerId].forEach(model => {
-        addModelRow(parseInt(printerId, 10), model);
+        addModelRow(printerId, model);
       });
     }
   }
@@ -3143,7 +3267,7 @@ function applyIncomingData(){
   const modal = bootstrap.Modal.getInstance(modalEl);
   modal.hide();
   if(val !== 'new'){
-    onEditCalcHistory(parseInt(val,10));
+    onEditCalcHistory(val);
   } else {
     document.getElementById('calcName').value = '';
     document.getElementById('calcClientName').value = '';
