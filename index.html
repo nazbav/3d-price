@@ -356,6 +356,18 @@
             </thead>
             <tbody></tbody>
           </table>
+          <div class="row g-2 mt-3">
+            <div class="col-auto">
+              <input type="date" class="form-control" id="histFrom">
+            </div>
+            <div class="col-auto">
+              <input type="date" class="form-control" id="histTo">
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-primary" onclick="updateHistoryStats()">Фильтр</button>
+            </div>
+          </div>
+          <div id="historyStats" class="mt-2"></div>
         </div>
       </div>
     </div>
@@ -487,6 +499,90 @@
   </div>
 </div>
 
+<!-- Модальное окно редактирования принтера -->
+<div class="modal fade" id="printerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Принтер</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Название</label>
+          <input type="text" class="form-control" id="printerNameInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Стоимость (₽)</label>
+          <input type="number" class="form-control" id="printerCostInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Часы окупаемости</label>
+          <input type="number" class="form-control" id="printerHoursInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Мощность (Вт)</label>
+          <input type="number" class="form-control" id="printerPowerInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Обсл. (₽/ч)</label>
+          <input type="number" class="form-control" id="printerMaintInput">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="savePrinterBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно редактирования материала -->
+<div class="modal fade" id="materialModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Материал</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Название</label>
+          <input type="text" class="form-control" id="matNameInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Стоимость за кг</label>
+          <input type="number" class="form-control" id="matCostInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Остаток (кг)</label>
+          <input type="number" class="form-control" id="matBalanceInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Заявленный вес (кг)</label>
+          <input type="number" class="form-control" id="matDeclaredInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Отход (%)</label>
+          <input type="number" class="form-control" id="matWasteInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Производитель</label>
+          <input type="text" class="form-control" id="matManufInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Дата производства</label>
+          <input type="text" class="form-control" id="matProdDateInput">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="saveMaterialBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const THEME_STORAGE_KEY = "themePreference";
@@ -565,6 +661,7 @@ function initAll(){
   renderGlobalAdditionalTable();
   renderCalcPrinters();
   renderHistoryTable();
+  updateHistoryStats();
   renderSummary();
   document.getElementById("calcOperatorRate").value = appData.calcSettings.operatorRate || "";
   document.getElementById("calcWorkHoursDay").value = appData.calcSettings.workHoursDay || "";
@@ -915,26 +1012,29 @@ function onAddPrinter(){
   saveToLocalStorage();
   renderPrintersTable();
 }
+let currentPrinterEditId = null;
 function onEditPrinter(id){
   const p = appData.printers.find(x => x.id === id);
   if(!p) return;
-  const n = prompt("Название принтера:", p.name);
-  if(n === null) return;
-  const c = prompt("Стоимость (₽):", p.cost);
-  if(c === null) return;
-  const h = prompt("Часы окупаемости:", p.hoursToRecoup);
-  if(h === null) return;
-  const pw = prompt("Мощность (Вт):", p.power);
-  if(pw === null) return;
-  const m = prompt("Обсл. (₽/ч):", p.maintCostHour);
-  if(m === null) return;
-  p.name = n;
-  p.cost = parseFloat(c) || 0;
-  p.hoursToRecoup = parseFloat(h) || 1000;
-  p.power = parseFloat(pw) || 0;
-  p.maintCostHour = parseFloat(m) || 0;
+  currentPrinterEditId = id;
+  document.getElementById('printerNameInput').value = p.name;
+  document.getElementById('printerCostInput').value = p.cost;
+  document.getElementById('printerHoursInput').value = p.hoursToRecoup;
+  document.getElementById('printerPowerInput').value = p.power;
+  document.getElementById('printerMaintInput').value = p.maintCostHour;
+  new bootstrap.Modal(document.getElementById('printerModal')).show();
+}
+function savePrinterFromModal(){
+  const p = appData.printers.find(x => x.id === currentPrinterEditId);
+  if(!p) return;
+  p.name = document.getElementById('printerNameInput').value;
+  p.cost = parseFloat(document.getElementById('printerCostInput').value) || 0;
+  p.hoursToRecoup = parseFloat(document.getElementById('printerHoursInput').value) || 1000;
+  p.power = parseFloat(document.getElementById('printerPowerInput').value) || 0;
+  p.maintCostHour = parseFloat(document.getElementById('printerMaintInput').value) || 0;
   saveToLocalStorage();
   renderPrintersTable();
+  bootstrap.Modal.getInstance(document.getElementById('printerModal')).hide();
 }
 function onDeletePrinter(id){
   if(!confirm("Удалить принтер?")) return;
@@ -1127,62 +1227,46 @@ function renderGlobalMaterialsTable(){
     tb.appendChild(tr);
   });
 }
+let currentMaterialEditId = null;
 function onAddGlobalMaterial(){
-  const nid = Date.now();
-  let name = prompt("Название материала:", "Новый материал");
-  if(name === null) return;
-  let cost = prompt("Стоимость за кг:", "0");
-  if(cost === null) return;
-  let balance = prompt("Остаток (кг):", "0");
-  if(balance === null) return;
-  let declared = prompt("Заявленный вес (кг):", "0");
-  if(declared === null) return;
-  let waste = prompt("Отход (%):", "0");
-  if(waste === null) return;
-  let manuf = prompt("Производитель:", "");
-  if(manuf === null) return;
-  let prodDate = prompt("Дата производства (DD.MM.YYYY):", "");
-  if(prodDate === null) return;
-  appData.materials.push({
-    id: nid,
-    name: name,
-    costPerKg: parseFloat(cost) || 0,
-    balance: parseFloat(balance) || 0,
-    declaredWeight: parseFloat(declared) || 0,
-    wastePercent: parseFloat(waste) || 0,
-    manufacturer: manuf,
-    productionDate: prodDate,
-    orca: defaultOrcaConfig()
-  });
-  saveToLocalStorage();
-  renderGlobalMaterialsTable();
+  currentMaterialEditId = null;
+  document.getElementById('matNameInput').value = '';
+  document.getElementById('matCostInput').value = '0';
+  document.getElementById('matBalanceInput').value = '0';
+  document.getElementById('matDeclaredInput').value = '0';
+  document.getElementById('matWasteInput').value = '0';
+  document.getElementById('matManufInput').value = '';
+  document.getElementById('matProdDateInput').value = '';
+  new bootstrap.Modal(document.getElementById('materialModal')).show();
 }
 function onEditGlobalMaterial(id){
   const m = appData.materials.find(x => x.id === id);
   if(!m) return;
-  const n = prompt("Название материала:", m.name);
-  if(n === null) return;
-  const c = prompt("Стоимость за кг:", m.costPerKg);
-  if(c === null) return;
-  const b = prompt("Остаток (кг):", m.balance);
-  if(b === null) return;
-  const d = prompt("Заявленный вес (кг):", m.declaredWeight);
-  if(d === null) return;
-  const w = prompt("Отход (%):", m.wastePercent);
-  if(w === null) return;
-  const manuf = prompt("Производитель:", m.manufacturer || "");
-  if(manuf === null) return;
-  const prodDate = prompt("Дата производства (DD.MM.YYYY):", m.productionDate || "");
-  if(prodDate === null) return;
-  m.name = n;
-  m.costPerKg = parseFloat(c) || 0;
-  m.balance = parseFloat(b) || 0;
-  m.declaredWeight = parseFloat(d) || 0;
-  m.wastePercent = parseFloat(w) || 0;
-  m.manufacturer = manuf;
-  m.productionDate = prodDate;
+  currentMaterialEditId = id;
+  document.getElementById('matNameInput').value = m.name;
+  document.getElementById('matCostInput').value = m.costPerKg;
+  document.getElementById('matBalanceInput').value = m.balance;
+  document.getElementById('matDeclaredInput').value = m.declaredWeight;
+  document.getElementById('matWasteInput').value = m.wastePercent;
+  document.getElementById('matManufInput').value = m.manufacturer || '';
+  document.getElementById('matProdDateInput').value = m.productionDate || '';
+  new bootstrap.Modal(document.getElementById('materialModal')).show();
+}
+function saveMaterialFromModal(){
+  const isNew = currentMaterialEditId === null;
+  let m = isNew ? {id: Date.now(), orca: defaultOrcaConfig()} : appData.materials.find(x=>x.id===currentMaterialEditId);
+  if(!m) return;
+  m.name = document.getElementById('matNameInput').value;
+  m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
+  m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
+  m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
+  m.wastePercent = parseFloat(document.getElementById('matWasteInput').value) || 0;
+  m.manufacturer = document.getElementById('matManufInput').value;
+  m.productionDate = document.getElementById('matProdDateInput').value;
+  if(isNew) appData.materials.push(m);
   saveToLocalStorage();
   renderGlobalMaterialsTable();
+  bootstrap.Modal.getInstance(document.getElementById('materialModal')).hide();
 }
 function onDeleteGlobalMaterial(id){
   if(!confirm("Удалить материал?")) return;
@@ -1725,6 +1809,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   }
   saveToLocalStorage();
   renderHistoryTable();
+  updateHistoryStats();
 }
 
 function findMaterialById(mid) {
@@ -1846,20 +1931,44 @@ function renderHistoryTable(){
         <button class="btn btn-sm btn-danger" onclick="onDeleteCalcHistoryEntry(${h.timestamp})">Удалить<\/button>
       <\/td>
     `;
-    tb.appendChild(tr);
+  tb.appendChild(tr);
   });
+}
+
+function parseHistoryDate(str){
+  const [d,t] = str.split(',');
+  const [day,mon,year] = d.trim().split('.');
+  return new Date(`${year}-${mon}-${day}T${(t||'00:00:00').trim()}`);
+}
+
+function updateHistoryStats(){
+  const fromVal = document.getElementById('histFrom').value;
+  const toVal = document.getElementById('histTo').value;
+  const from = fromVal ? new Date(fromVal) : new Date('1970-01-01');
+  const to = toVal ? new Date(toVal) : new Date();
+  to.setDate(to.getDate()+1);
+  const list = appData.calcHistory.filter(h=>{
+    const d = parseHistoryDate(h.dateStr);
+    return d>=from && d<to;
+  });
+  const sum = list.reduce((s,h)=>s+h.total,0);
+  const hrs = list.reduce((s,h)=>s+h.totalHours,0);
+  const div = document.getElementById('historyStats');
+  div.textContent = `Всего заказов: ${list.length}, сумма: ${sum.toFixed(2)} ₽, часы печати: ${hrs.toFixed(2)}`;
 }
 function onDeleteCalcHistoryEntry(timestamp) {
   if(!confirm("Удалить выбранный расчет из истории?")) return;
   appData.calcHistory = appData.calcHistory.filter(entry => entry.timestamp !== timestamp);
   saveToLocalStorage();
   renderHistoryTable();
+  updateHistoryStats();
 }
 function onClearCalcHistory(){
   if(!confirm("Очистить всю историю?")) return;
   appData.calcHistory = [];
   saveToLocalStorage();
   renderHistoryTable();
+  updateHistoryStats();
 }
 function onExportHistory(){
   const js = JSON.stringify(appData.calcHistory, null, 2);
@@ -1883,6 +1992,7 @@ function onImportHistory(){
     appData.calcHistory = obj;
     saveToLocalStorage();
     renderHistoryTable();
+    updateHistoryStats();
     alert("Импорт истории завершён.");
   } catch(e){
     alert("Ошибка импорта истории: " + e);
@@ -3091,6 +3201,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
+  document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
+  document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
 
   document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
   document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
