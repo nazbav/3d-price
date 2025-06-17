@@ -242,6 +242,12 @@
           </select>
         </div>
       </div>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="calcOrderId" class="form-label">Код заказа:</label>
+          <input type="text" id="calcOrderId" class="form-control" readonly />
+        </div>
+      </div>
       <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
       <div class="row mb-3">
         <div class="col-md-3">
@@ -295,10 +301,11 @@
             <thead class="">
               <tr>
                 <th onclick="sortTable('historyTable',0)">Дата/время</th>
-                <th onclick="sortTable('historyTable',1)">Название расчёта</th>
-                <th onclick="sortTable('historyTable',2)">Клиент</th>
-                <th onclick="sortTable('historyTable',3)">Статус</th>
-                <th onclick="sortTable('historyTable',4)">Итог (₽)</th>
+                <th onclick="sortTable('historyTable',1)">Код</th>
+                <th onclick="sortTable('historyTable',2)">Название расчёта</th>
+                <th onclick="sortTable('historyTable',3)">Клиент</th>
+                <th onclick="sortTable('historyTable',4)">Статус</th>
+                <th onclick="sortTable('historyTable',5)">Итог (₽)</th>
                 <th>Подробнее</th>
               </tr>
             </thead>
@@ -641,6 +648,59 @@ function generateUUID(){
   return Math.random().toString(36).substr(2,8)+Math.random().toString(36).substr(2,8);
 }
 
+/* Перенос данных из старого формата */
+function migrateOldData(obj){
+  if(!Array.isArray(obj.printers)) obj.printers = [];
+  if(!Array.isArray(obj.materials)) obj.materials = [];
+  if(!Array.isArray(obj.additionalGlobal)) obj.additionalGlobal = [];
+  if(!Array.isArray(obj.clients)) obj.clients = [];
+  if(!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
+
+  // Перенос материалов и расходов из принтеров
+  obj.printers.forEach(pr=>{
+    if(Array.isArray(pr.materials)){
+      pr.materials.forEach(m=>{
+        if(!obj.materials.some(g=>g.id===m.id)){
+          m.printers = [String(pr.id)];
+          obj.materials.push(m);
+        }
+      });
+    }
+    if(Array.isArray(pr.additional)){
+      pr.additional.forEach(a=>{
+        if(!obj.additionalGlobal.some(g=>g.id===a.id)){
+          a.printers = [String(pr.id)];
+          obj.additionalGlobal.push(a);
+        }
+      });
+    }
+    pr.materials = [];
+    pr.additional = [];
+  });
+
+  // Перенос клиентов из истории
+  const nameMap = {};
+  obj.calcHistory.forEach(h=>{
+    const nm = h.clientName;
+    if(!nm) return;
+    let c = obj.clients.find(x=>x.name===nm);
+    if(!c){
+      if(nameMap[nm]){
+        c = nameMap[nm];
+      }else{
+        c = {id: generateUUID(), name: nm};
+        obj.clients.push(c);
+        nameMap[nm] = c;
+      }
+    }
+    if(!h.clientId) h.clientId = c.id;
+  });
+
+  obj.materials.forEach(m=>{ if(!m.printers) m.printers=[]; });
+  obj.additionalGlobal.forEach(a=>{ if(!a.printers) a.printers=[]; });
+  return obj;
+}
+
 function ucfirst(str){
   return str.charAt(0).toUpperCase()+str.slice(1);
 }
@@ -775,15 +835,15 @@ function loadFromLocalStorage(){
     const s = localStorage.getItem(STORAGE_KEY);
     if(s){
       const p = JSON.parse(s);
-      if(p) appData = p;
-      // ensure printers arrays
+      if(p) appData = migrateOldData(p);
+      // ensure arrays exist
       if(!Array.isArray(appData.printers)) appData.printers = [];
       if(!Array.isArray(appData.materials)) appData.materials = [];
       if(!Array.isArray(appData.additionalGlobal)) appData.additionalGlobal = [];
       if(!Array.isArray(appData.clients)) appData.clients = [];
       if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
-      (appData.materials||[]).forEach(m=>{if(!m.printers) m.printers=[];});
-      (appData.additionalGlobal||[]).forEach(a=>{if(!a.printers) a.printers=[];});
+      appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
+      appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
     }
   } catch(e){}
 }
@@ -1635,7 +1695,7 @@ function addModelRow(printerId, modelData) {
   const optsStatus = statuses.map(s =>
     `<option value="${s.val}" ${(modelData.status === s.val) ? "selected" : ""}>${s.text}<\/option>`
   ).join("");
-  const mats = getAllMaterialsForPrinter(printerId);
+  const mats = getAllMaterialsForPrinter(printerId, true);
   const optsMat = mats.map(m =>
     `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name}<\/option>`
   ).join("");
@@ -1669,15 +1729,14 @@ function addModelRow(printerId, modelData) {
   `;
   tbody.appendChild(tr);
 }
-function getAllMaterialsForPrinter(printerId){
+function getAllMaterialsForPrinter(printerId, includeAll=false){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return [];
-  // Возвращаем только материалы с ненулевым остатком
   const globalMats = appData.materials.filter(m => {
-    if(m.balance <= 0) return false;
+    if(!includeAll && m.balance <= 0) return false;
     return !m.printers || m.printers.length===0 || m.printers.includes(String(printerId));
   });
-  const printerMats = pr.materials.filter(m => m.balance > 0);
+  const printerMats = pr.materials.filter(m => includeAll || m.balance > 0);
   return [...globalMats, ...printerMats];
 }
 
@@ -1711,6 +1770,7 @@ function onCalculateAll() {
   const sDate = document.getElementById("calcStartDate").value;
   const parallelMode = document.getElementById("calcParallelPrinting").value;
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
+  let orderId = document.getElementById("calcOrderId").value.trim();
   
   // Сохранение настроек расчёта
   appData.calcSettings.operatorRate = opRate;
@@ -1909,10 +1969,14 @@ function onCalculateAll() {
   }
   const finalSum = subtotal / (1 - tPercent / 100);
   const taxAmount = finalSum - subtotal;
-  
+
   let finDateStr = calcFinishDate(sDate, Math.ceil(finalTimeOperator / (whDay || 8)));
-  
+
+  if(!orderId) orderId = generateUUID();
+  document.getElementById("calcOrderId").value = orderId;
+
   let htmlRes = `<strong>Общий результат:<\/strong><br/>`;
+  htmlRes += `Код: ${orderId}<br/>`;
   htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
   htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
@@ -2032,7 +2096,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   document.getElementById("calcResult").innerHTML = htmlRes;
   
   lastCalcFullData = {
-    id: generateUUID(),
+    id: orderId,
     calcName,
     clientName,
     clientId,
@@ -2060,7 +2124,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   const dtStr = new Date().toLocaleString("ru-RU");
   const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
   const newEntry = {
-    id: generateUUID(),
+    id: orderId,
     timestamp: Date.now(),
     dateStr: dtStr,
     calcName,
@@ -2136,6 +2200,7 @@ function renderHistoryTable(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${h.dateStr}<\/td>
+      <td>${h.id || ''}<\/td>
       <td>${h.calcName || "(Без названия)"}<\/td>
       <td>${h.clientName || "(Не указан)"}<\/td>
       <td>
@@ -2260,7 +2325,7 @@ function onImportJson(){
   }
   try{
     const obj = JSON.parse(s);
-    appData = obj;
+    appData = migrateOldData(obj);
     saveToLocalStorage();
     initAll();
     alert("Импорт выполнен.");
@@ -2772,6 +2837,7 @@ function generateMaxDetailedCalcHtml(d) {
 function onEditCalcHistory(timestamp){
   const it = appData.calcHistory.find(x => x.timestamp === timestamp);
   if(!it){ alert("Нет такого элемента в истории"); return; }
+  document.getElementById("calcOrderId").value = it.id || "";
   document.getElementById("calcName").value = it.calcName || "";
   document.getElementById("calcClientName").value = it.clientName || "";
   document.getElementById("calcOrderStatus").value = it.orderStatus || "new";
