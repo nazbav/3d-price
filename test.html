@@ -451,53 +451,8 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <ul class="nav nav-tabs" id="orcaTabNav" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="orca-prof-tab" data-bs-toggle="tab" data-bs-target="#orca-prof" type="button" role="tab">Профиль прутка</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-cool-tab" data-bs-toggle="tab" data-bs-target="#orca-cool" type="button" role="tab">Охлаждение</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-ovr-tab" data-bs-toggle="tab" data-bs-target="#orca-ovr" type="button" role="tab">Переопределения</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-adv-tab" data-bs-toggle="tab" data-bs-target="#orca-adv" type="button" role="tab">Дополнительно</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-extr-tab" data-bs-toggle="tab" data-bs-target="#orca-extr" type="button" role="tab">Экструдер ММ</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-dep-tab" data-bs-toggle="tab" data-bs-target="#orca-dep" type="button" role="tab">Зависимости</button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button class="nav-link" id="orca-note-tab" data-bs-toggle="tab" data-bs-target="#orca-note" type="button" role="tab">Заметки</button>
-          </li>
-        </ul>
-        <div class="tab-content pt-3" id="orcaTabContent">
-          <div class="tab-pane fade show active" id="orca-prof" role="tabpanel">
-            <div id="orcaProfFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-cool" role="tabpanel">
-            <div id="orcaCoolFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-ovr" role="tabpanel">
-            <div id="orcaOvrFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-adv" role="tabpanel">
-            <div id="orcaAdvFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-extr" role="tabpanel">
-            <div id="orcaExtrFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-dep" role="tabpanel">
-            <div id="orcaDepFields"></div>
-          </div>
-          <div class="tab-pane fade" id="orca-note" role="tabpanel">
-            <div id="orcaNoteFields"></div>
-            <div id="orcaExtraFields" class="mt-3"></div>
-          </div>
-        </div>
+        <div id="orcaFields"></div>
+        <div id="orcaExtraFields" class="mt-3"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
@@ -2125,16 +2080,9 @@ function downloadMaterialLabelHtml(materialId) {
 
 /* Настройки OrcaSlicer для материала */
 let currentOrcaMaterialId = null;
-const ORCA_GROUPS = {
-  profile: ['type','filament_id','setting_id','name','from','instantiation','inherits','filament_diameter','filament_density','filament_cost','spool_weight','filament_runout_sensor','enable_volumetric_extrusion','filament_start_gcode','filament_end_gcode'],
-  cooling: ['enable_cooling','fan_speed_min','fan_speed_max','start_layer','stop_cooling_first_layers','min_layer_time','bridge_fan_speed','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed'],
-  overrides: ['perimeter_speed','infill_speed','support_speed','external_wall_speed','travel_speed','flow_rate_overrides'],
-  advanced: ['retraction_distance','retraction_speed','extra_restart_distance','coasting_distance','wipe_distance','enable_pressure_advance','pressure_advance','min_extrusion_before_retract','filament_runout_gcode','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp'],
-  extrmm: ['steps_per_mm','filament_drive_gear_diameter','volumetric_extrusion','extrusion_multiplier'],
-  deps: ['compatible_printers','required_nozzle_sizes','required_extruder_count','requires_heated_bed'],
-  notes: ['notes','version','author','based_on','profile_type','shared_with','uuid']
-};
-let ORCA_FIELDS = Object.values(ORCA_GROUPS).flat();
+const ORCA_FIELDS = [
+  'type','filament_id','setting_id','name','from','instantiation','inherits','filament_diameter','filament_density','filament_cost','spool_weight','filament_runout_sensor','enable_volumetric_extrusion','filament_start_gcode','filament_end_gcode','enable_cooling','fan_speed_min','fan_speed_max','start_layer','stop_cooling_first_layers','min_layer_time','bridge_fan_speed','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','perimeter_speed','infill_speed','support_speed','external_wall_speed','travel_speed','flow_rate_overrides','retraction_distance','retraction_speed','extra_restart_distance','coasting_distance','wipe_distance','enable_pressure_advance','pressure_advance','min_extrusion_before_retract','filament_runout_gcode','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','steps_per_mm','filament_drive_gear_diameter','volumetric_extrusion','extrusion_multiplier','compatible_printers','required_nozzle_sizes','required_extruder_count','requires_heated_bed','notes','version','author','based_on','profile_type','shared_with','uuid'
+];
 const ORCA_TEXTAREA_FIELDS = ['filament_start_gcode','filament_end_gcode','compatible_printers','notes','filament_runout_gcode','flow_rate_overrides'];
 
 function createOrcaField(f, container){
@@ -2161,13 +2109,10 @@ function createOrcaField(f, container){
 }
 
 function ensureOrcaFieldsHtml(){
-  if(document.getElementById('orcaProfFields').dataset.inited) return;
-  for(const [grp, fields] of Object.entries(ORCA_GROUPS)){
-    const container=document.getElementById('orca'+ucfirst(grp)+'Fields');
-    if(!container) continue;
-    fields.forEach(f=>createOrcaField(f, container));
-  }
-  document.getElementById('orcaProfFields').dataset.inited='1';
+  const container=document.getElementById('orcaFields');
+  if(container.dataset.inited) return;
+  ORCA_FIELDS.forEach(f=>createOrcaField(f, container));
+  container.dataset.inited='1';
 }
 
 function openOrcaConfig(matId){
@@ -2176,7 +2121,7 @@ function openOrcaConfig(matId){
   currentOrcaMaterialId = matId;
   if(!mat.orca) mat.orca = defaultOrcaConfig();
   ensureOrcaFieldsHtml();
-  const fields = Object.values(ORCA_GROUPS).flat();
+  const fields = ORCA_FIELDS.slice();
   for(const f of fields){
     const el=document.getElementById('orca_'+f);
     if(el) el.value=mat.orca[f]||'';
