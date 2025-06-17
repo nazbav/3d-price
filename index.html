@@ -466,13 +466,17 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <pre id="orcaJsonView" class="bg-light p-2 border"></pre>
+        <div id="orcaFields" data-inited="0"></div>
+        <pre id="orcaJsonView" class="bg-light p-2 border mt-2"></pre>
         <pre id="orcaInfoView" class="bg-light p-2 border mt-2"></pre>
+        <input type="file" id="orcaJsonFileInput" class="d-none" accept=".json">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        <button type="button" class="btn btn-outline-secondary" id="importOrcaJsonBtn">Импорт JSON</button>
         <button type="button" class="btn btn-info" id="downloadOrcaJsonBtn">Скачать JSON</button>
         <button type="button" class="btn btn-info" id="downloadOrcaInfoBtn">Скачать INFO</button>
+        <button type="button" class="btn btn-primary" id="saveOrcaConfigBtn">Сохранить</button>
       </div>
     </div>
   </div>
@@ -487,13 +491,17 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <pre id="orcaPrinterJsonView" class="bg-light p-2 border"></pre>
+        <div id="orcaPrinterFields" data-inited="0"></div>
+        <pre id="orcaPrinterJsonView" class="bg-light p-2 border mt-2"></pre>
         <pre id="orcaPrinterInfoView" class="bg-light p-2 border mt-2"></pre>
+        <input type="file" id="orcaPrinterJsonFile" class="d-none" accept=".json">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        <button type="button" class="btn btn-outline-secondary" id="importPrinterJsonBtn">Импорт JSON</button>
         <button type="button" class="btn btn-info" id="downloadPrinterJsonBtn">Скачать JSON</button>
         <button type="button" class="btn btn-info" id="downloadPrinterInfoBtn">Скачать INFO</button>
+        <button type="button" class="btn btn-primary" id="savePrinterJsonBtn">Сохранить</button>
       </div>
     </div>
   </div>
@@ -567,6 +575,10 @@
           <input type="number" class="form-control" id="matWasteInput">
         </div>
         <div class="mb-2">
+          <label class="form-label">Цвет</label>
+          <input type="color" class="form-control form-control-color" id="matColorInput" value="#ffffff">
+        </div>
+        <div class="mb-2">
           <label class="form-label">Производитель</label>
           <input type="text" class="form-control" id="matManufInput">
         </div>
@@ -628,18 +640,32 @@ function showMultiPrompt(title, fields){
     body.innerHTML = '';
     document.getElementById('multiPromptTitle').textContent = title;
     fields.forEach(f=>{
-      const div = document.createElement('div');
-      div.className = 'mb-2';
-      const lbl = document.createElement('label');
-      lbl.className = 'form-label';
-      lbl.textContent = f.label;
-      const inp = document.createElement('input');
-      inp.className = 'form-control';
-      inp.type = f.type||'text';
-      inp.id = 'mp_'+f.id;
-      if(f.type==='checkbox'){ inp.type='checkbox'; inp.checked=!!f.value; }
-      else inp.value = f.value||'';
-      div.appendChild(lbl); div.appendChild(inp); body.appendChild(div);
+      if(f.type==='checkbox'){
+        const div=document.createElement('div');
+        div.className='form-check mb-2';
+        const inp=document.createElement('input');
+        inp.type='checkbox';
+        inp.className='form-check-input';
+        inp.id='mp_'+f.id;
+        inp.checked=!!f.value;
+        const lbl=document.createElement('label');
+        lbl.className='form-check-label ms-2';
+        lbl.setAttribute('for','mp_'+f.id);
+        lbl.textContent=f.label;
+        div.appendChild(inp); div.appendChild(lbl); body.appendChild(div);
+      } else {
+        const div=document.createElement('div');
+        div.className='mb-2';
+        const lbl=document.createElement('label');
+        lbl.className='form-label';
+        lbl.textContent=f.label;
+        const inp=document.createElement('input');
+        inp.className='form-control';
+        inp.type=f.type||'text';
+        inp.id='mp_'+f.id;
+        inp.value=f.value||'';
+        div.appendChild(lbl); div.appendChild(inp); body.appendChild(div);
+      }
     });
     const modal = new bootstrap.Modal(document.getElementById('multiPromptModal'));
     document.getElementById('multiPromptOk').onclick = () => {
@@ -1139,7 +1165,7 @@ function onShowPrinterDetails(id){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_printerMaterials_${m.id}" class="printerMaterials_chk"><\/td>
-      <td>${m.name}<\/td>
+      <td><span style="display:inline-block;width:14px;height:14px;background-color:${m.color||'#ffffff'};border:1px solid #000;margin-right:4px"></span>${m.name}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
       <td>${m.declaredWeight || "-"}<\/td>
@@ -1291,6 +1317,7 @@ function onAddGlobalMaterial(){
   document.getElementById('matBalanceInput').value = '0';
   document.getElementById('matDeclaredInput').value = '0';
   document.getElementById('matWasteInput').value = '0';
+  document.getElementById('matColorInput').value = '#ffffff';
   document.getElementById('matManufInput').value = '';
   document.getElementById('matProdDateInput').value = '';
   new bootstrap.Modal(document.getElementById('materialModal')).show();
@@ -1304,6 +1331,7 @@ function onEditGlobalMaterial(id){
   document.getElementById('matBalanceInput').value = m.balance;
   document.getElementById('matDeclaredInput').value = m.declaredWeight;
   document.getElementById('matWasteInput').value = m.wastePercent;
+  document.getElementById('matColorInput').value = m.color || '#ffffff';
   document.getElementById('matManufInput').value = m.manufacturer || '';
   document.getElementById('matProdDateInput').value = m.productionDate || '';
   new bootstrap.Modal(document.getElementById('materialModal')).show();
@@ -1317,6 +1345,7 @@ function saveMaterialFromModal(){
   m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
   m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
   m.wastePercent = parseFloat(document.getElementById('matWasteInput').value) || 0;
+  m.color = document.getElementById('matColorInput').value;
   m.manufacturer = document.getElementById('matManufInput').value;
   m.productionDate = document.getElementById('matProdDateInput').value;
   if(isNew) appData.materials.push(m);
@@ -2252,7 +2281,15 @@ function openOrcaConfig(matId){
   const mat = findMaterialById(matId);
   if(!mat) return;
   currentOrcaMaterialId = matId;
+  ensureOrcaFieldsHtml();
   const cfg = mat.orca || {};
+  document.querySelectorAll('#orcaFields .orca-input').forEach(el=>{ el.value=''; });
+  for(const [k,v] of Object.entries(cfg)){
+    const el=document.getElementById('orca_'+k);
+    if(el){
+      el.value=Array.isArray(v)?v.join(k==='compatible_printers'?', ':''):v;
+    }
+  }
   document.getElementById('orcaJsonView').textContent = JSON.stringify(cfg, null, 2);
   document.getElementById('orcaInfoView').textContent = mat.orcaInfo || '';
   const modal = new bootstrap.Modal(document.getElementById('orcaConfigModal'));
@@ -2392,7 +2429,13 @@ function openPrinterOrca(id){
   const pr=appData.printers.find(p=>p.id===id);
   if(!pr) return;
   currentOrcaPrinterId=id;
+  ensureOrcaPrinterFields();
   const cfg=pr.orca||{};
+  document.querySelectorAll('#orcaPrinterFields [data-printer-field]').forEach(el=>{el.value='';});
+  for(const [k,v] of Object.entries(cfg)){
+    const el=document.getElementById('printer_'+k);
+    if(el) el.value=Array.isArray(v)?v.join('\n'):v;
+  }
   document.getElementById('orcaPrinterJsonView').textContent=JSON.stringify(cfg,null,2);
   document.getElementById('orcaPrinterInfoView').textContent=pr.orcaInfo||'';
   new bootstrap.Modal(document.getElementById('orcaPrinterModal')).show();
@@ -3243,6 +3286,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
+  document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
+  document.getElementById('importOrcaJsonBtn').onclick = ()=>document.getElementById('orcaJsonFileInput').click();
+  document.getElementById('orcaJsonFileInput').addEventListener('change',e=>importOrcaJson(e.target.files[0]));
+  document.getElementById('savePrinterJsonBtn').onclick = savePrinterJson;
+  document.getElementById('importPrinterJsonBtn').onclick = ()=>document.getElementById('orcaPrinterJsonFile').click();
+  document.getElementById('orcaPrinterJsonFile').addEventListener('change',e=>importPrinterJson(e.target.files[0]));
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
   document.getElementById('importJsonFile').addEventListener('change', importFromFile);
   
