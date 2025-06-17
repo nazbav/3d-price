@@ -1130,7 +1130,7 @@ function copyElement(type, id) {
   switch(type) {
     case 'printers':
       {
-        const orig = appData.printers.find(p => p.id === id);
+        const orig = appData.printers.find(p => String(p.id) === String(id));
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
           copy.id = generateUUID();
@@ -1154,7 +1154,7 @@ function copyElement(type, id) {
       break;
     case 'globalAdditional':
       {
-        const orig = appData.additionalGlobal.find(a => a.id === id);
+        const orig = appData.additionalGlobal.find(a => String(a.id) === String(id));
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
           copy.id = generateUUID();
@@ -1169,7 +1169,7 @@ function copyElement(type, id) {
         const printerId = getCurrentPrinterId();
         const printer = appData.printers.find(p => String(p.id) === String(printerId));
         if(printer){
-          const orig = printer.additional.find(a => a.id == id);
+          const orig = printer.additional.find(a => String(a.id) === String(id));
           if(orig){
             const copy = JSON.parse(JSON.stringify(orig));
             copy.id = generateUUID();
@@ -1185,7 +1185,7 @@ function copyElement(type, id) {
         const printerId = getCurrentPrinterId();
         const printer = appData.printers.find(p => String(p.id) === String(printerId));
         if(printer){
-          const orig = printer.materials.find(m => m.id == id);
+          const orig = printer.materials.find(m => String(m.id) === String(id));
           if(orig){
             const copy = JSON.parse(JSON.stringify(orig));
             copy.id = generateUUID();
@@ -1219,11 +1219,11 @@ function renderPrintersTable(){
       <td>${printer.maintCostHour}<\/td>
       <td>
         <div class="btn-group-sm">
-          <button class="btn btn-secondary" onclick="onEditPrinter(${printer.id})">Ред.<\/button>
-          <button class="btn btn-success" onclick="openPrinterOrca(${printer.id})">Orca<\/button>
-          <button class="btn btn-info" onclick="onShowPrinterDetails(${printer.id})">Детали<\/button>
-          <button class="btn btn-warning" onclick="copyElement('printers', ${printer.id})">Копировать<\/button>
-          <button class="btn btn-danger" onclick="onDeletePrinter(${printer.id})">Удл.<\/button>
+          <button class="btn btn-secondary" onclick="onEditPrinter('${printer.id}')">Ред.<\/button>
+          <button class="btn btn-success" onclick="openPrinterOrca('${printer.id}')">Orca<\/button>
+          <button class="btn btn-info" onclick="onShowPrinterDetails('${printer.id}')">Детали<\/button>
+          <button class="btn btn-warning" onclick="copyElement('printers', '${printer.id}')">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeletePrinter('${printer.id}')">Удл.<\/button>
         <\/div>
       <\/td>
     `;
@@ -1248,7 +1248,7 @@ function onAddPrinter(){
 }
 let currentPrinterEditId = null;
 function onEditPrinter(id){
-  const p = appData.printers.find(x => x.id === id);
+  const p = appData.printers.find(x => String(x.id) === String(id));
   if(!p) return;
   currentPrinterEditId = id;
   document.getElementById('printerNameInput').value = p.name;
@@ -1259,7 +1259,7 @@ function onEditPrinter(id){
   new bootstrap.Modal(document.getElementById('printerModal')).show();
 }
 function savePrinterFromModal(){
-  const p = appData.printers.find(x => x.id === currentPrinterEditId);
+  const p = appData.printers.find(x => String(x.id) === String(currentPrinterEditId));
   if(!p) return;
   p.name = document.getElementById('printerNameInput').value;
   p.cost = parseFloat(document.getElementById('printerCostInput').value) || 0;
@@ -1278,7 +1278,7 @@ function onDeletePrinter(id){
   document.getElementById("printerDetails").style.display = "none";
 }
 function onShowPrinterDetails(id){
-  const printer = appData.printers.find(p => p.id === id);
+  const printer = appData.printers.find(p => String(p.id) === String(id));
   if(!printer) return;
   document.getElementById("printerDetails").style.display = "block";
   document.getElementById("printerDetailsName").textContent = printer.name;
@@ -1298,9 +1298,9 @@ function onShowPrinterDetails(id){
       <td>${(a.printers && a.printers.length)? a.printers.map(printerNameById).join(', '): 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
-          <button class="btn btn-secondary" onclick="onEditPrinterAdditional(${printer.id}, ${a.id})">Ред.<\/button>
-          <button class="btn btn-warning" onclick="copyElement('printerAdditional', ${a.id})">Копировать<\/button>
-          <button class="btn btn-danger" onclick="onDeletePrinterAdditional(${printer.id}, ${a.id})">Удл.<\/button>
+          <button class="btn btn-secondary" onclick="onEditPrinterAdditional('${printer.id}', '${a.id}')">Ред.<\/button>
+          <button class="btn btn-warning" onclick="copyElement('printerAdditional', '${a.id}')">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeletePrinterAdditional('${printer.id}', '${a.id}')">Удл.<\/button>
         <\/div>
       <\/td>
     `;
@@ -1324,11 +1324,11 @@ function onShowPrinterDetails(id){
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
-          <button class="btn btn-secondary" onclick="onEditPrinterMaterial(${printer.id}, ${m.id})">Ред.<\/button>
-          <button class="btn btn-success" onclick="openOrcaConfig(${m.id})">Orca<\/button>
-          <button class="btn btn-info" onclick="downloadMaterialLabelHtml(${m.id})">Этикетка<\/button>
-          <button class="btn btn-warning" onclick="copyElement('printerMaterials', ${m.id})">Копировать<\/button>
-          <button class="btn btn-danger" onclick="onDeletePrinterMaterial(${printer.id}, ${m.id})">Удл.<\/button>
+          <button class="btn btn-secondary" onclick="onEditPrinterMaterial('${printer.id}', '${m.id}')">Ред.<\/button>
+          <button class="btn btn-success" onclick="openOrcaConfig('${m.id}')">Orca<\/button>
+          <button class="btn btn-info" onclick="downloadMaterialLabelHtml('${m.id}')">Этикетка<\/button>
+          <button class="btn btn-warning" onclick="copyElement('printerMaterials', '${m.id}')">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeletePrinterMaterial('${printer.id}', '${m.id}')">Удл.<\/button>
         <\/div>
       <\/td>
     `;
@@ -1355,7 +1355,7 @@ function onAddPrinterAdditional(printerId){
 async function onEditPrinterAdditional(printerId, addId){
   const pr = appData.printers.find(p => String(p.id) === String(printerId));
   if(!pr) return;
-  const it = pr.additional.find(a => a.id === addId);
+  const it = pr.additional.find(a => String(a.id) === String(addId));
   if(!it) return;
   const vals = await showMultiPrompt('Статья принтера',[
     {id:'desc',label:'Описание',value:it.description},
@@ -1449,11 +1449,11 @@ function renderGlobalMaterialsTable(){
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
-          <button class="btn btn-secondary" onclick="onEditGlobalMaterial(${m.id})">Ред.<\/button>
-          <button class="btn btn-success" onclick="openOrcaConfig(${m.id})">Orca<\/button>
-          <button class="btn btn-info" onclick="downloadMaterialLabelHtml(${m.id})">Этикетка<\/button>
-          <button class="btn btn-warning" onclick="copyElement('globalMaterials', ${m.id})">Копировать<\/button>
-          <button class="btn btn-danger" onclick="onDeleteGlobalMaterial(${m.id})">Удл.<\/button>
+          <button class="btn btn-secondary" onclick="onEditGlobalMaterial('${m.id}')">Ред.<\/button>
+          <button class="btn btn-success" onclick="openOrcaConfig('${m.id}')">Orca<\/button>
+          <button class="btn btn-info" onclick="downloadMaterialLabelHtml('${m.id}')">Этикетка<\/button>
+          <button class="btn btn-warning" onclick="copyElement('globalMaterials', '${m.id}')">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeleteGlobalMaterial('${m.id}')">Удл.<\/button>
         <\/div>
       <\/td>
     `;
@@ -1475,7 +1475,7 @@ function onAddGlobalMaterial(){
   new bootstrap.Modal(document.getElementById('materialModal')).show();
 }
 function onEditGlobalMaterial(id){
-  const m = appData.materials.find(x => x.id === id);
+  const m = appData.materials.find(x => String(x.id) === String(id));
   if(!m) return;
   currentMaterialEditId = id;
   document.getElementById('matNameInput').value = m.name;
@@ -1529,9 +1529,9 @@ function renderGlobalAdditionalTable(){
       <td>${(a.printers && a.printers.length)? a.printers.map(printerNameById).join(', '): 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
-          <button class="btn btn-secondary" onclick="onEditGlobalAdditional(${a.id})">Ред.<\/button>
-          <button class="btn btn-warning" onclick="copyElement('globalAdditional', ${a.id})">Копировать<\/button>
-          <button class="btn btn-danger" onclick="onDeleteGlobalAdditional(${a.id})">Удл.<\/button>
+          <button class="btn btn-secondary" onclick="onEditGlobalAdditional('${a.id}')">Ред.<\/button>
+          <button class="btn btn-warning" onclick="copyElement('globalAdditional', '${a.id}')">Копировать<\/button>
+          <button class="btn btn-danger" onclick="onDeleteGlobalAdditional('${a.id}')">Удл.<\/button>
         <\/div>
       <\/td>
     `;
@@ -1552,7 +1552,7 @@ function onAddGlobalAdditional(){
   renderGlobalAdditionalTable();
 }
 async function onEditGlobalAdditional(id){
-  const x = appData.additionalGlobal.find(a => a.id === id);
+  const x = appData.additionalGlobal.find(a => String(a.id) === String(id));
   if(!x) return;
   const vals = await showMultiPrompt('Расход',[
     {id:'desc',label:'Описание',value:x.description},
@@ -2159,10 +2159,10 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
 }
 
 function findMaterialById(mid) {
-  let mat = appData.materials.find(m => m.id == mid);
+  let mat = appData.materials.find(m => String(m.id) === String(mid));
   if (mat) return mat;
   for (let p of appData.printers) {
-    mat = p.materials.find(m => m.id == mid);
+    mat = p.materials.find(m => String(m.id) === String(mid));
     if (mat) return mat;
   }
   return null;
@@ -2693,7 +2693,7 @@ function ensureOrcaPrinterFields(){
 }
 
 function openPrinterOrca(id){
-  const pr=appData.printers.find(p=>p.id===id);
+  const pr=appData.printers.find(p=>String(p.id)===String(id));
   if(!pr) return;
   currentOrcaPrinterId=id;
   ensureOrcaPrinterFields();
