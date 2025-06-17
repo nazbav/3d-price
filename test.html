@@ -583,53 +583,6 @@
   </div>
 </div>
 
-<!-- Модальное окно доп. расхода -->
-<div class="modal fade" id="additionalModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Доп. расход</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2">
-          <label class="form-label">Описание</label>
-          <input type="text" class="form-control" id="addDescInput">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Стоимость (₽)</label>
-          <input type="number" class="form-control" id="addCostInput">
-        </div>
-        <div class="mb-2">
-          <label class="form-label">Часы окупаемости</label>
-          <input type="number" class="form-control" id="addHoursInput">
-        </div>
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="addUseInput" checked>
-          <label class="form-check-label" for="addUseInput">Включать в расчёт</label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-        <button type="button" class="btn btn-primary" id="saveAdditionalBtn">Сохранить</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Модальное окно подтверждения -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-body" id="confirmMessage"></div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Нет</button>
-        <button type="button" class="btn btn-danger" id="confirmOkBtn">Да</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const THEME_STORAGE_KEY = "themePreference";
@@ -1150,33 +1103,45 @@ function onShowPrinterDetails(id){
   document.getElementById("btnAddPrinterMaterial").onclick = () => onAddPrinterMaterial(printer.id);
 }
 function onAddPrinterAdditional(printerId){
-  currentAdditionalContext = {type:'printer', printerId: printerId, id:null};
-  document.getElementById('addDescInput').value = '';
-  document.getElementById('addCostInput').value = '0';
-  document.getElementById('addHoursInput').value = '1000';
-  document.getElementById('addUseInput').checked = true;
-  new bootstrap.Modal(document.getElementById('additionalModal')).show();
+  const pr = appData.printers.find(p => p.id === printerId);
+  if(!pr) return;
+  const nid = Date.now();
+  pr.additional.push({
+    id: nid,
+    description: "Новая статья",
+    cost: 0,
+    hoursToRecoup: 1000,
+    useInCalc: true
+  });
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
 }
 function onEditPrinterAdditional(printerId, addId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
   const it = pr.additional.find(a => a.id === addId);
   if(!it) return;
-  currentAdditionalContext = {type:'printer', printerId: printerId, id:addId};
-  document.getElementById('addDescInput').value = it.description;
-  document.getElementById('addCostInput').value = it.cost;
-  document.getElementById('addHoursInput').value = it.hoursToRecoup;
-  document.getElementById('addUseInput').checked = it.useInCalc;
-  new bootstrap.Modal(document.getElementById('additionalModal')).show();
+  const d = prompt("Описание:", it.description);
+  if(d === null) return;
+  const c = prompt("Стоимость (₽):", it.cost);
+  if(c === null) return;
+  const h = prompt("Часы окупаемости:", it.hoursToRecoup);
+  if(h === null) return;
+  const used = confirm("Включать в расчёт?");
+  it.description = d;
+  it.cost = parseFloat(c) || 0;
+  it.hoursToRecoup = parseFloat(h) || 1000;
+  it.useInCalc = used;
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
 }
 function onDeletePrinterAdditional(printerId, addId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return;
-  showConfirm('Удалить статью?', ()=>{
-    pr.additional = pr.additional.filter(a => a.id !== addId);
-    saveToLocalStorage();
-    onShowPrinterDetails(printerId);
-  });
+  if(!confirm("Удалить статью?")) return;
+  pr.additional = pr.additional.filter(a => a.id !== addId);
+  saveToLocalStorage();
+  onShowPrinterDetails(printerId);
 }
 function onAddPrinterMaterial(printerId){
   const pr = appData.printers.find(p => p.id === printerId);
@@ -1263,20 +1228,6 @@ function renderGlobalMaterialsTable(){
   });
 }
 let currentMaterialEditId = null;
-let currentAdditionalContext = null;
-let confirmAction = null;
-
-function showConfirm(msg, action){
-  document.getElementById('confirmMessage').textContent = msg;
-  confirmAction = action;
-  new bootstrap.Modal(document.getElementById('confirmModal')).show();
-}
-
-function confirmOk(){
-  if(confirmAction) confirmAction();
-  confirmAction = null;
-  bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
-}
 function onAddGlobalMaterial(){
   currentMaterialEditId = null;
   document.getElementById('matNameInput').value = '';
@@ -1348,71 +1299,39 @@ function renderGlobalAdditionalTable(){
   });
 }
 function onAddGlobalAdditional(){
-  currentAdditionalContext = {type:'global', printerId:null, id:null};
-  document.getElementById('addDescInput').value = '';
-  document.getElementById('addCostInput').value = '0';
-  document.getElementById('addHoursInput').value = '1000';
-  document.getElementById('addUseInput').checked = true;
-  new bootstrap.Modal(document.getElementById('additionalModal')).show();
+  const nid = Date.now();
+  appData.additionalGlobal.push({
+    id: nid,
+    description: "Новая статья",
+    cost: 0,
+    hoursToRecoup: 1000,
+    useInCalc: true
+  });
+  saveToLocalStorage();
+  renderGlobalAdditionalTable();
 }
 function onEditGlobalAdditional(id){
   const x = appData.additionalGlobal.find(a => a.id === id);
   if(!x) return;
-  currentAdditionalContext = {type:'global', printerId:null, id:id};
-  document.getElementById('addDescInput').value = x.description;
-  document.getElementById('addCostInput').value = x.cost;
-  document.getElementById('addHoursInput').value = x.hoursToRecoup || 1000;
-  document.getElementById('addUseInput').checked = x.useInCalc;
-  new bootstrap.Modal(document.getElementById('additionalModal')).show();
+  const d = prompt("Описание:", x.description);
+  if(d === null) return;
+  const c = prompt("Стоимость (₽):", x.cost);
+  if(c === null) return;
+  const hh = prompt("Часы окуп.", x.hoursToRecoup || 1000);
+  if(hh === null) return;
+  const used = confirm("Включать в расчёт?");
+  x.description = d;
+  x.cost = parseFloat(c) || 0;
+  x.hoursToRecoup = parseFloat(hh) || 1000;
+  x.useInCalc = used;
+  saveToLocalStorage();
+  renderGlobalAdditionalTable();
 }
 function onDeleteGlobalAdditional(id){
-  showConfirm('Удалить статью?', ()=>{
-    appData.additionalGlobal = appData.additionalGlobal.filter(a => a.id !== id);
-    saveToLocalStorage();
-    renderGlobalAdditionalTable();
-  });
-}
-
-function saveAdditionalFromModal(){
-  const desc = document.getElementById('addDescInput').value;
-  const cost = parseFloat(document.getElementById('addCostInput').value) || 0;
-  const hours = parseFloat(document.getElementById('addHoursInput').value) || 1000;
-  const used = document.getElementById('addUseInput').checked;
-  if(!currentAdditionalContext) return;
-  if(currentAdditionalContext.type === 'global'){
-    let item;
-    if(currentAdditionalContext.id === null){
-      item = {id: Date.now()};
-      appData.additionalGlobal.push(item);
-    } else {
-      item = appData.additionalGlobal.find(a => a.id === currentAdditionalContext.id);
-    }
-    if(!item) return;
-    item.description = desc;
-    item.cost = cost;
-    item.hoursToRecoup = hours;
-    item.useInCalc = used;
-    saveToLocalStorage();
-    renderGlobalAdditionalTable();
-  } else {
-    const pr = appData.printers.find(p => p.id === currentAdditionalContext.printerId);
-    if(!pr) return;
-    let item;
-    if(currentAdditionalContext.id === null){
-      item = {id: Date.now()};
-      pr.additional.push(item);
-    } else {
-      item = pr.additional.find(a => a.id === currentAdditionalContext.id);
-    }
-    if(!item) return;
-    item.description = desc;
-    item.cost = cost;
-    item.hoursToRecoup = hours;
-    item.useInCalc = used;
-    saveToLocalStorage();
-    onShowPrinterDetails(currentAdditionalContext.printerId);
-  }
-  bootstrap.Modal.getInstance(document.getElementById('additionalModal')).hide();
+  if(!confirm("Удалить статью?")) return;
+  appData.additionalGlobal = appData.additionalGlobal.filter(a => a.id !== id);
+  saveToLocalStorage();
+  renderGlobalAdditionalTable();
 }
 
 /* Функции калькуляции */
@@ -2341,24 +2260,37 @@ function saveOrcaConfig(){
   bootstrap.Modal.getInstance(modalEl).hide();
 }
 
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function downloadOrcaJson(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
   const cfg = Object.assign({type:'filament'}, mat.orca||{});
-  const arrFields=['filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed'];
-  arrFields.forEach(k=>{ if(cfg[k]!==undefined) cfg[k]=[cfg[k]]; });
-  if(cfg.compatible_printers)
-    cfg.compatible_printers = cfg.compatible_printers.split(',').map(s=>s.trim()).filter(Boolean);
-  const blob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = (cfg.name||'filament')+'.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const notArray=['type','filament_id','setting_id','name','from','instantiation','inherits','version','author','based_on','profile_type','shared_with','uuid'];
+  for(const k of Object.keys(cfg)){
+    if(notArray.includes(k)) continue;
+    if(k==='compatible_printers'){
+      if(typeof cfg[k]==='string') cfg[k]=cfg[k].split(',').map(s=>s.trim()).filter(Boolean);
+      continue;
+    }
+    if(!Array.isArray(cfg[k])) cfg[k]=[String(cfg[k])];
+  }
+  const jsonBlob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
+  downloadBlob(jsonBlob,(cfg.name||'filament')+'.json');
+  const baseId = cfg.setting_id || cfg.filament_id || '';
+  const infoLines = `sync_info = update\nuser_id = \nsetting_id = \nbase_id = ${baseId}\nupdated_time = ${Math.floor(Date.now()/1000)}`;
+  const infoBlob = new Blob([infoLines],{type:'text/plain'});
+  downloadBlob(infoBlob,(cfg.name||'filament')+'.info');
 }
 
 function importOrcaJson(file){
@@ -2462,15 +2394,13 @@ function downloadPrinterJson(){
   if(currentOrcaPrinterId===null) return;
   const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
   if(!pr) return;
-  const blob=new Blob([JSON.stringify(pr.orca||{},null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;
-  link.download=(pr.orca.name||pr.name||'printer')+'.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const cfg=pr.orca||{};
+  const jsonBlob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
+  const name=(cfg.printer_settings_id||cfg.name||pr.name||'printer');
+  downloadBlob(jsonBlob,name+'.json');
+  const baseId=cfg.printer_settings_id||'';
+  const infoLines=`sync_info = update\nuser_id = \nsetting_id = \nbase_id = ${baseId}\nupdated_time = ${Math.floor(Date.now()/1000)}`;
+  downloadBlob(new Blob([infoLines],{type:'text/plain'}),name+'.info');
 }
 
 function importPrinterJson(file){
@@ -3284,8 +3214,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
-  document.getElementById('saveAdditionalBtn').onclick = saveAdditionalFromModal;
-  document.getElementById('confirmOkBtn').onclick = confirmOk;
 
   document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
   document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
