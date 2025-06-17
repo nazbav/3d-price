@@ -10,19 +10,6 @@ ORCA_MACHINE_DIR = os.path.join(os.environ.get('APPDATA', ''), 'OrcaSlicer', 'us
 DEFAULT_INPUT = 'calc_data.json'
 DEFAULT_OUTPUT = 'calc_data_synced.json'
 
-ORCA_FIELDS = [
-    'type','filament_id','setting_id','name','from','instantiation','inherits',
-    'filament_diameter','filament_density','filament_start_gcode','filament_end_gcode',
-    'filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time',
-    'support_material_interface_fan_speed','slow_down_min_speed','enable_pressure_advance',
-    'pressure_advance','temperature_vitrification','hot_plate_temp_initial_layer',
-    'hot_plate_temp','compatible_printers'
-]
-
-PRINTER_FIELDS = [
-    'before_layer_change_gcode','change_filament_gcode','machine_start_gcode',
-    'machine_end_gcode','print_host','print_host_webui','printer_settings_id'
-]
 
 def build_system_filament_map(system_root):
     mapping = {}
@@ -56,32 +43,22 @@ def load_json(path):
     except Exception:
         return None
 
-def normalize_value(val, key):
-    if isinstance(val, list):
-        if key == 'compatible_printers':
-            return ', '.join(val)
-        return val[0] if val else ''
-    return val
+def normalize_name(value):
+    if isinstance(value, list):
+        return value[0] if value else ''
+    return value or ''
 
 def convert_filament(data, mapping=None):
     if mapping:
         data = merge_inherited(dict(data), mapping)
-    orca = {}
-    for k in ORCA_FIELDS:
-        if k in data:
-            orca[k] = normalize_value(data[k], k)
-    name_val = data.get('filament_settings_id') or data.get('name') or ''
-    name = normalize_value(name_val, 'filament_settings_id') or 'material'
-    return name, orca
+    name_val = data.get('filament_settings_id') or data.get('name')
+    name = normalize_name(name_val) or 'material'
+    return name, data
 
 def convert_machine(data):
-    orca = {}
-    for k in PRINTER_FIELDS:
-        if k in data:
-            orca[k] = normalize_value(data[k], k)
-    name_val = data.get('printer_settings_id') or data.get('name') or ''
-    name = normalize_value(name_val, 'printer_settings_id') or 'printer'
-    return name, orca
+    name_val = data.get('printer_settings_id') or data.get('name')
+    name = normalize_name(name_val) or 'printer'
+    return name, data
 
 def main():
     parser = argparse.ArgumentParser(description='Sync Orca Slicer data with calculator export')
