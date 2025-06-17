@@ -780,7 +780,7 @@ function populatePrintersSelect(sel, selected){
     const opt=document.createElement('option');
     opt.value=p.id;
     opt.textContent=p.name;
-    if(selected && selected.includes(String(p.id))) opt.selected=true;
+    if(selected && selected.some(id => String(id) === String(p.id))) opt.selected=true;
     sel.appendChild(opt);
   });
 }
@@ -1734,7 +1734,7 @@ function getAllMaterialsForPrinter(printerId, includeAll=false){
   if(!pr) return [];
   const globalMats = appData.materials.filter(m => {
     if(!includeAll && m.balance <= 0) return false;
-    return !m.printers || m.printers.length===0 || m.printers.includes(String(printerId));
+    return !m.printers || m.printers.length===0 || m.printers.some(pid => String(pid) === String(printerId));
   });
   const printerMats = pr.materials.filter(m => includeAll || m.balance > 0);
   return [...globalMats, ...printerMats];
@@ -1938,7 +1938,7 @@ function onCalculateAll() {
     if (!g.useInCalc) return;
     let hours = 0;
     detailsByPrinter.forEach(d=>{
-      if(!g.printers || g.printers.length===0 || g.printers.includes(String(d.printerId))){
+      if(!g.printers || g.printers.length===0 || g.printers.some(pid => String(pid) === String(d.printerId))){
         hours += d.printerTime;
       }
     });
