@@ -2,3 +2,11 @@
 - added saveBrandingSettings and saveCalcSettings
 - ensured arrays exist for materials, expenses, clients, history
 - updated settings saving to persist work hours, operator rate, kWh cost and tax
+- introduced settings hub with branding, calculation and cloud export sections
+- implemented search and sort for all tables plus date filter in history
+- added clients entity with quick add option during calculation
+- unified global materials and expenses with printer mapping
+- added migrateOldData to convert legacy configs during import
+- applied short alphanumeric UUIDs for printers, models and orders
+- fixed material selection when editing history by listing zero balance items
+- display order code in history table and calculation results
