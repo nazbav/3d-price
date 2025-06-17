@@ -242,6 +242,12 @@
           </select>
         </div>
       </div>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="calcOrderId" class="form-label">Код заказа:</label>
+          <input type="text" id="calcOrderId" class="form-control" readonly />
+        </div>
+      </div>
       <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
       <div class="row mb-3">
         <div class="col-md-3">
@@ -295,10 +301,11 @@
             <thead class="">
               <tr>
                 <th onclick="sortTable('historyTable',0)">Дата/время</th>
-                <th onclick="sortTable('historyTable',1)">Название расчёта</th>
-                <th onclick="sortTable('historyTable',2)">Клиент</th>
-                <th onclick="sortTable('historyTable',3)">Статус</th>
-                <th onclick="sortTable('historyTable',4)">Итог (₽)</th>
+                <th onclick="sortTable('historyTable',1)">Код</th>
+                <th onclick="sortTable('historyTable',2)">Название расчёта</th>
+                <th onclick="sortTable('historyTable',3)">Клиент</th>
+                <th onclick="sortTable('historyTable',4)">Статус</th>
+                <th onclick="sortTable('historyTable',5)">Итог (₽)</th>
                 <th>Подробнее</th>
               </tr>
             </thead>
@@ -1688,7 +1695,7 @@ function addModelRow(printerId, modelData) {
   const optsStatus = statuses.map(s =>
     `<option value="${s.val}" ${(modelData.status === s.val) ? "selected" : ""}>${s.text}<\/option>`
   ).join("");
-  const mats = getAllMaterialsForPrinter(printerId);
+  const mats = getAllMaterialsForPrinter(printerId, true);
   const optsMat = mats.map(m =>
     `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name}<\/option>`
   ).join("");
@@ -1722,15 +1729,14 @@ function addModelRow(printerId, modelData) {
   `;
   tbody.appendChild(tr);
 }
-function getAllMaterialsForPrinter(printerId){
+function getAllMaterialsForPrinter(printerId, includeAll=false){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return [];
-  // Возвращаем только материалы с ненулевым остатком
   const globalMats = appData.materials.filter(m => {
-    if(m.balance <= 0) return false;
+    if(!includeAll && m.balance <= 0) return false;
     return !m.printers || m.printers.length===0 || m.printers.includes(String(printerId));
   });
-  const printerMats = pr.materials.filter(m => m.balance > 0);
+  const printerMats = pr.materials.filter(m => includeAll || m.balance > 0);
   return [...globalMats, ...printerMats];
 }
 
@@ -1764,6 +1770,7 @@ function onCalculateAll() {
   const sDate = document.getElementById("calcStartDate").value;
   const parallelMode = document.getElementById("calcParallelPrinting").value;
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
+  let orderId = document.getElementById("calcOrderId").value.trim();
   
   // Сохранение настроек расчёта
   appData.calcSettings.operatorRate = opRate;
@@ -1962,10 +1969,14 @@ function onCalculateAll() {
   }
   const finalSum = subtotal / (1 - tPercent / 100);
   const taxAmount = finalSum - subtotal;
-  
+
   let finDateStr = calcFinishDate(sDate, Math.ceil(finalTimeOperator / (whDay || 8)));
-  
+
+  if(!orderId) orderId = generateUUID();
+  document.getElementById("calcOrderId").value = orderId;
+
   let htmlRes = `<strong>Общий результат:<\/strong><br/>`;
+  htmlRes += `Код: ${orderId}<br/>`;
   htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
   htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
@@ -2085,7 +2096,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   document.getElementById("calcResult").innerHTML = htmlRes;
   
   lastCalcFullData = {
-    id: generateUUID(),
+    id: orderId,
     calcName,
     clientName,
     clientId,
@@ -2113,7 +2124,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   const dtStr = new Date().toLocaleString("ru-RU");
   const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
   const newEntry = {
-    id: generateUUID(),
+    id: orderId,
     timestamp: Date.now(),
     dateStr: dtStr,
     calcName,
@@ -2189,6 +2200,7 @@ function renderHistoryTable(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${h.dateStr}<\/td>
+      <td>${h.id || ''}<\/td>
       <td>${h.calcName || "(Без названия)"}<\/td>
       <td>${h.clientName || "(Не указан)"}<\/td>
       <td>
@@ -2825,6 +2837,7 @@ function generateMaxDetailedCalcHtml(d) {
 function onEditCalcHistory(timestamp){
   const it = appData.calcHistory.find(x => x.timestamp === timestamp);
   if(!it){ alert("Нет такого элемента в истории"); return; }
+  document.getElementById("calcOrderId").value = it.id || "";
   document.getElementById("calcName").value = it.calcName || "";
   document.getElementById("calcClientName").value = it.clientName || "";
   document.getElementById("calcOrderStatus").value = it.orderStatus || "new";
