@@ -8,3 +8,5 @@
 - unified global materials and expenses with printer mapping
 - added migrateOldData to convert legacy configs during import
 - applied short alphanumeric UUIDs for printers, models and orders
+- fixed material selection when editing history by listing zero balance items
+- display order code in history table and calculation results
