@@ -172,6 +172,7 @@
                 <th onclick="sortTable('materialsTable',5)">Отход (%)</th>
                 <th onclick="sortTable('materialsTable',6)">Производитель</th>
                 <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
+                <th>Принтеры</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -200,6 +201,7 @@
                 <th onclick="sortTable('additionalGlobalTable',2)">Стоим. (₽)</th>
                 <th onclick="sortTable('additionalGlobalTable',3)">Часы окуп.</th>
                 <th onclick="sortTable('additionalGlobalTable',4)">Вкл. в расчёт?</th>
+                <th>Принтеры</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -589,6 +591,10 @@
           <label class="form-label">Дата производства</label>
           <input type="text" class="form-control" id="matProdDateInput">
         </div>
+        <div class="mb-2">
+          <label class="form-label">Принтеры</label>
+          <select multiple class="form-select" id="matPrintersSelect"></select>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
@@ -660,6 +666,24 @@ function showMultiPrompt(title, fields){
         lbl.setAttribute('for','mp_'+f.id);
         lbl.textContent=f.label;
         div.appendChild(inp); div.appendChild(lbl); body.appendChild(div);
+      } else if(f.type==='multiselect'){
+        const div=document.createElement('div');
+        div.className='mb-2';
+        const lbl=document.createElement('label');
+        lbl.className='form-label';
+        lbl.textContent=f.label;
+        const sel=document.createElement('select');
+        sel.className='form-select';
+        sel.multiple=true;
+        sel.id='mp_'+f.id;
+        (f.options||[]).forEach(opt=>{
+          const o=document.createElement('option');
+          o.value=opt.value;
+          o.textContent=opt.label;
+          if(f.value&&f.value.includes(opt.value)) o.selected=true;
+          sel.appendChild(o);
+        });
+        div.appendChild(lbl); div.appendChild(sel); body.appendChild(div);
       } else {
         const div=document.createElement('div');
         div.className='mb-2';
@@ -679,13 +703,31 @@ function showMultiPrompt(title, fields){
       const result={};
       fields.forEach(f=>{
         const el=document.getElementById('mp_'+f.id);
-        result[f.id] = (f.type==='checkbox')? el.checked : el.value;
+        if(f.type==='checkbox') result[f.id] = el.checked;
+        else if(f.type==='multiselect') result[f.id] = Array.from(el.selectedOptions).map(o=>o.value);
+        else result[f.id] = el.value;
       });
       modal.hide();
       res(result);
     };
     modal.show();
   });
+}
+
+function populatePrintersSelect(sel, selected){
+  sel.innerHTML='';
+  appData.printers.forEach(p=>{
+    const opt=document.createElement('option');
+    opt.value=p.id;
+    opt.textContent=p.name;
+    if(selected && selected.includes(String(p.id))) opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+
+function printerNameById(id){
+  const p=appData.printers.find(pr=>String(pr.id)===String(id));
+  return p? p.name : id;
 }
 
 const STORAGE_KEY = "ThreeDPrintCalc_Extended_v5";
@@ -734,6 +776,9 @@ function loadFromLocalStorage(){
     if(s){
       const p = JSON.parse(s);
       if(p) appData = p;
+      // ensure printers arrays
+      (appData.materials||[]).forEach(m=>{if(!m.printers) m.printers=[];});
+      (appData.additionalGlobal||[]).forEach(a=>{if(!a.printers) a.printers=[];});
     }
   } catch(e){}
 }
@@ -921,7 +966,8 @@ async function massEdit(type) {
           {id:'declared',label:'Заявленный вес (кг)',type:'number'},
           {id:'waste',label:'Отход (%)',type:'number'},
           {id:'manuf',label:'Производитель'},
-          {id:'prodDate',label:'Дата производства'}
+          {id:'prodDate',label:'Дата производства'},
+          {id:'printers',label:'Принтеры',type:'multiselect',options:appData.printers.map(p=>({value:String(p.id),label:p.name}))}
         ]);
         if(!vals) return;
         appData.materials.forEach(m=>{
@@ -933,6 +979,7 @@ async function massEdit(type) {
             if(vals.waste) m.wastePercent=parseFloat(vals.waste)||m.wastePercent;
             if(vals.manuf) m.manufacturer=vals.manuf;
             if(vals.prodDate) m.productionDate=vals.prodDate;
+            if(vals.printers && vals.printers.length) m.printers=vals.printers;
           }
         });
         renderGlobalMaterialsTable();
@@ -943,7 +990,8 @@ async function massEdit(type) {
         const vals = await showMultiPrompt('Глобальные расходы',[
           {id:'cost',label:'Стоимость (₽)',type:'number'},
           {id:'hours',label:'Часы окупаемости',type:'number'},
-          {id:'use',label:'Включать в расчёт',type:'checkbox',value:true}
+          {id:'use',label:'Включать в расчёт',type:'checkbox',value:true},
+          {id:'printers',label:'Принтеры',type:'multiselect',options:appData.printers.map(p=>({value:String(p.id),label:p.name}))}
         ]);
         if(!vals) return;
         appData.additionalGlobal.forEach(a=>{
@@ -952,6 +1000,7 @@ async function massEdit(type) {
             if(vals.cost) a.cost=parseFloat(vals.cost)||a.cost;
             if(vals.hours) a.hoursToRecoup=parseFloat(vals.hours)||a.hoursToRecoup;
             a.useInCalc=vals.use;
+            if(vals.printers && vals.printers.length) a.printers=vals.printers;
           }
         });
         renderGlobalAdditionalTable();
@@ -1181,6 +1230,7 @@ function onShowPrinterDetails(id){
       <td>${a.cost}<\/td>
       <td>${a.hoursToRecoup}<\/td>
       <td>${a.useInCalc ? "Да" : "Нет"}<\/td>
+      <td>${(a.printers && a.printers.length)? a.printers.map(printerNameById).join(', '): 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditPrinterAdditional(${printer.id}, ${a.id})">Ред.<\/button>
@@ -1206,6 +1256,7 @@ function onShowPrinterDetails(id){
       <td>${m.wastePercent}<\/td>
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
+      <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditPrinterMaterial(${printer.id}, ${m.id})">Ред.<\/button>
@@ -1330,6 +1381,7 @@ function renderGlobalMaterialsTable(){
       <td>${m.wastePercent}<\/td>
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
+      <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditGlobalMaterial(${m.id})">Ред.<\/button>
@@ -1354,6 +1406,7 @@ function onAddGlobalMaterial(){
   document.getElementById('matColorInput').value = '#ffffff';
   document.getElementById('matManufInput').value = '';
   document.getElementById('matProdDateInput').value = '';
+  populatePrintersSelect(document.getElementById('matPrintersSelect'), []);
   new bootstrap.Modal(document.getElementById('materialModal')).show();
 }
 function onEditGlobalMaterial(id){
@@ -1368,11 +1421,12 @@ function onEditGlobalMaterial(id){
   document.getElementById('matColorInput').value = m.color || '#ffffff';
   document.getElementById('matManufInput').value = m.manufacturer || '';
   document.getElementById('matProdDateInput').value = m.productionDate || '';
+  populatePrintersSelect(document.getElementById('matPrintersSelect'), m.printers||[]);
   new bootstrap.Modal(document.getElementById('materialModal')).show();
 }
 function saveMaterialFromModal(){
   const isNew = currentMaterialEditId === null;
-  let m = isNew ? {id: generateUUID(), orca: defaultOrcaConfig()} : appData.materials.find(x=>x.id==currentMaterialEditId);
+  let m = isNew ? {id: generateUUID(), orca: defaultOrcaConfig(), printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
   if(!m) return;
   m.name = document.getElementById('matNameInput').value;
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
@@ -1382,6 +1436,7 @@ function saveMaterialFromModal(){
   m.color = document.getElementById('matColorInput').value;
   m.manufacturer = document.getElementById('matManufInput').value;
   m.productionDate = document.getElementById('matProdDateInput').value;
+  m.printers = Array.from(document.getElementById('matPrintersSelect').selectedOptions).map(o=>o.value);
   if(isNew) appData.materials.push(m);
   saveToLocalStorage();
   renderGlobalMaterialsTable();
@@ -1406,6 +1461,7 @@ function renderGlobalAdditionalTable(){
       <td>${a.cost}<\/td>
       <td>${a.hoursToRecoup || 1000}<\/td>
       <td>${a.useInCalc ? "Да" : "Нет"}<\/td>
+      <td>${(a.printers && a.printers.length)? a.printers.map(printerNameById).join(', '): 'Все'}<\/td>
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditGlobalAdditional(${a.id})">Ред.<\/button>
@@ -1424,7 +1480,8 @@ function onAddGlobalAdditional(){
     description: "Новая статья",
     cost: 0,
     hoursToRecoup: 1000,
-    useInCalc: true
+    useInCalc: true,
+    printers: []
   });
   saveToLocalStorage();
   renderGlobalAdditionalTable();
@@ -1436,13 +1493,15 @@ async function onEditGlobalAdditional(id){
     {id:'desc',label:'Описание',value:x.description},
     {id:'cost',label:'Стоимость (₽)',type:'number',value:x.cost},
     {id:'hours',label:'Часы окуп.',type:'number',value:x.hoursToRecoup||1000},
-    {id:'use',label:'Включать в расчёт',type:'checkbox',value:x.useInCalc}
+    {id:'use',label:'Включать в расчёт',type:'checkbox',value:x.useInCalc},
+    {id:'printers',label:'Принтеры',type:'multiselect',options:appData.printers.map(p=>({value:String(p.id),label:p.name})),value:x.printers||[]}
   ]);
   if(!vals) return;
   x.description = vals.desc;
   x.cost = parseFloat(vals.cost)||0;
   x.hoursToRecoup = parseFloat(vals.hours)||1000;
   x.useInCalc = vals.use;
+  x.printers = vals.printers || [];
   saveToLocalStorage();
   renderGlobalAdditionalTable();
 }
@@ -1609,7 +1668,10 @@ function getAllMaterialsForPrinter(printerId){
   const pr = appData.printers.find(p => p.id === printerId);
   if(!pr) return [];
   // Возвращаем только материалы с ненулевым остатком
-  const globalMats = appData.materials.filter(m => m.balance > 0);
+  const globalMats = appData.materials.filter(m => {
+    if(m.balance <= 0) return false;
+    return !m.printers || m.printers.length===0 || m.printers.includes(String(printerId));
+  });
   const printerMats = pr.materials.filter(m => m.balance > 0);
   return [...globalMats, ...printerMats];
 }
@@ -1809,8 +1871,14 @@ function onCalculateAll() {
   let globalAdditionalDetails = [];
   appData.additionalGlobal.forEach(g => {
     if (!g.useInCalc) return;
+    let hours = 0;
+    detailsByPrinter.forEach(d=>{
+      if(!g.printers || g.printers.length===0 || g.printers.includes(String(d.printerId))){
+        hours += d.printerTime;
+      }
+    });
     const costPerHour = (g.hoursToRecoup > 0) ? g.cost / g.hoursToRecoup : 0;
-    const cVal = costPerHour * finalTimeOperator;
+    const cVal = costPerHour * hours;
     sumGlobalAdd += cVal;
     globalAdditionalDetails.push({
       id: g.id,
