@@ -352,7 +352,7 @@
     </div>
 
     <!-- Импорт/Экспорт -->
-<div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
+<!-- <div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
         <div class="mt-4">
 <h3>Экспорт данных</h3>
 
@@ -371,7 +371,8 @@
     <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
   </div>
 </div>
-  </div>  </div>
+  </div>  -->
+  </div>
     <!-- Настройки -->
 <div class="tab-pane fade" id="settingsPane" role="tabpanel" aria-labelledby="settings-tab">
   <div class="row mt-4">
@@ -425,12 +426,32 @@
           <button class="btn btn-primary" onclick="saveCalcSettings()">Сохранить</button>
         </div>
         <div class="tab-pane fade" id="cloudSet" role="tabpanel">
+<div class="mt-4">
           <h3>Облачный экспорт</h3>
           <button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
           <button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
           <button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
           <input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
           <div id="qrcode" class="mt-2"></div>
+</div>
+<hr>
+<div class="mt-4">
+<h3>Экспорт данных</h3>
+    <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
+    <button class="btn btn-info" id="downloadJsonFileBtn">Скачать JSON файл</button>
+    <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
+    <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
+</div>
+<hr>
+<div class="mt-4">
+    <h3>Импорт данных</h3>
+    <textarea id="importArea" class="form-control" rows="5"></textarea>
+    <input type="file" id="importJsonFile" class="form-control mt-2" accept=".json">
+    <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
+    <button class="btn btn-info mt-2" onclick="importFromFile()">Импорт из файла</button>
+    <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
+</div>
+		
         </div>
       </div>
     </div>
