@@ -726,6 +726,79 @@ function migrateOldData(obj){
     pr.additional = [];
   });
 
+  // Удаляем дубликаты принтеров по имени или адресу
+  const uniqPrinters = [];
+  const pMap = {};
+  obj.printers.forEach(pr=>{
+    const key = (pr.print_host||'') + '|' + (pr.name||'');
+    if(!pMap[key]){ pMap[key]=pr; uniqPrinters.push(pr); }
+  });
+  obj.printers = uniqPrinters;
+
+  // Удаляем дубликаты материалов
+  const uniqMat = [];
+  const mMap = {};
+  obj.materials.forEach(m=>{
+    const key = String(m.id||'') + '|' + (m.name||'');
+    if(!mMap[key]){ mMap[key]=m; uniqMat.push(m); }
+  });
+  obj.materials = uniqMat;
+
+  // Удаляем дубликаты дополнительных расходов
+  const uniqAdd = [];
+  const aMap = {};
+  obj.additionalGlobal.forEach(a=>{
+    const key = String(a.id||'') + '|' + (a.description||'');
+    if(!aMap[key]){ aMap[key]=a; uniqAdd.push(a); }
+  });
+  obj.additionalGlobal = uniqAdd;
+
+  // Карта принтеров для поиска замены
+  const idMap = {};
+  obj.printers.forEach(pr=>{
+    idMap[String(pr.id)] = pr;
+    if(pr.print_host) idMap[pr.print_host] = pr;
+    if(pr.name) idMap[pr.name.toLowerCase()] = pr;
+  });
+  function ensurePrinter(ref){
+    if(idMap[String(ref)]) return idMap[String(ref)];
+    if(idMap[ref]) return idMap[ref];
+    return null;
+  }
+
+  // Обновление истории расчётов и calcData
+  obj.calcHistory.forEach(h=>{
+    if(!h.markupPercent) h.markupPercent = 0;
+    if(!h.globalAdditional) h.globalAdditional = {sumGlobalAdd:0,taxAmount:0,details:[]};
+    if(Array.isArray(h.details)){
+      h.details.forEach(d=>{
+        let pr = ensurePrinter(d.printerId) || ensurePrinter(d.printerName?.toLowerCase());
+        if(!pr){
+          pr = {id: generateUUID(), name: d.printerName||'Temp', orcaProfiles:[], additional:[], materials:[], isTemp:true};
+          obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
+        }
+        d.printerId = pr.id;
+        d.printerName = pr.name;
+      });
+    }
+    if(h.calcData){
+      const newCD = {};
+      for(const pid in h.calcData){
+        let pr = ensurePrinter(pid);
+        if(!pr){
+          const det = (h.details||[]).find(d=>String(d.printerId)===String(pid));
+          pr = det? ensurePrinter(det.printerId) : null;
+        }
+        if(!pr){
+          pr = {id: generateUUID(), name: pid, orcaProfiles:[], additional:[], materials:[], isTemp:true};
+          obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
+        }
+        newCD[pr.id] = h.calcData[pid];
+      }
+      h.calcData = newCD;
+    }
+  });
+
   // Перенос клиентов из истории
   const nameMap = {};
   obj.calcHistory.forEach(h=>{
