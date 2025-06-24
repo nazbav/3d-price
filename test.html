@@ -3476,7 +3476,7 @@ function applyIncomingData(){
   const modal = bootstrap.Modal.getInstance(modalEl);
   modal.hide();
   if(val !== 'new'){
-    onEditCalcHistory(val);
+    onEditCalcHistory(parseInt(val,10));
   } else {
     document.getElementById('calcName').value = '';
     document.getElementById('calcClientName').value = '';
