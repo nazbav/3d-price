@@ -45,13 +45,44 @@ def main():
     data = load_json(args.input) or {
         'printers': [],
         'materials': [],
+        'materialProfiles': [],
         'additionalGlobal': [],
         'calcSettings': {},
         'labelSettings': {},
         'calcHistory': []
     }
 
-    mat_map = {m.get('name','').lower(): m for m in data.get('materials', [])}
+    material_profiles = data.get('materialProfiles', [])
+    if not isinstance(material_profiles, list):
+        material_profiles = []
+
+    mat_map = {m.get('name', '').lower(): m for m in data.get('materials', [])}
+
+    # convert old format materials with embedded Orca config
+    for m in list(mat_map.values()):
+        if 'orca' in m or 'orcaInfo' in m:
+            prof = {
+                'id': int(time.time()*1000) + len(material_profiles),
+                'config': m.get('orca', {}),
+                'info': m.get('orcaInfo', '')
+            }
+            material_profiles.append(prof)
+            m['profileIds'] = [prof['id']]
+            if 'orca' in m:
+                del m['orca']
+            if 'orcaInfo' in m:
+                del m['orcaInfo']
+        else:
+            if not isinstance(m.get('profileIds'), list):
+                m['profileIds'] = []
+
+    pf_map = {}
+    for p in material_profiles:
+        cfg = p.get('config', {})
+        nm = (cfg.get('filament_settings_id') or cfg.get('name') or '').lower()
+        if nm:
+            pf_map[nm] = p
+
     fil_dir = os.path.join(args.orca_path, 'filament')
     for fp in glob.glob(os.path.join(fil_dir, '*.json')):
         cfg = load_json(fp)
@@ -67,11 +98,21 @@ def main():
                 info_text = ''
         name, orca = convert_filament(cfg)
         key = name.lower()
+
+        prof = pf_map.get(key)
+        if not prof:
+            prof = {
+                'id': int(time.time()*1000) + len(material_profiles),
+                'config': orca,
+                'info': info_text
+            }
+            material_profiles.append(prof)
+            pf_map[key] = prof
+
         if key in mat_map:
-            mat_map[key]['orca'] = orca
-            mat_map[key]['orcaInfo'] = info_text
+            mat = mat_map[key]
         else:
-            mat_map[key] = {
+            mat = {
                 'id': int(time.time()*1000) + len(mat_map),
                 'name': name,
                 'costPerKg': 0,
@@ -79,11 +120,17 @@ def main():
                 'declaredWeight': 0,
                 'wastePercent': 0,
                 'manufacturer': '',
-                'productionDate': '',
-                'orca': orca,
-                'orcaInfo': info_text
+                'productionDate': ''
             }
+            mat_map[key] = mat
+
+        if not isinstance(mat.get('profileIds'), list):
+            mat['profileIds'] = []
+        if prof['id'] not in mat['profileIds']:
+            mat['profileIds'].append(prof['id'])
+
     data['materials'] = list(mat_map.values())
+    data['materialProfiles'] = material_profiles
 
     pr_map = {}
     name_map = {}
@@ -159,8 +206,6 @@ def main():
                 'hoursToRecoup': 1000,
                 'power': 0,
                 'maintCostHour': 0,
-                'additional': [],
-                'materials': [],
                 'orcaProfiles': []
             }
             name_map[name.lower()] = target
