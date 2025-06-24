@@ -32,7 +32,8 @@ def convert_filament(data):
 def convert_machine(data):
     name_val = data.get('printer_settings_id') or data.get('name')
     name = normalize_name(name_val) or 'printer'
-    return name, data
+    host_key = (data.get('print_host') or data.get('inherits') or '').lower()
+    return name, host_key, data
 
 def main():
     parser = argparse.ArgumentParser(description='Sync Orca Slicer data with calculator export')
@@ -84,7 +85,21 @@ def main():
             }
     data['materials'] = list(mat_map.values())
 
-    pr_map = {p.get('name','').lower(): p for p in data.get('printers', [])}
+    pr_map = {}
+    name_map = {}
+    for p in data.get('printers', []):
+        name_map[p.get('name', '').lower()] = p
+        if p.get('orcaProfiles'):
+            for prof in p['orcaProfiles']:
+                cfg = prof.get('config', {})
+                host = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
+                if host:
+                    pr_map[host] = p
+        elif p.get('orca'):
+            host = (p['orca'].get('print_host') or p['orca'].get('inherits') or '').lower()
+            if host:
+                pr_map[host] = p
+
     mach_dir = os.path.join(args.orca_path, 'machine')
     for fp in glob.glob(os.path.join(mach_dir, '*.json')):
         cfg = load_json(fp)
@@ -98,14 +113,15 @@ def main():
                     info_text = f.read()
             except Exception:
                 info_text = ''
-        name, orca = convert_machine(cfg)
-        key = name.lower()
-        if key in pr_map:
-            pr_map[key]['orca'] = orca
-            pr_map[key]['orcaInfo'] = info_text
-        else:
-            pr_map[key] = {
-                'id': int(time.time()*1000) + len(pr_map),
+        name, host_key, orca = convert_machine(cfg)
+        target = None
+        if host_key and host_key in pr_map:
+            target = pr_map[host_key]
+        elif name.lower() in name_map:
+            target = name_map[name.lower()]
+        if not target:
+            target = {
+                'id': int(time.time()*1000) + len(name_map),
                 'name': name,
                 'cost': 0,
                 'hoursToRecoup': 1000,
@@ -113,10 +129,24 @@ def main():
                 'maintCostHour': 0,
                 'additional': [],
                 'materials': [],
-                'orca': orca,
-                'orcaInfo': info_text
+                'orcaProfiles': []
             }
-    data['printers'] = list(pr_map.values())
+            name_map[name.lower()] = target
+        if 'orcaProfiles' not in target:
+            target['orcaProfiles'] = []
+        target['orcaProfiles'].append({'id': int(time.time()*1000), 'config': orca, 'info': info_text})
+        if host_key:
+            pr_map[host_key] = target
+
+    printers = list(name_map.values())
+    for p in printers:
+        if not isinstance(p.get('orcaProfiles'), list):
+            p['orcaProfiles'] = []
+        if 'orca' in p:
+            del p['orca']
+        if 'orcaInfo' in p:
+            del p['orcaInfo']
+    data['printers'] = printers
 
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
