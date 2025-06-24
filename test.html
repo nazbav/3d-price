@@ -488,15 +488,21 @@
   </div>
 </div>
 
-<!-- Модальное окно настроек OrcaSlicer -->
-<div class="modal fade" id="orcaConfigModal" tabindex="-1">
+<!-- Модальное окно настроек материала OrcaSlicer -->
+<div class="modal fade" id="orcaMaterialModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Параметры OrcaSlicer</h5>
+        <h5 class="modal-title">Настройки материала OrcaSlicer</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div class="d-flex mb-2">
+          <select id="materialProfileSelect" class="form-select me-2"></select>
+          <button type="button" class="btn btn-success btn-sm me-1" id="addMaterialProfileBtn">+</button>
+          <button type="button" class="btn btn-warning btn-sm me-1" id="removeMaterialProfileBtn">−</button>
+          <button type="button" class="btn btn-danger btn-sm" id="delMaterialProfileBtn">✖</button>
+        </div>
         <div id="orcaFields" data-inited="0"></div>
         <pre id="orcaJsonView" class="p-2 border mt-2"></pre>
         <pre id="orcaInfoView" class="p-2 border mt-2"></pre>
@@ -722,8 +728,8 @@ function migrateOldData(obj){
         }
       });
     }
-    pr.materials = [];
-    pr.additional = [];
+    delete pr.materials;
+    delete pr.additional;
   });
 
   // Удаляем дубликаты принтеров по имени или адресу
@@ -818,6 +824,17 @@ function migrateOldData(obj){
   });
 
   obj.materials.forEach(m=>{ if(!m.printers) m.printers=[]; });
+  if(!Array.isArray(obj.materialProfiles)) obj.materialProfiles=[];
+  obj.materials.forEach(m=>{
+    if(!Array.isArray(m.profileIds)) m.profileIds=[];
+    if(m.orca || m.orcaInfo){
+      const pf={id:generateUUID(),config:m.orca||{},info:m.orcaInfo||''};
+      obj.materialProfiles.push(pf);
+      m.profileIds.push(pf.id);
+    }
+    delete m.orca;
+    delete m.orcaInfo;
+  });
   obj.additionalGlobal.forEach(a=>{ if(!a.printers) a.printers=[]; });
   obj.printers.forEach(p=>{
     if(!Array.isArray(p.orcaProfiles)){
@@ -932,8 +949,6 @@ let appData = {
       hoursToRecoup: 500,
       power: 350,
       maintCostHour: 5,
-      additional: [],
-      materials: [],
       orcaProfiles: []
     }
   ],
@@ -942,6 +957,7 @@ let appData = {
     // Пример материала
     // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, wastePercent: 5, manufacturer: "XYZ", productionDate: "01.01.2025", printers: [] }
   ],
+  materialProfiles: [],
   additionalGlobal: [],
   calcSettings: {
     operatorRate: 200,
@@ -972,6 +988,7 @@ function loadFromLocalStorage(){
       // ensure arrays exist
       if(!Array.isArray(appData.printers)) appData.printers = [];
       if(!Array.isArray(appData.materials)) appData.materials = [];
+      if(!Array.isArray(appData.materialProfiles)) appData.materialProfiles = [];
       if(!Array.isArray(appData.additionalGlobal)) appData.additionalGlobal = [];
       if(!Array.isArray(appData.clients)) appData.clients = [];
       if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
@@ -1105,32 +1122,6 @@ function massDelete(type) {
       });
       renderGlobalAdditionalTable();
       break;
-    case 'printerAdditional':
-      {
-        const printerId = getCurrentPrinterId();
-        const printer = appData.printers.find(p => String(p.id) === String(printerId));
-        if(printer){
-          printer.additional = printer.additional.filter(a => {
-            const chk = document.getElementById("chk_printerAdditional_"+a.id);
-            return !(chk && chk.checked);
-          });
-          onShowPrinterDetails(printerId);
-        }
-      }
-      break;
-    case 'printerMaterials':
-      {
-        const printerId = getCurrentPrinterId();
-        const printer = appData.printers.find(p => String(p.id) === String(printerId));
-        if(printer){
-          printer.materials = printer.materials.filter(m => {
-            const chk = document.getElementById("chk_printerMaterials_"+m.id);
-            return !(chk && chk.checked);
-          });
-          onShowPrinterDetails(printerId);
-        }
-      }
-      break;
   }
   saveToLocalStorage();
 }
@@ -1204,58 +1195,6 @@ async function massEdit(type) {
         renderGlobalAdditionalTable();
       }
       break;
-    case 'printerAdditional':
-      {
-        const printerId=getCurrentPrinterId();
-        const printer=appData.printers.find(p=>String(p.id)===String(printerId));
-        if(printer){
-          const vals=await showMultiPrompt('Расходы принтера',[
-            {id:'cost',label:'Стоимость (₽)',type:'number'},
-            {id:'hours',label:'Часы окупаемости',type:'number'},
-            {id:'use',label:'Включать в расчёт',type:'checkbox',value:true}
-          ]);
-          if(!vals) return;
-          printer.additional.forEach(a=>{
-            const chk=document.getElementById('chk_printerAdditional_'+a.id);
-            if(chk&&chk.checked){
-              if(vals.cost) a.cost=parseFloat(vals.cost)||a.cost;
-              if(vals.hours) a.hoursToRecoup=parseFloat(vals.hours)||a.hoursToRecoup;
-              a.useInCalc=vals.use;
-            }
-          });
-          onShowPrinterDetails(printerId);
-        }
-      }
-      break;
-    case 'printerMaterials':
-      {
-        const printerId=getCurrentPrinterId();
-        const printer=appData.printers.find(p=>String(p.id)===String(printerId));
-        if(printer){
-          const vals=await showMultiPrompt('Материалы принтера',[
-            {id:'cost',label:'Стоимость за кг',type:'number'},
-            {id:'balance',label:'Остаток (кг)',type:'number'},
-            {id:'declared',label:'Заявленный вес (кг)',type:'number'},
-            {id:'waste',label:'Отход (%)',type:'number'},
-            {id:'manuf',label:'Производитель'},
-            {id:'prodDate',label:'Дата производства'}
-          ]);
-          if(!vals) return;
-          printer.materials.forEach(m=>{
-            const chk=document.getElementById('chk_printerMaterials_'+m.id);
-            if(chk&&chk.checked){
-              if(vals.cost) m.costPerKg=parseFloat(vals.cost)||m.costPerKg;
-              if(vals.balance) m.balance=parseFloat(vals.balance)||m.balance;
-              if(vals.declared) m.declaredWeight=parseFloat(vals.declared)||m.declaredWeight;
-              if(vals.waste) m.wastePercent=parseFloat(vals.waste)||m.wastePercent;
-              if(vals.manuf) m.manufacturer=vals.manuf;
-              if(vals.prodDate) m.productionDate=vals.prodDate;
-            }
-          });
-          onShowPrinterDetails(printerId);
-        }
-      }
-      break;
   }
   saveToLocalStorage();
 }
@@ -1294,38 +1233,6 @@ function copyElement(type, id) {
           copy.description += " (копия)";
           appData.additionalGlobal.push(copy);
           renderGlobalAdditionalTable();
-        }
-      }
-      break;
-    case 'printerAdditional':
-      {
-        const printerId = getCurrentPrinterId();
-        const printer = appData.printers.find(p => String(p.id) === String(printerId));
-        if(printer){
-          const orig = printer.additional.find(a => String(a.id) === String(id));
-          if(orig){
-            const copy = JSON.parse(JSON.stringify(orig));
-            copy.id = generateUUID();
-            copy.description += " (копия)";
-            printer.additional.push(copy);
-            onShowPrinterDetails(printerId);
-          }
-        }
-      }
-      break;
-    case 'printerMaterials':
-      {
-        const printerId = getCurrentPrinterId();
-        const printer = appData.printers.find(p => String(p.id) === String(printerId));
-        if(printer){
-          const orig = printer.materials.find(m => String(m.id) === String(id));
-          if(orig){
-            const copy = JSON.parse(JSON.stringify(orig));
-            copy.id = generateUUID();
-            copy.name += " (копия)";
-            printer.materials.push(copy);
-            onShowPrinterDetails(printerId);
-          }
         }
       }
       break;
@@ -1372,8 +1279,6 @@ function onAddPrinter(){
     hoursToRecoup: 1000,
     power: 0,
     maintCostHour: 0,
-    additional: [],
-    materials: [],
     orcaProfiles: []
   };
   appData.printers.push(p);
@@ -1417,152 +1322,6 @@ function onShowPrinterDetails(id){
   document.getElementById("printerDetails").style.display = "block";
   document.getElementById("printerDetailsName").textContent = printer.name;
   document.getElementById("printerDetailsId").textContent = printer.id;
-  
-  // Дополнительные расходы принтера
-  const tbodyAdd = document.querySelector("#printerAdditionalTable tbody");
-  tbodyAdd.innerHTML = "";
-  printer.additional.forEach(a => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><input type="checkbox" id="chk_printerAdditional_${a.id}" class="printerAdditional_chk"><\/td>
-      <td>${a.description}<\/td>
-      <td>${a.cost}<\/td>
-      <td>${a.hoursToRecoup}<\/td>
-      <td>${a.useInCalc ? "Да" : "Нет"}<\/td>
-      <td>${(a.printers && a.printers.length)? a.printers.map(printerNameById).join(', '): 'Все'}<\/td>
-      <td>
-        <div class="btn-group-sm">
-          <button class="btn btn-secondary" onclick="onEditPrinterAdditional('${printer.id}', '${a.id}')">Ред.<\/button>
-          <button class="btn btn-warning" onclick="copyElement('printerAdditional', '${a.id}')">Копировать<\/button>
-          <button class="btn btn-danger" onclick="onDeletePrinterAdditional('${printer.id}', '${a.id}')">Удл.<\/button>
-        <\/div>
-      <\/td>
-    `;
-    tbodyAdd.appendChild(tr);
-  });
-  
-  // Материалы принтера
-  const tbodyMat = document.querySelector("#printerMaterialsTable tbody");
-  tbodyMat.innerHTML = "";
-  printer.materials.forEach(m => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><input type="checkbox" id="chk_printerMaterials_${m.id}" class="printerMaterials_chk"><\/td>
-      <td><span style="display:inline-block;width:14px;height:14px;background-color:${m.color||'#ffffff'};border:1px solid #000;margin-right:4px"></span>${m.name}<\/td>
-      <td>${m.costPerKg}<\/td>
-      <td>${m.balance}<\/td>
-      <td>${m.declaredWeight || "-"}<\/td>
-      <td>${m.wastePercent}<\/td>
-      <td>${m.manufacturer || "-"}<\/td>
-      <td>${m.productionDate || "-"}<\/td>
-      <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
-      <td>
-        <div class="btn-group-sm">
-          <button class="btn btn-secondary" onclick="onEditPrinterMaterial('${printer.id}', '${m.id}')">Ред.<\/button>
-          <button class="btn btn-success" onclick="openOrcaConfig('${m.id}')">Orca<\/button>
-          <button class="btn btn-info" onclick="downloadMaterialLabelHtml('${m.id}')">Этикетка<\/button>
-          <button class="btn btn-warning" onclick="copyElement('printerMaterials', '${m.id}')">Копировать<\/button>
-          <button class="btn btn-danger" onclick="onDeletePrinterMaterial('${printer.id}', '${m.id}')">Удл.<\/button>
-        <\/div>
-      <\/td>
-    `;
-    tbodyMat.appendChild(tr);
-  });
-  
-  document.getElementById("btnAddPrinterAdditional").onclick = () => onAddPrinterAdditional(printer.id);
-  document.getElementById("btnAddPrinterMaterial").onclick = () => onAddPrinterMaterial(printer.id);
-}
-function onAddPrinterAdditional(printerId){
-  const pr = appData.printers.find(p => String(p.id) === String(printerId));
-  if(!pr) return;
-  const nid = generateUUID();
-  pr.additional.push({
-    id: nid,
-    description: "Новая статья",
-    cost: 0,
-    hoursToRecoup: 1000,
-    useInCalc: true
-  });
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
-}
-async function onEditPrinterAdditional(printerId, addId){
-  const pr = appData.printers.find(p => String(p.id) === String(printerId));
-  if(!pr) return;
-  const it = pr.additional.find(a => String(a.id) === String(addId));
-  if(!it) return;
-  const vals = await showMultiPrompt('Статья принтера',[
-    {id:'desc',label:'Описание',value:it.description},
-    {id:'cost',label:'Стоимость (₽)',type:'number',value:it.cost},
-    {id:'hours',label:'Часы окупаемости',type:'number',value:it.hoursToRecoup},
-    {id:'use',label:'Включать в расчёт',type:'checkbox',value:it.useInCalc}
-  ]);
-  if(!vals) return;
-  it.description = vals.desc;
-  it.cost = parseFloat(vals.cost)||0;
-  it.hoursToRecoup = parseFloat(vals.hours)||1000;
-  it.useInCalc = vals.use;
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
-}
-function onDeletePrinterAdditional(printerId, addId){
-  const pr = appData.printers.find(p => String(p.id) === String(printerId));
-  if(!pr) return;
-  if(!confirm("Удалить статью?")) return;
-  pr.additional = pr.additional.filter(a => String(a.id) !== String(addId));
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
-}
-function onAddPrinterMaterial(printerId){
-  const pr = appData.printers.find(p => String(p.id) === String(printerId));
-  if(!pr) return;
-  const nid = generateUUID();
-  pr.materials.push({
-    id: nid,
-    name: "Новый материал",
-    costPerKg: 0,
-    balance: 0,
-    declaredWeight: 0,
-    wastePercent: 0,
-    manufacturer: "",
-    productionDate: "",
-    orca: defaultOrcaConfig()
-  });
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
-}
-async function onEditPrinterMaterial(printerId, matId){
-  const pr = appData.printers.find(p => String(p.id) === String(printerId));
-  if(!pr) return;
-  const mat = pr.materials.find(m => String(m.id) === String(matId));
-  if(!mat) return;
-  const vals = await showMultiPrompt('Материал принтера',[
-    {id:'name',label:'Название',value:mat.name},
-    {id:'cost',label:'Стоимость за кг',type:'number',value:mat.costPerKg},
-    {id:'bal',label:'Остаток (кг)',type:'number',value:mat.balance},
-    {id:'decl',label:'Заявленный вес (кг)',type:'number',value:mat.declaredWeight},
-    {id:'waste',label:'Отход (%)',type:'number',value:mat.wastePercent},
-    {id:'manuf',label:'Производитель',value:mat.manufacturer||''},
-    {id:'prod',label:'Дата производства',value:mat.productionDate||''}
-  ]);
-  if(!vals) return;
-  mat.name = vals.name;
-  mat.costPerKg = parseFloat(vals.cost)||0;
-  mat.balance = parseFloat(vals.bal)||0;
-  mat.declaredWeight = parseFloat(vals.decl)||0;
-  mat.wastePercent = parseFloat(vals.waste)||0;
-  mat.manufacturer = vals.manuf;
-  mat.productionDate = vals.prod;
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
-}
-function onDeletePrinterMaterial(printerId, matId){
-  const pr = appData.printers.find(p => String(p.id) === String(printerId));
-  if(!pr) return;
-  if(!confirm("Удалить материал?")) return;
-  pr.materials = pr.materials.filter(m => String(m.id) !== String(matId));
-  saveToLocalStorage();
-  onShowPrinterDetails(printerId);
 }
 
 /* Функции для глобальных материалов */
@@ -1625,7 +1384,7 @@ function onEditGlobalMaterial(id){
 }
 function saveMaterialFromModal(){
   const isNew = currentMaterialEditId === null;
-  let m = isNew ? {id: generateUUID(), orca: defaultOrcaConfig(), printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
+  let m = isNew ? {id: generateUUID(), profileIds: [], printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
   if(!m) return;
   m.name = document.getElementById('matNameInput').value;
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
@@ -2645,6 +2404,7 @@ function downloadMaterialLabelHtml(materialId) {
 
 /* Настройки OrcaSlicer для материала */
 let currentOrcaMaterialId = null;
+let currentMaterialProfileIndex = 0;
 const ORCA_FIELDS = [
   'type','filament_id','setting_id','name','from','instantiation','inherits','filament_diameter','filament_density','filament_cost','spool_weight','filament_runout_sensor','enable_volumetric_extrusion','filament_start_gcode','filament_end_gcode','enable_cooling','fan_speed_min','fan_speed_max','start_layer','stop_cooling_first_layers','min_layer_time','bridge_fan_speed','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','perimeter_speed','infill_speed','support_speed','external_wall_speed','travel_speed','flow_rate_overrides','retraction_distance','retraction_speed','extra_restart_distance','coasting_distance','wipe_distance','enable_pressure_advance','pressure_advance','min_extrusion_before_retract','filament_runout_gcode','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','steps_per_mm','filament_drive_gear_diameter','volumetric_extrusion','extrusion_multiplier','compatible_printers','required_nozzle_sizes','required_extruder_count','requires_heated_bed','notes','version','author','based_on','profile_type','shared_with','uuid'
 ];
@@ -2691,36 +2451,74 @@ function ensureOrcaFieldsHtml(){
   container.dataset.inited='1';
 }
 
+function populateMaterialProfileSelect(mat){
+  const sel=document.getElementById('materialProfileSelect');
+  sel.innerHTML='';
+  (mat.profileIds||[]).forEach((pid,i)=>{
+    const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+    const opt=document.createElement('option');
+    const cfg=prof?prof.config||{}:{};
+    opt.value=i;
+    opt.textContent=cfg.filament_settings_id||cfg.name||('Профиль '+(i+1));
+    sel.appendChild(opt);
+  });
+}
+
+function loadMaterialProfile(mat,index){
+  currentMaterialProfileIndex=index;
+  const pid=mat.profileIds[index];
+  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  document.querySelectorAll('#orcaMaterialModal .orca-input').forEach(el=>{el.value='';});
+  const cfg=prof?prof.config||{}:{};
+  for(const [k,v] of Object.entries(cfg)){
+    const el=document.getElementById('orca_'+k);
+    if(el) el.value=Array.isArray(v)?v.join(k==='compatible_printers'?', ':''):v;
+  }
+  document.getElementById('orcaJsonView').textContent=JSON.stringify(cfg,null,2);
+  document.getElementById('orcaInfoView').textContent=prof?prof.info||'' : '';
+  document.getElementById('materialProfileSelect').value=index;
+}
+
 function openOrcaConfig(matId){
   const mat = findMaterialById(matId);
   if(!mat) return;
-  currentOrcaMaterialId = matId;
+  currentOrcaMaterialId = String(matId);
   ensureOrcaFieldsHtml();
-  const cfg = mat.orca || {};
-  document.querySelectorAll('#orcaFields .orca-input').forEach(el=>{ el.value=''; });
-  for(const [k,v] of Object.entries(cfg)){
-    const el=document.getElementById('orca_'+k);
-    if(el){
-      el.value=Array.isArray(v)?v.join(k==='compatible_printers'?', ':''):v;
-    }
+  if(!Array.isArray(appData.materialProfiles)) appData.materialProfiles=[];
+  if(!Array.isArray(mat.profileIds)) mat.profileIds=[];
+  if((mat.orca || mat.orcaInfo) && mat.profileIds.length===0){
+    const pf={id:generateUUID(),config:mat.orca||{},info:mat.orcaInfo||''};
+    appData.materialProfiles.push(pf);
+    mat.profileIds=[pf.id];
+    delete mat.orca; delete mat.orcaInfo;
   }
-  document.getElementById('orcaJsonView').textContent = JSON.stringify(cfg, null, 2);
-  document.getElementById('orcaInfoView').textContent = mat.orcaInfo || '';
-  const modal = new bootstrap.Modal(document.getElementById('orcaConfigModal'));
-  modal.show();
+  if(mat.profileIds.length===0){
+    const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
+    appData.materialProfiles.push(pf);
+    mat.profileIds.push(pf.id);
+  }
+  populateMaterialProfileSelect(mat);
+  loadMaterialProfile(mat,0);
+  new bootstrap.Modal(document.getElementById('orcaMaterialModal')).show();
 }
 
 function saveOrcaConfig(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const cfg={};
-  document.querySelectorAll('#orcaConfigModal .orca-input').forEach(el=>{
-    cfg[el.dataset.orcaField]=el.value;
+  const pid=mat.profileIds[currentMaterialProfileIndex];
+  let prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  if(!prof){
+    prof={id:pid||generateUUID(),config:{},info:''};
+    appData.materialProfiles.push(prof);
+    if(!mat.profileIds.includes(prof.id)) mat.profileIds.push(prof.id);
+  }
+  prof.config={};
+  document.querySelectorAll('#orcaMaterialModal .orca-input').forEach(el=>{
+    prof.config[el.dataset.orcaField]=el.value;
   });
-  mat.orca=cfg;
   saveToLocalStorage();
-  const modalEl = document.getElementById('orcaConfigModal');
+  const modalEl = document.getElementById('orcaMaterialModal');
   bootstrap.Modal.getInstance(modalEl).hide();
 }
 
@@ -2739,7 +2537,9 @@ function downloadOrcaJson(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const cfg = mat.orca || {};
+  const pid=mat.profileIds[currentMaterialProfileIndex];
+  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  const cfg = prof?prof.config||{}:{};
   const jsonBlob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
   downloadBlob(jsonBlob,(cfg.name||'filament')+'.json');
 }
@@ -2748,9 +2548,12 @@ function downloadOrcaInfo(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const info = mat.orcaInfo || '';
+  const pid=mat.profileIds[currentMaterialProfileIndex];
+  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  const info = prof?prof.info||'':'';
   const infoBlob = new Blob([info],{type:'text/plain'});
-  const name = (mat.orca && mat.orca.name) || 'filament';
+  const cfg = prof?prof.config||{}:{};
+  const name = (cfg.name||cfg.filament_settings_id||'filament');
   downloadBlob(infoBlob,name+'.info');
 }
 
@@ -2869,7 +2672,7 @@ function loadOrcaProfile(pr,index){
 function openPrinterOrca(id){
   const pr=appData.printers.find(p=>String(p.id)===String(id));
   if(!pr) return;
-  currentOrcaPrinterId=id;
+  currentOrcaPrinterId=String(id);
   ensureOrcaPrinterFields();
   if(!Array.isArray(pr.orcaProfiles)){
     if(pr.orca){
@@ -2890,7 +2693,7 @@ function openPrinterOrca(id){
 
 function savePrinterJson(){
   if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
+  const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
   if(!pr) return;
   const profile=pr.orcaProfiles[currentOrcaProfileIndex];
   if(!profile) return;
@@ -2904,7 +2707,7 @@ function savePrinterJson(){
 
 function downloadPrinterJson(){
   if(currentOrcaPrinterId===null) return;
-  const pr = appData.printers.find(p=>p.id===currentOrcaPrinterId);
+  const pr = appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
   if(!pr) return;
   const profile=pr.orcaProfiles[currentOrcaProfileIndex];
   const cfg = profile?profile.config||{}:{};
@@ -2915,7 +2718,7 @@ function downloadPrinterJson(){
 
 function downloadPrinterInfo(){
   if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
+  const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
   if(!pr) return;
   const profile=pr.orcaProfiles[currentOrcaProfileIndex];
   const info = profile?profile.info||'':'';
@@ -2950,7 +2753,7 @@ function importPrinterJson(file){
 
 function addOrcaProfile(){
   if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
+  const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
   if(!pr) return;
   const newProf={id:generateUUID(),config:defaultPrinterConfig(),info:''};
   pr.orcaProfiles.push(newProf);
@@ -2960,13 +2763,52 @@ function addOrcaProfile(){
 
 function deleteOrcaProfile(){
   if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
+  const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
   if(!pr) return;
   if(pr.orcaProfiles.length<=1) return;
   pr.orcaProfiles.splice(currentOrcaProfileIndex,1);
   const idx=Math.max(0,currentOrcaProfileIndex-1);
   populateOrcaProfileSelect(pr);
   loadOrcaProfile(pr,idx);
+}
+
+function addMaterialProfile(){
+  if(currentOrcaMaterialId===null) return;
+  const mat=findMaterialById(currentOrcaMaterialId);
+  if(!mat) return;
+  const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
+  appData.materialProfiles.push(pf);
+  if(!Array.isArray(mat.profileIds)) mat.profileIds=[];
+  mat.profileIds.push(pf.id);
+  populateMaterialProfileSelect(mat);
+  loadMaterialProfile(mat,mat.profileIds.length-1);
+}
+
+function removeMaterialProfile(){
+  if(currentOrcaMaterialId===null) return;
+  const mat=findMaterialById(currentOrcaMaterialId);
+  if(!mat) return;
+  if(mat.profileIds.length<=1) return;
+  mat.profileIds.splice(currentMaterialProfileIndex,1);
+  const idx=Math.max(0,currentMaterialProfileIndex-1);
+  populateMaterialProfileSelect(mat);
+  loadMaterialProfile(mat,idx);
+}
+
+function deleteMaterialProfile(){
+  if(currentOrcaMaterialId===null) return;
+  const mat=findMaterialById(currentOrcaMaterialId);
+  if(!mat) return;
+  const pid=mat.profileIds[currentMaterialProfileIndex];
+  appData.materials.forEach(m=>{ if(Array.isArray(m.profileIds)) m.profileIds = m.profileIds.filter(id=>String(id)!==String(pid)); });
+  appData.materialProfiles = appData.materialProfiles.filter(p=>String(p.id)!==String(pid));
+  if(mat.profileIds.length===0){
+    const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
+    appData.materialProfiles.push(pf);
+    mat.profileIds.push(pf.id);
+  }
+  populateMaterialProfileSelect(mat);
+  loadMaterialProfile(mat,0);
 }
 
 function downloadFullDetailedCalculation(){
@@ -3788,8 +3630,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('addOrcaProfileBtn').onclick = ()=>addOrcaProfile();
   document.getElementById('delOrcaProfileBtn').onclick = ()=>deleteOrcaProfile();
   document.getElementById('orcaProfileSelect').addEventListener('change',e=>{
-    const pr=appData.printers.find(p=>p.id===currentOrcaPrinterId);
+    const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
     if(pr) loadOrcaProfile(pr,parseInt(e.target.value,10));
+  });
+  document.getElementById('addMaterialProfileBtn').onclick = ()=>addMaterialProfile();
+  document.getElementById('removeMaterialProfileBtn').onclick = ()=>removeMaterialProfile();
+  document.getElementById('delMaterialProfileBtn').onclick = ()=>deleteMaterialProfile();
+  document.getElementById('materialProfileSelect').addEventListener('change',e=>{
+    const mat=findMaterialById(currentOrcaMaterialId);
+    if(mat) loadMaterialProfile(mat,parseInt(e.target.value,10));
   });
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
