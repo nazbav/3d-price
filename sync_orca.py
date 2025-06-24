@@ -78,8 +78,11 @@ def main():
 
     pf_map = {}
     for p in material_profiles:
-        cfg = p.get('config', {})
-        nm = (cfg.get('filament_settings_id') or cfg.get('name') or '').lower()
+        cfg = p.get('config')
+        if not isinstance(cfg, dict):
+            cfg = {}
+        nm_val = cfg.get('filament_settings_id') or cfg.get('name')
+        nm = normalize_name(nm_val).lower()
         if nm:
             pf_map[nm] = p
 

@@ -730,6 +730,7 @@ function migrateOldData(obj){
     }
     delete pr.materials;
     delete pr.additional;
+
   });
 
   // Удаляем дубликаты принтеров по имени или адресу
@@ -803,6 +804,7 @@ function migrateOldData(obj){
       }
       h.calcData = newCD;
     }
+
   });
 
   // Перенос клиентов из истории
@@ -1629,14 +1631,11 @@ function addModelRow(printerId, modelData) {
   tbody.appendChild(tr);
 }
 function getAllMaterialsForPrinter(printerId, includeAll=false){
-  const pr = appData.printers.find(p => String(p.id) === String(printerId));
-  if(!pr) return [];
-  const globalMats = appData.materials.filter(m => {
+  return appData.materials.filter(m => {
     if(!includeAll && m.balance <= 0) return false;
-    return !m.printers || m.printers.length===0 || m.printers.some(pid => String(pid) === String(printerId));
+    if(!Array.isArray(m.printers) || m.printers.length===0) return true;
+    return m.printers.some(pid => String(pid) === String(printerId));
   });
-  const printerMats = pr ? pr.materials.filter(m => includeAll || m.balance > 0) : [];
-  return [...globalMats, ...printerMats];
 }
 
 let lastCalcFullData = null;
@@ -1783,26 +1782,8 @@ function onCalculateAll() {
       });
     });
     
-    // Расчёт дополнительных расходов для принтера (по всем его расходным статьям)
+    // Дополнительные расходы принтера удалены, но оставляем структуру для обратной совместимости
     let printerAdditionalDetails = [];
-    let sumPrAddFull = 0;
-    pr.additional.filter(a => a.useInCalc !== false).forEach(a => { sumPrAddFull += a.cost; });
-    pr.additional.filter(a => a.useInCalc !== false).forEach(a => {
-      let costDistributed = 0;
-      if (pr.hoursToRecoup > 0) {
-        costDistributed = (a.cost / pr.hoursToRecoup) * prTime;
-      }
-      printerAdditionalDetails.push({
-         description: a.description,
-         baseCost: a.cost,
-         hoursToRecoup: a.hoursToRecoup,
-         costDistributed: costDistributed
-      });
-    });
-    // Добавляем сумму дополнительных расходов к итоговой стоимости принтера
-    if (pr.hoursToRecoup > 0 && sumPrAddFull > 0) {
-      prCostNoTax += (sumPrAddFull / pr.hoursToRecoup) * prTime;
-    }
     
     if (parallelMode === "no") {
       finalTimeAllPrinters += prTime;
