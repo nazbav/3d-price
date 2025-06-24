@@ -87,18 +87,50 @@ def main():
 
     pr_map = {}
     name_map = {}
-    for p in data.get('printers', []):
-        name_map[p.get('name', '').lower()] = p
-        if p.get('orcaProfiles'):
-            for prof in p['orcaProfiles']:
-                cfg = prof.get('config', {})
-                host = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
-                if host:
-                    pr_map[host] = p
-        elif p.get('orca'):
-            host = (p['orca'].get('print_host') or p['orca'].get('inherits') or '').lower()
+
+    def score_printer(pr):
+        fields = ['cost', 'hoursToRecoup', 'power', 'maintCostHour']
+        cnt = sum(1 for f in fields if pr.get(f))
+        return (cnt, pr.get('cost', 0), pr.get('hoursToRecoup', 0), pr.get('power', 0), pr.get('maintCostHour', 0))
+
+    def merge_printers(a, b):
+        if score_printer(b) > score_printer(a):
+            a, b = b, a
+        existing = set()
+        for pf in a.get('orcaProfiles', []):
+            cfg = pf.get('config', {})
+            h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
+            ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
+            existing.add((h, ps))
+        for pf in b.get('orcaProfiles', []):
+            cfg = pf.get('config', {})
+            h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
+            ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
+            if (h, ps) not in existing:
+                a.setdefault('orcaProfiles', []).append(pf)
+                existing.add((h, ps))
+        b['_merged'] = True
+        return a
+
+    printers_in = data.get('printers', [])
+    for p in printers_in:
+        if not isinstance(p.get('orcaProfiles'), list):
+            profs = []
+            if p.get('orca'):
+                profs.append({'id': int(time.time()*1000), 'config': p['orca'], 'info': p.get('orcaInfo', '')})
+            p['orcaProfiles'] = profs
+        host_keys = []
+        for prof in p['orcaProfiles']:
+            cfg = prof.get('config', {})
+            host = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
             if host:
+                host_keys.append(host)
+        for host in host_keys:
+            if host in pr_map:
+                pr_map[host] = merge_printers(pr_map[host], p)
+            else:
                 pr_map[host] = p
+        name_map[p.get('name', '').lower()] = p
 
     mach_dir = os.path.join(args.orca_path, 'machine')
     for fp in glob.glob(os.path.join(mach_dir, '*.json')):
@@ -138,7 +170,9 @@ def main():
         if host_key:
             pr_map[host_key] = target
 
-    printers = list(name_map.values())
+
+    printers = [p for p in name_map.values() if not p.get('_merged')]
+
     for p in printers:
         if not isinstance(p.get('orcaProfiles'), list):
             p['orcaProfiles'] = []
@@ -146,6 +180,10 @@ def main():
             del p['orca']
         if 'orcaInfo' in p:
             del p['orcaInfo']
+
+        if '_merged' in p:
+            del p['_merged']
+
     data['printers'] = printers
 
     with open(args.output, 'w', encoding='utf-8') as f:
