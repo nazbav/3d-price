@@ -170,7 +170,9 @@ def main():
         if host_key:
             pr_map[host_key] = target
 
+
     printers = [p for p in name_map.values() if not p.get('_merged')]
+
     for p in printers:
         if not isinstance(p.get('orcaProfiles'), list):
             p['orcaProfiles'] = []
@@ -178,8 +180,10 @@ def main():
             del p['orca']
         if 'orcaInfo' in p:
             del p['orcaInfo']
+
         if '_merged' in p:
             del p['_merged']
+
     data['printers'] = printers
 
     with open(args.output, 'w', encoding='utf-8') as f:
