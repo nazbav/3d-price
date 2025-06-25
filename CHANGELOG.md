@@ -41,3 +41,4 @@
 - printer profiles stored globally with unique IDs; manager available via "Профили принтеров"
 - removed импорт и скачивание профилей из интерфейса
 - sync_orca.py выдаёт раздел printerProfiles и связывает их с принтерами
+- sync_orca.py предлагает интерактивное назначение профилей и избегает дубликатов
