@@ -35,3 +35,5 @@
 - менеджер профилей Orca теперь позволяет только импорт JSON, просмотр связей и удаление профилей
 - materials table shows linked Orca profiles; profile lookup is case-insensitive and link modal warns when list empty
 - removed printer detail view; materials table highlights color with readable text
+- sync_orca.py preserves user printers when merging machine configs, preventing accidental deletion
+- fixed Orca printer fields not displaying due to data-inited check
