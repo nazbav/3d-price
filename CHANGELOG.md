@@ -28,3 +28,4 @@
 - expanded AGENTS.md with detailed Ubuntu console testing steps
 - importing models via link now matches materials by print profile; modal selection if multiple
 - removed Orca material settings modal; added simple profile linking and global profile manager
+- fixed findMaterialByName to handle printers without material lists
