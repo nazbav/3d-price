@@ -1774,7 +1774,6 @@ function renderCalcPrinters(){
       <table class="table table-bordered table-sm mb-2" id="calcModelsTable_${pr.id}">
         <thead>
           <tr>
-            <th>Код<\/th>
             <th>Имя модели<\/th>
             <th>Иконка<\/th>
             <th>Статус<\/th>
@@ -2111,7 +2110,6 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     if (d.linesDetail.length > 0) {
       htmlRes += `<div class="table-responsive"><table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
       htmlRes += `<thead><tr>
-        <th>Код<\/th>
         <th>Модель<\/th>
         <th>Иконка<\/th>
         <th>Статус<\/th>
@@ -2862,7 +2860,6 @@ function generateMaxDetailedCalcHtml(d) {
     if(pr.linesDetail && pr.linesDetail.length>0){
       s += `<table style="margin-top:5px;">
         <thead><tr>
-          <th>Код<\/th>
           <th>Модель<\/th>
           <th>Иконка<\/th>
           <th>Статус<\/th>
