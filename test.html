@@ -1014,6 +1014,27 @@ function populatePrintersSelect(sel, selected){
   });
 }
 
+function collectUnresolvedPrinters(){
+  const idSet=new Set(appData.printers.map(p=>String(p.id)));
+  const list=[];
+  appData.calcHistory.forEach(h=>{
+    if(Array.isArray(h.details)) h.details.forEach(d=>{
+      if(!idSet.has(String(d.printerId))){
+        list.push({history:h,ref:d.printerId,origName:d.printerName||d.printerId,model:d.modelName||''});
+      }
+    });
+    if(h.calcData){
+      for(const pid in h.calcData){
+        if(!idSet.has(String(pid))){
+          const det=(h.details||[]).find(dd=>String(dd.printerId)===String(pid));
+          list.push({history:h,ref:pid,origName:pid,model:det?det.modelName||'':''});
+        }
+      }
+    }
+  });
+  return list;
+}
+
 function showPrinterMapModal(list){
   if(!list || list.length===0) return;
   const tbody=document.querySelector('#printerMapTable tbody');
@@ -1254,13 +1275,20 @@ function massDelete(type) {
   if(!confirm("Удалить выбранные элементы?")) return;
   switch(type) {
     case 'printers':
+      const removed = [];
       appData.printers = appData.printers.filter(p => {
         const chk = document.getElementById("chk_printers_"+p.id);
-        return !(chk && chk.checked);
+        const del = chk && chk.checked;
+        if(del) removed.push(String(p.id));
+        return !del;
       });
       renderPrintersTable();
       renderCalcPrinters();
       renderSummary();
+      if(removed.length){
+        const unresolved = collectUnresolvedPrinters();
+        if(unresolved.length) showPrinterMapModal(unresolved);
+      }
       break;
     case 'globalMaterials':
       appData.materials = appData.materials.filter(m => {
@@ -1485,6 +1513,8 @@ function onDeletePrinter(id){
   renderCalcPrinters();
   renderSummary();
   document.getElementById("printerDetails").style.display = "none";
+  const unresolved = collectUnresolvedPrinters();
+  if(unresolved.length) showPrinterMapModal(unresolved);
 }
 function onShowPrinterDetails(id){
   const printer = appData.printers.find(p => String(p.id) === String(id));

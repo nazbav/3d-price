@@ -18,3 +18,5 @@
 - removed automatic creation of printers from history; unresolved printers must be added manually or via import
 - materials can now link existing Orca profiles from the global list
 - printer mapping table shows model name and supports bulk assignment
+- deleting a printer now triggers the mapping dialog if history references it
+- README updated with note about printer reassignment dialog
