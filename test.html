@@ -3113,8 +3113,14 @@ async function sendMyNalogReceipt(){
       },
       body: JSON.stringify(payload)
     });
-    if(resp.ok) alert('Запрос отправлен в Мой Налог');
-    else alert('Ошибка отправки: ' + resp.status);
+    if(resp.ok){
+      const data = await resp.json().catch(()=>null);
+      if(data?.id) alert('Чек отправлен. ID: '+data.id);
+      else alert('Запрос отправлен в Мой Налог');
+    } else {
+      const text = await resp.text().catch(()=>resp.status);
+      alert('Ошибка отправки: ' + text);
+    }
   } catch (e) {
     alert('Не удалось подключиться к сервису Мой Налог');
   }
@@ -3141,8 +3147,14 @@ async function sendMyNalogBill(){
       },
       body: JSON.stringify(payload)
     });
-    if(resp.ok) alert('Счёт создан в сервисе Мой Налог');
-    else alert('Ошибка создания счёта: ' + resp.status);
+    if(resp.ok){
+      const data = await resp.json().catch(()=>null);
+      if(data?.id) alert('Счёт создан. ID: '+data.id);
+      else alert('Счёт создан в сервисе Мой Налог');
+    } else {
+      const text = await resp.text().catch(()=>resp.status);
+      alert('Ошибка создания счёта: ' + text);
+    }
   } catch (e) {
     alert('Не удалось подключиться к сервису Мой Налог');
   }
@@ -3161,6 +3173,7 @@ async function checkMyNalogStatus(){
     statusEl.textContent = 'Токен не задан';
     return;
   }
+  statusEl.textContent = 'Проверка...';
   try {
     const resp = await fetch('https://my.nalog.ru/api/self-employed/profile', {
       headers: { 'Authorization': 'Bearer ' + token }
@@ -3171,7 +3184,8 @@ async function checkMyNalogStatus(){
       const inn = data?.inn || data?.individual?.inn || '';
       statusEl.textContent = `Подключено: ${name} ${inn ? '(ИНН '+inn+')' : ''}`;
     } else {
-      statusEl.textContent = 'Ошибка: ' + resp.status;
+      const text = await resp.text().catch(()=>resp.status);
+      statusEl.textContent = 'Ошибка: ' + text;
     }
   }catch(e){
     statusEl.textContent = 'Нет соединения';
