@@ -37,3 +37,4 @@
 - removed printer detail view; materials table highlights color with readable text
 - sync_orca.py preserves user printers when merging machine configs, preventing accidental deletion
 - fixed Orca printer fields not displaying due to data-inited check
+- fixed missing closing tag in material modal causing Orca profile windows not to show
