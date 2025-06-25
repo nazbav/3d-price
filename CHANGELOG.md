@@ -55,6 +55,8 @@
 - summary result now renders as a compact card with order info and model tiles
 - улучшены сообщения об успехе и ошибках при отправке чека и счёта в "Мой Налог"
 - раздел «Мой Налог» позволяет войти по телефону и СМС, автоматически сохраняя токен
+
+- исправлена ошибка дублирования переменной phone
 - added discount field with old price strikeout and final cost override for completed orders
 - added 'New calculation' button to reset calculator form
 - thumbnail upload now crops the image to fit 140x110 and compresses it to JPEG for smaller size

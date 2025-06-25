@@ -3154,13 +3154,13 @@ async function sendMyNalogReceipt(){
   if(!lastCalcFullData){ alert('Нет данных расчета.'); return; }
   const token = localStorage.getItem('my_nalog_token');
   if(!token){
-  const phone = document.getElementById('myNalogPhone');
-  if(phone) localStorage.setItem('my_nalog_phone', phone.value.trim());
+  const phoneEl = document.getElementById('myNalogPhone');
+  if(phoneEl) localStorage.setItem('my_nalog_phone', phoneEl.value.trim());
 async function requestMyNalogSms(){
-  const phone = document.getElementById('myNalogPhone').value.trim();
+  const phoneNum = document.getElementById('myNalogPhone').value.trim();
   const pass = document.getElementById('myNalogPass').value.trim();
   const statusEl = document.getElementById('myNalogStatus');
-  if(!phone || !pass){
+  if(!phoneNum || !pass){
     alert('Введите телефон и пароль');
     return;
   }
@@ -3169,7 +3169,7 @@ async function requestMyNalogSms(){
     const resp = await fetch('https://my.nalog.ru/api/self-employed/login', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({phone, password: pass})
+      body: JSON.stringify({phone: phoneNum, password: pass})
     });
     if(resp.ok){
       statusEl.textContent = 'SMS отправлено';
@@ -3183,10 +3183,10 @@ async function requestMyNalogSms(){
 }
 
 async function confirmMyNalogSms(){
-  const phone = document.getElementById('myNalogPhone').value.trim();
+  const phoneNum = document.getElementById('myNalogPhone').value.trim();
   const code = document.getElementById('myNalogSms').value.trim();
   const statusEl = document.getElementById('myNalogStatus');
-  if(!phone || !code){
+  if(!phoneNum || !code){
     alert('Нужен телефон и код');
     return;
   }
@@ -3195,7 +3195,7 @@ async function confirmMyNalogSms(){
     const resp = await fetch('https://my.nalog.ru/api/self-employed/login/confirm', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({phone, code})
+      body: JSON.stringify({phone: phoneNum, code})
     });
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
@@ -3215,9 +3215,9 @@ async function confirmMyNalogSms(){
   }
 }
 
-  const phone = localStorage.getItem('my_nalog_phone') || '';
+  const savedPhone = localStorage.getItem('my_nalog_phone') || '';
   const phoneInp = document.getElementById('myNalogPhone');
-  if(phoneInp) phoneInp.value = phone;
+  if(phoneInp) phoneInp.value = savedPhone;
     alert('Токен Мой Налог не указан в настройках.');
     return;
   }
