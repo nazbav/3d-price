@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <title>Калькулятор 3D-печати (v3)</title>
+  <title>Калькулятор 3D-печати (TEST)</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 	
@@ -143,10 +143,6 @@
         </div>
       </div>
       <hr/>
-      <div id="printerDetails" style="display: none;">
-        <h4>Расходы и материалы для принтера <span id="printerDetailsName"></span> (ID: <span id="printerDetailsId"></span>)</h4>
-        <div class="alert alert-info">Индивидуальные материалы и расходы теперь настраиваются в разделе «Общие материалы» и «Общие доп. расходы» с привязкой к принтерам.</div>
-      </div>
     </div>
 
     <!-- Общие материалы -->
@@ -172,9 +168,10 @@
                 <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
                 <th onclick="sortTable('materialsTable',5)">Отход (%)</th>
                 <th onclick="sortTable('materialsTable',6)">Производитель</th>
-                <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
-                <th>Принтеры</th>
-                <th>Действия</th>
+                 <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
+                 <th>Принтеры</th>
+                 <th>Профили</th>
+                 <th>Действия</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -513,10 +510,8 @@
       <div class="modal-body">
         <div class="d-flex mb-2">
           <select id="orcaProfileSelect" class="form-select me-2"></select>
-          <button type="button" class="btn btn-success btn-sm me-1" id="addOrcaProfileBtn">+</button>
           <button type="button" class="btn btn-danger btn-sm" id="delOrcaProfileBtn">✖</button>
         </div>
-        <div id="orcaPrinterFields" data-inited="0"></div>
         <pre id="orcaPrinterJsonView" class="p-2 border mt-2"></pre>
         <pre id="orcaPrinterInfoView" class="p-2 border mt-2"></pre>
         <input type="file" id="orcaPrinterJsonFile" class="d-none" accept=".json">
@@ -526,7 +521,6 @@
         <button type="button" class="btn btn-outline-secondary" id="importPrinterJsonBtn">Импорт JSON</button>
         <button type="button" class="btn btn-info" id="downloadPrinterJsonBtn">Скачать JSON</button>
         <button type="button" class="btn btn-info" id="downloadPrinterInfoBtn">Скачать INFO</button>
-        <button type="button" class="btn btn-primary" id="savePrinterJsonBtn">Сохранить</button>
       </div>
     </div>
   </div>
@@ -639,6 +633,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="applyMaterialProfileLinkBtn">Применить</button>
       </div>
     </div>
   </div>
@@ -959,6 +954,18 @@ function showMultiPrompt(title, fields){
           sel.appendChild(o);
         });
         div.appendChild(lbl); div.appendChild(sel); body.appendChild(div);
+      } else if(f.type==='textarea'){
+        const div=document.createElement('div');
+        div.className='mb-2';
+        const lbl=document.createElement('label');
+        lbl.className='form-label';
+        lbl.textContent=f.label;
+        const area=document.createElement('textarea');
+        area.className='form-control';
+        area.rows=f.rows||3;
+        area.id='mp_'+f.id;
+        area.value=f.value||'';
+        div.appendChild(lbl); div.appendChild(area); body.appendChild(div);
       } else {
         const div=document.createElement('div');
         div.className='mb-2';
@@ -981,6 +988,7 @@ function showMultiPrompt(title, fields){
         if(f.type==='checkbox') result[f.id] = el.checked;
         else if(f.type==='multiselect') result[f.id] = Array.from(el.selectedOptions).map(o=>o.value);
         else if(f.type==='select') result[f.id] = el.value;
+        else if(f.type==='textarea') result[f.id] = el.value;
         else result[f.id] = el.value;
       });
       modal.hide();
@@ -1088,6 +1096,24 @@ function showPrinterMapModal(list){
 function printerNameById(id){
   const p=appData.printers.find(pr=>String(pr.id)===String(id));
   return p? p.name : id;
+}
+
+function profileNameById(pid){
+  const pf=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  if(!pf) return pid;
+  const cfg=pf.config||{};
+  return cfg.filament_settings_id||cfg.name||pid;
+}
+
+function textColorForBg(hex){
+  if(!hex) return '#000';
+  hex=hex.replace('#','');
+  if(hex.length===3){ hex=hex.split('').map(c=>c+c).join(''); }
+  const r=parseInt(hex.substr(0,2),16);
+  const g=parseInt(hex.substr(2,2),16);
+  const b=parseInt(hex.substr(4,2),16);
+  const yiq=(r*299+g*587+b*114)/1000;
+  return yiq>128?'#000':'#fff';
 }
 
 const STORAGE_KEY = "ThreeDPrintCalc_Extended_v5";
@@ -1418,11 +1444,6 @@ function copyElement(type, id) {
   }
   saveToLocalStorage();
 }
-function getCurrentPrinterId(){
-  // Предполагается, что в данный момент отображается детальная информация принтера
-  return document.getElementById("printerDetailsId").textContent;
-}
-
 /* Функции для принтеров */
 function renderPrintersTable(){
   const tbody = document.querySelector("#printersTable tbody");
@@ -1440,7 +1461,6 @@ function renderPrintersTable(){
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditPrinter('${printer.id}')">Ред.<\/button>
           <button class="btn btn-success" onclick="openPrinterOrca('${printer.id}')">Orca<\/button>
-          <button class="btn btn-info" onclick="onShowPrinterDetails('${printer.id}')">Детали<\/button>
           <button class="btn btn-warning" onclick="copyElement('printers', '${printer.id}')">Копировать<\/button>
           <button class="btn btn-danger" onclick="onDeletePrinter('${printer.id}')">Удл.<\/button>
         <\/div>
@@ -1499,27 +1519,20 @@ function onDeletePrinter(id){
   renderPrintersTable();
   renderCalcPrinters();
   renderSummary();
-  document.getElementById("printerDetails").style.display = "none";
   const unresolved = collectUnresolvedPrinters();
   if(unresolved.length) showPrinterMapModal(unresolved);
 }
-function onShowPrinterDetails(id){
-  const printer = appData.printers.find(p => String(p.id) === String(id));
-  if(!printer) return;
-  document.getElementById("printerDetails").style.display = "block";
-  document.getElementById("printerDetailsName").textContent = printer.name;
-  document.getElementById("printerDetailsId").textContent = printer.id;
-}
-
 /* Функции для глобальных материалов */
 function renderGlobalMaterialsTable(){
   const tb = document.querySelector("#materialsTable tbody");
   tb.innerHTML = "";
   appData.materials.forEach(m => {
     const tr = document.createElement("tr");
+    const col = m.color || '#ffffff';
+    const tc = textColorForBg(col);
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
-      <td>${m.name}<\/td>
+      <td style="background-color:${col};color:${tc};">${m.name}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
       <td>${m.declaredWeight || "-"}<\/td>
@@ -1527,6 +1540,7 @@ function renderGlobalMaterialsTable(){
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
+      <td>${(m.profileIds && m.profileIds.length) ? m.profileIds.map(profileNameById).join(', ') : '-'}<\/td>
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditGlobalMaterial('${m.id}')">Ред.<\/button>
@@ -2264,10 +2278,12 @@ function findMaterialByName(name) {
 
 function findMaterialsByProfile(profile){
   if(!profile) return [];
+  const key=String(profile).toLowerCase();
   const ids = appData.materialProfiles
     .filter(p=>{
       const cfg=p.config||{};
-      return cfg.filament_settings_id===profile || cfg.name===profile;
+      const nm=(cfg.filament_settings_id||cfg.name||'').toLowerCase();
+      return nm===key;
     })
     .map(p=>String(p.id));
   if(ids.length===0) return [];
@@ -2306,10 +2322,20 @@ function populateProfileSelect(selected){
     if(selected.includes(String(p.id))) opt.selected=true;
     sel.appendChild(opt);
   });
+  if(sel.options.length===0){
+    const opt=document.createElement('option');
+    opt.textContent='Нет профилей';
+    opt.disabled=true;
+    sel.appendChild(opt);
+  }
 }
 function openMaterialProfileLink(mid){
   const mat=findMaterialById(mid);
   if(!mat) return;
+  if(appData.materialProfiles.length===0){
+    alert('Нет профилей Orca. Добавьте их в менеджере.');
+    return;
+  }
   currentMaterialForProfiles=String(mid);
   populateProfileSelect((mat.profileIds||[]).map(String));
   new bootstrap.Modal(document.getElementById('materialProfileLinkModal')).show();
@@ -2330,7 +2356,7 @@ function renderMaterialProfilesTable(){
     const cfg=p.config||{};
     const name=cfg.filament_settings_id||cfg.name||p.id;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${name}</td><td><button class="btn btn-sm btn-info" onclick="downloadProfileJson('${p.id}')">JSON</button> <button class="btn btn-sm btn-info ms-1" onclick="downloadProfileInfo('${p.id}')">INFO</button> <button class="btn btn-sm btn-secondary ms-1" onclick="editMaterialProfile('${p.id}')">Ред.</button> <button class="btn btn-sm btn-danger ms-1" onclick="deleteMaterialProfileGlobal('${p.id}')">✖</button></td>`;
+    tr.innerHTML=`<td>${name}</td><td><button class="btn btn-sm btn-info" onclick="downloadProfileJson('${p.id}')">JSON</button> <button class="btn btn-sm btn-info ms-1" onclick="downloadProfileInfo('${p.id}')">INFO</button> <button class="btn btn-sm btn-danger ms-1" onclick="deleteMaterialProfileGlobal('${p.id}')">✖</button></td>`;
     tb.appendChild(tr);
   });
 }
@@ -2357,14 +2383,6 @@ function downloadProfileInfo(pid){
   const cfg=prof.config||{};
   downloadBlob(new Blob([info],{type:'text/plain'}),(cfg.name||cfg.filament_settings_id||'filament')+'.info');
 }
-function editMaterialProfile(pid){
-  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
-  if(!prof) return;
-  const val=prompt('JSON', JSON.stringify(prof.config,null,2));
-  if(!val) return;
-  try{ prof.config=JSON.parse(val); saveToLocalStorage(); renderMaterialProfilesTable(); }
-  catch(e){ alert('Ошибка: '+e); }
-}
 function importProfileFile(file){
   if(!file) return;
   const reader=new FileReader();
@@ -2374,6 +2392,7 @@ function importProfileFile(file){
   };
   reader.readAsText(file);
 }
+
 function calcFinishDate(sv, days){
   if(!sv) return "";
   try{
@@ -2701,62 +2720,7 @@ function downloadBlob(blob, filename){
 /* Настройки OrcaSlicer для принтера */
 let currentOrcaPrinterId = null;
 let currentOrcaProfileIndex = 0;
-const ORCA_PRINTER_FIELDS = ['before_layer_change_gcode','change_filament_gcode','machine_start_gcode','machine_end_gcode','print_host','print_host_webui','printer_settings_id'];
-const PRINTER_TEXTAREA_FIELDS = ['before_layer_change_gcode','change_filament_gcode','machine_start_gcode','machine_end_gcode'];
-
-function defaultPrinterConfig(){
-  return {
-    before_layer_change_gcode:'',
-    change_filament_gcode:'',
-    machine_start_gcode:'',
-    machine_end_gcode:'',
-    print_host:'',
-    print_host_webui:'',
-    printer_settings_id:''
-  };
-}
-
-function createPrinterField(f, removable=false){
-  const c=document.getElementById('orcaPrinterFields');
-  const div=document.createElement('div');
-  div.className='mb-3 d-flex align-items-start printer-field';
-  div.dataset.field=f;
-  const label=document.createElement('label');
-  label.className='form-label';
-  label.textContent=f;
-  label.setAttribute('for','printer_'+f);
-  label.style.minWidth='180px';
-  div.appendChild(label);
-  let el;
-  if(PRINTER_TEXTAREA_FIELDS.includes(f)){
-    el=document.createElement('textarea');
-    el.className='form-control';
-    el.rows=2;
-  }else{
-    el=document.createElement('input');
-    el.className='form-control';
-  }
-  el.id='printer_'+f;
-  el.dataset.printerField=f;
-  el.style.flex='1 1 auto';
-  div.appendChild(el);
-  if(removable){
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.className='btn btn-danger btn-sm ms-2';
-    btn.textContent='✖';
-    btn.onclick=()=>{div.remove(); ORCA_PRINTER_FIELDS.splice(ORCA_PRINTER_FIELDS.indexOf(f),1);};
-    div.appendChild(btn);
-  }
-  c.appendChild(div);
-}
-
-function ensureOrcaPrinterFields(){
-  const c=document.getElementById('orcaPrinterFields');
-  if(c.dataset.inited) return;
-  ORCA_PRINTER_FIELDS.forEach(f=>createPrinterField(f,false));
-  c.dataset.inited='1';
-}
+const ORCA_PRINTER_FIELDS = [];
 
 function populateOrcaProfileSelect(pr){
   const sel=document.getElementById('orcaProfileSelect');
@@ -2774,11 +2738,6 @@ function loadOrcaProfile(pr,index){
   currentOrcaProfileIndex=index;
   const profile=pr.orcaProfiles[index];
   const cfg=profile?profile.config||{}:{};
-  document.querySelectorAll('#orcaPrinterFields [data-printer-field]').forEach(el=>{el.value='';});
-  for(const [k,v] of Object.entries(cfg)){
-    const el=document.getElementById('printer_'+k);
-    if(el) el.value=Array.isArray(v)?v.join('\n'):v;
-  }
   document.getElementById('orcaPrinterJsonView').textContent=JSON.stringify(cfg,null,2);
   document.getElementById('orcaPrinterInfoView').textContent=profile?profile.info||'':'';
   document.getElementById('orcaProfileSelect').value=index;
@@ -2788,7 +2747,6 @@ function openPrinterOrca(id){
   const pr=appData.printers.find(p=>String(p.id)===String(id));
   if(!pr) return;
   currentOrcaPrinterId=String(id);
-  ensureOrcaPrinterFields();
   if(!Array.isArray(pr.orcaProfiles)){
     if(pr.orca){
       pr.orcaProfiles=[{id:generateUUID(),config:pr.orca,info:pr.orcaInfo||''}];
@@ -2799,26 +2757,13 @@ function openPrinterOrca(id){
     delete pr.orcaInfo;
   }
   if(pr.orcaProfiles.length===0){
-    pr.orcaProfiles.push({id:generateUUID(),config:defaultPrinterConfig(),info:''});
+    pr.orcaProfiles.push({id:generateUUID(),config:{},info:''});
   }
   populateOrcaProfileSelect(pr);
   loadOrcaProfile(pr,0);
   new bootstrap.Modal(document.getElementById('orcaPrinterModal')).show();
 }
 
-function savePrinterJson(){
-  if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
-  if(!pr) return;
-  const profile=pr.orcaProfiles[currentOrcaProfileIndex];
-  if(!profile) return;
-  profile.config={};
-  document.querySelectorAll('#orcaPrinterModal [data-printer-field]').forEach(el=>{
-    profile.config[el.dataset.printerField]=el.value;
-  });
-  saveToLocalStorage();
-  bootstrap.Modal.getInstance(document.getElementById('orcaPrinterModal')).hide();
-}
 
 function downloadPrinterJson(){
   if(currentOrcaPrinterId===null) return;
@@ -2848,17 +2793,12 @@ function importPrinterJson(file){
   reader.onload=()=>{
     try{
       const data=JSON.parse(reader.result);
-      for(const [k,v] of Object.entries(data)){
-        let el=document.getElementById('printer_'+k);
-        if(!el){
-          ORCA_PRINTER_FIELDS.push(k);
-          createPrinterField(k,true);
-          el=document.getElementById('printer_'+k);
-        }
-        if(el){
-          el.value=Array.isArray(v)?v.join('\n'):v;
-        }
-      }
+      const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
+      if(!pr) return;
+      pr.orcaProfiles.push({id:generateUUID(),config:data,info:''});
+      populateOrcaProfileSelect(pr);
+      loadOrcaProfile(pr,pr.orcaProfiles.length-1);
+      saveToLocalStorage();
     }catch(err){
       alert('Ошибка чтения файла: '+err);
     }
@@ -2866,15 +2806,6 @@ function importPrinterJson(file){
   reader.readAsText(file);
 }
 
-function addOrcaProfile(){
-  if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
-  if(!pr) return;
-  const newProf={id:generateUUID(),config:defaultPrinterConfig(),info:''};
-  pr.orcaProfiles.push(newProf);
-  populateOrcaProfileSelect(pr);
-  loadOrcaProfile(pr,pr.orcaProfiles.length-1);
-}
 
 function deleteOrcaProfile(){
   if(currentOrcaPrinterId===null) return;
@@ -3539,11 +3470,20 @@ function parseIncomingLinkParams(params){
   showIncomingDataModal();
 }
 
-function findPrinterForLink(key){
-  return appData.printers.find(p=>{
+async function resolvePrinterForLink(key){
+  const list = appData.printers.filter(p=>{
     if(p.name===key) return true;
     return (p.orcaProfiles||[]).some(prf=>prf.config && prf.config.printer_settings_id===key);
   });
+  if(list.length===1) return list[0];
+  if(list.length>1){
+    const options=list.map(p=>({value:String(p.id),label:p.name}));
+    const res=await showMultiPrompt('Принтер для профиля '+key,[{id:'pid',label:'Принтер',type:'select',options}]);
+    if(res && res.pid){
+      return list.find(p=>String(p.id)===res.pid) || null;
+    }
+  }
+  return null;
 }
 
 function showIncomingDataModal(){
@@ -3578,7 +3518,7 @@ async function applyIncomingData(){
     });
   }
   if(incomingLinkData){
-    const pr = findPrinterForLink(incomingLinkData.printerKey);
+    const pr = await resolvePrinterForLink(incomingLinkData.printerKey);
     if(!pr){
       alert('Не найден принтер '+incomingLinkData.printerKey);
     } else {
@@ -3767,11 +3707,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
-  document.getElementById('savePrinterJsonBtn').onclick = savePrinterJson;
   document.getElementById('importPrinterJsonBtn').onclick = ()=>document.getElementById('orcaPrinterJsonFile').click();
   document.getElementById('orcaPrinterJsonFile').addEventListener('change',e=>importPrinterJson(e.target.files[0]));
   document.getElementById('downloadPrinterJsonBtn').onclick = downloadPrinterJson;
-  document.getElementById('addOrcaProfileBtn').onclick = ()=>addOrcaProfile();
   document.getElementById('delOrcaProfileBtn').onclick = ()=>deleteOrcaProfile();
   document.getElementById('orcaProfileSelect').addEventListener('change',e=>{
     const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
@@ -3780,11 +3718,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
-  document.getElementById('importJsonFile').addEventListener('change', importFromFile);
-    document.getElementById("applyMaterialProfileLinkBtn").onclick = applyMaterialProfileLink;
-    document.getElementById("manageMaterialProfilesBtn").onclick = openMaterialProfilesManager;
-    document.getElementById("importProfileBtn").onclick = () => document.getElementById("importProfileInput").click();
-    document.getElementById("importProfileInput").addEventListener("change",e=>importProfileFile(e.target.files[0]));
+    document.getElementById('importJsonFile')?.addEventListener('change', importFromFile);
+    const applyLinkBtn=document.getElementById("applyMaterialProfileLinkBtn");
+    if(applyLinkBtn) applyLinkBtn.onclick = applyMaterialProfileLink;
+    const manageProfilesBtn=document.getElementById("manageMaterialProfilesBtn");
+    if(manageProfilesBtn) manageProfilesBtn.onclick = openMaterialProfilesManager;
+    const importProfileBtn=document.getElementById("importProfileBtn");
+    if(importProfileBtn) importProfileBtn.onclick = () => document.getElementById("importProfileInput").click();
+    document.getElementById("importProfileInput")?.addEventListener("change",e=>importProfileFile(e.target.files[0]));
 
   document.getElementById('downloadPrinterInfoBtn').onclick = downloadPrinterInfo;
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{

@@ -1,14 +1,20 @@
 import os
 import json
 import glob
-import time
 import argparse
+import random
+import string
 
 ORCA_FILAMENT_DIR = os.path.join(os.environ.get('APPDATA', ''), 'OrcaSlicer', 'user', 'default', 'filament')
 ORCA_MACHINE_DIR = os.path.join(os.environ.get('APPDATA', ''), 'OrcaSlicer', 'user', 'default', 'machine')
 
 DEFAULT_INPUT = 'calc_data.json'
-DEFAULT_OUTPUT = 'calc_data_synced.json'
+DEFAULT_OUTPUT = "calc_data_synced.json"
+
+
+def gen_id():
+    alphabet = string.ascii_lowercase + string.digits
+    return ''.join(random.choices(alphabet, k=16))
 
 
 
@@ -62,7 +68,7 @@ def main():
     for m in list(mat_map.values()):
         if 'orca' in m or 'orcaInfo' in m:
             prof = {
-                'id': int(time.time()*1000) + len(material_profiles),
+                'id': gen_id(),
                 'config': m.get('orca', {}),
                 'info': m.get('orcaInfo', '')
             }
@@ -105,7 +111,7 @@ def main():
         prof = pf_map.get(key)
         if not prof:
             prof = {
-                'id': int(time.time()*1000) + len(material_profiles),
+                'id': gen_id(),
                 'config': orca,
                 'info': info_text
             }
@@ -154,7 +160,7 @@ def main():
         if not isinstance(p.get('orcaProfiles'), list):
             profs = []
             if p.get('orca'):
-                profs.append({'id': int(time.time()*1000), 'config': p['orca'], 'info': p.get('orcaInfo', '')})
+                profs.append({'id': gen_id(), 'config': p['orca'], 'info': p.get('orcaInfo', '')})
             p['orcaProfiles'] = profs
         host_keys = []
         for prof in p['orcaProfiles']:
@@ -193,12 +199,17 @@ def main():
             continue
         if 'orcaProfiles' not in target:
             target['orcaProfiles'] = []
-        target['orcaProfiles'].append({'id': int(time.time()*1000), 'config': orca, 'info': info_text})
+        target['orcaProfiles'].append({'id': gen_id(), 'config': orca, 'info': info_text})
         if host_key:
             pr_map[host_key] = target
 
 
-    printers = [p for p in name_map.values() if not p.get('_merged')]
+    # keep all printers from the input even if they were "merged" with
+    # additional profiles. previously the code removed entries marked as
+    # `_merged`, which could unexpectedly drop user defined printers when
+    # a matching machine file existed.  Instead of filtering them out we
+    # keep every printer and simply clean the helper flag.
+    printers = list(name_map.values())
 
     for p in printers:
         if not isinstance(p.get('orcaProfiles'), list):
