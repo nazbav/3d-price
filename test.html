@@ -1907,7 +1907,7 @@ function onCalculateAll() {
     const rows = table.querySelectorAll("tbody tr");
     let modelsData = [];
     rows.forEach(row => {
-      const inputs = row.querySelectorAll('input:not([type="file"])');
+      const inputs = Array.from(row.querySelectorAll('input')).filter(inp => inp.type !== 'file');
       const inpName = inputs[0];
       const selStatus = row.querySelectorAll("select")[0];
       const inpH = inputs[1];
@@ -1946,7 +1946,7 @@ function onCalculateAll() {
     let lines = [];
     const rows = table.querySelectorAll("tbody tr");
     rows.forEach(row => {
-      const inputs = row.querySelectorAll('input:not([type="file"])');
+      const inputs = Array.from(row.querySelectorAll('input')).filter(inp => inp.type !== 'file');
       const inpName = inputs[0];
       const selStatus = row.querySelectorAll("select")[0];
       const inpH = inputs[1];
