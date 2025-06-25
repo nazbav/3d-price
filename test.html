@@ -277,6 +277,7 @@
       <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
       <div class="mt-2">
         <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none" onclick="downloadAllThermoLabelsHtml()">Скачать все этикетки</button>
+        <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none" onclick="downloadSummaryCardHtml()">Скачать итоговую карточку</button>
       </div>
     </div>
 
@@ -1927,6 +1928,8 @@ let lastCalcFullData = null;
 
 let incomingLinkData = null;
 
+let lastSummaryCardHtml = '';
+
 
 
 
@@ -2164,9 +2167,40 @@ function onCalculateAll() {
   const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
   htmlRes += `<strong>Цена за 1 грамм: ${safeFixed(pricePerGram)} ₽<\/strong><br/>`;
 
- if (finDateStr) {
+  if (finDateStr) {
     htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
   }
+
+  // формируем HTML карточки итогов для скачивания
+  let summaryModels = '';
+  detailsByPrinter.forEach(pr => {
+    pr.linesDetail.forEach(ln => {
+      summaryModels += `<div class="model-card">` +
+        (ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" alt="icon">` : '') +
+        `<h3>${ln.name}<\/h3>` +
+        `<p><strong>Требуется:<\/strong> ${formatTimeForDisplay(ln.hours)}<\/p>` +
+        `<p><strong>Вес + отход:<\/strong> ${safeFixed(ln.realWeight)} г<\/p>` +
+        `<p><strong>Материал:<\/strong> ${ln.matName}<\/p>` +
+      `</div>`;
+    });
+  });
+  generateQRCodeCanvas(appData.labelSettings.chatLink, 120, function(qrCanvas){
+    const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : '';
+    lastSummaryCardHtml = buildSummaryCardHtml({
+      company: appData.labelSettings.companyName,
+      orderId,
+      orderName: calcName || '(Без названия)',
+      client: clientName || '(Не указан)',
+      status: orderStatus,
+      totalTime: formatTimeForDisplay(finalTimeOperator) + ' ч',
+      totalWeight: safeFixed(totalWeight),
+      totalCost: safeFixed(finalSum),
+      pricePerGram: safeFixed(pricePerGram),
+      finDate: finDateStr,
+      modelsHtml: summaryModels,
+      qr: qrDataUrl
+    });
+  });
   if (warnings.length > 0) {
     htmlRes += `<div class="alert alert-warning mt-2">Предупреждения:<br/>` + warnings.join("<br/>") + `<\/div>`;
   }
@@ -2268,6 +2302,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   document.getElementById("calcResult").innerHTML = htmlRes;
   const allBtn=document.getElementById("downloadAllLabelsBtn");
   if(allBtn) allBtn.style.display='inline-block';
+  const summaryBtn=document.getElementById("downloadSummaryCardBtn");
+  if(summaryBtn) summaryBtn.style.display='inline-block';
   
   lastCalcFullData = {
     id: orderId,
@@ -2906,6 +2942,64 @@ function downloadMaterialLabelHtml(materialId) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+function buildSummaryCardHtml(data){
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Сводка заказа</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    body{background:var(--bs-body-bg);color:var(--bs-body-color);font-family:'Segoe UI',Tahoma,sans-serif;padding:2rem;background-image:radial-gradient(circle at 20% 20%,var(--bs-primary-bg-subtle),transparent 60%),radial-gradient(circle at 80% 0,var(--bs-success-bg-subtle),transparent 60%);} 
+    .order-summary-card{max-width:1200px;margin:0 auto;background:var(--bs-light-bg-subtle);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;display:flex;flex-wrap:wrap;}
+    .order-info{flex:1 1 300px;padding:1.5rem;background:var(--bs-secondary-bg);}
+    .order-info h2{font-size:1.4rem;margin-bottom:1rem;color:var(--bs-primary);}
+    .order-info .info-item{margin-bottom:.5rem;font-size:.95rem;}
+    .order-info .label{font-weight:600;color:var(--bs-secondary-color);}
+    .order-info .value{margin-left:.5rem;font-weight:500;}
+    .order-info .qr{text-align:center;margin-bottom:1rem;}
+    .order-info .qr img{width:120px;height:120px;}
+    .models{flex:2 1 600px;padding:1.5rem;}
+    .models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;}
+    .model-card{background:var(--bs-light-bg-subtle);border-radius:8px;padding:1rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform .3s ease,box-shadow .3s ease;}
+    .model-card:hover{transform:translateY(-4px);box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+    .model-card img{width:48px;height:48px;margin-bottom:.5rem;}
+    .model-card h3{font-size:1rem;margin-bottom:.5rem;color:var(--bs-primary);}
+    .model-card p{font-size:.9rem;margin:.25rem 0;color:var(--bs-secondary-color);}
+    .model-card p strong{color:var(--bs-body-color);}
+    @media (max-width:800px){.order-summary-card{flex-direction:column;}.order-info,.models{flex:1 1 auto;}}
+  </style>
+</head>
+<body>
+<div class="order-summary-card">
+  <div class="order-info">
+    <h2>${data.company}</h2>
+    <div class="qr"><img src="${data.qr}" alt="QR"></div>
+    <div class="info-item"><span class="label">Код заказа:<\/span><span class="value">${data.orderId}<\/span></div>
+    <div class="info-item"><span class="label">Название заказа:<\/span><span class="value">${data.orderName}<\/span></div>
+    <div class="info-item"><span class="label">Клиент:<\/span><span class="value">${data.client}<\/span></div>
+    <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
+    <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
+    <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
+    <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.totalCost} ₽<\/span></div>
+    <div class="info-item"><span class="label">Цена за 1 грамм:<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
+    ${data.finDate ? `<div class="info-item"><span class="label">Дата завершения:<\/span><span class="value">${data.finDate}<\/span></div>` : ''}
+  <\/div>
+  <div class="models">
+    <div class="models-grid">${data.modelsHtml}<\/div>
+  <\/div>
+<\/div>
+</body>
+</html>`;
+}
+
+function downloadSummaryCardHtml(){
+  if(!lastSummaryCardHtml){alert('Нет данных.');return;}
+  const blob=new Blob([lastSummaryCardHtml],{type:'text/html'});
+  downloadBlob(blob,`OrderSummary_${Date.now()}.html`);
 }
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
@@ -3821,6 +3915,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
   document.getElementById('downloadAllLabelsBtn')?.addEventListener('click', downloadAllThermoLabelsHtml);
+  document.getElementById('downloadSummaryCardBtn')?.addEventListener('click', downloadSummaryCardHtml);
     document.getElementById('importJsonFile')?.addEventListener('change', importFromFile);
     const applyLinkBtn=document.getElementById("applyMaterialProfileLinkBtn");
     if(applyLinkBtn) applyLinkBtn.onclick = applyMaterialProfileLink;
