@@ -45,3 +45,4 @@
 - интерактив sync_orca спрашивает об изменении только когда профили уже связаны
 - в менеджере профилей можно переназначать профиль другому принтеру
 - fixed material profile lookup when importing models via link; handles numeric IDs
+- added branding logo upload (140x110 PNG compressed to base64) and display on thermo label

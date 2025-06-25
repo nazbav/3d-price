@@ -395,6 +395,11 @@
             <input type="text" id="chatLinkInput" class="form-control"/>
           </div>
           <div class="mb-3">
+            <label class="form-label">Логотип:</label><br>
+            <img id="logoPreview" src="" alt="logo" style="width:140px;height:110px;object-fit:contain;border:1px solid #ccc;cursor:pointer" onclick="document.getElementById('logoInput').click()"/>
+            <input type="file" id="logoInput" accept="image/png" class="d-none" onchange="onLogoFileChange(event)">
+          </div>
+          <div class="mb-3">
             <label for="calcWorkHoursDay" class="form-label">Раб. часов в день:</label>
             <input type="number" id="calcWorkHoursDay" class="form-control" />
           </div>
@@ -1165,7 +1170,8 @@ let appData = {
   labelSettings: {
   companyName: "Компания",
   chatLink: "https://t.me/dur",
-  costPerLabel: 0,   
+  logo: "",
+  costPerLabel: 0,
   printLabels: false
 },
   clients: [],
@@ -1187,6 +1193,8 @@ function loadFromLocalStorage(){
       if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
       appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
       appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
+      if(!appData.labelSettings) appData.labelSettings = {};
+      if(!appData.labelSettings.logo) appData.labelSettings.logo = "";
     }
   } catch(e){}
 }
@@ -1215,6 +1223,8 @@ function initAll(){
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
   document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
   document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
+  const lp = document.getElementById("logoPreview");
+  if(lp) lp.src = appData.labelSettings.logo ? 'data:image/png;base64,'+appData.labelSettings.logo : '';
 }
 
 // Функции для работы с форматами времени
@@ -2588,11 +2598,35 @@ function saveBrandingSettings(){
   const cn = document.getElementById("companyNameInput").value.trim();
   const cl = document.getElementById("chatLinkInput").value.trim();
   const hours = parseFloat(document.getElementById("calcWorkHoursDay").value) || 0;
+  const logoSrc = document.getElementById("logoPreview").src;
   appData.labelSettings.companyName = cn || "Моя компания";
   appData.labelSettings.chatLink = cl || "https://t.me/example";
+  appData.labelSettings.logo = logoSrc.startsWith("data:image") ? logoSrc.split(',')[1] : "";
   appData.calcSettings.workHoursDay = hours;
   saveToLocalStorage();
   alert("Сохранено");
+}
+
+function onLogoFileChange(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 140;
+      canvas.height = 110;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/png');
+      document.getElementById('logoPreview').src = dataUrl;
+      appData.labelSettings.logo = dataUrl.split(',')[1];
+      saveToLocalStorage();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function saveCalcSettings(){
@@ -2646,6 +2680,13 @@ function downloadThermoLabelHtml(modelName, printerName, materialName, hours, we
       font-weight: bold;
       margin-bottom: 2mm;
     }
+    .logo {
+      position: absolute;
+      top: 2mm;
+      left: 2mm;
+      width: 14mm;
+      height: 11mm;
+    }
     .label-content {
       font-size: 10pt;
       line-height: 1.2;
@@ -2669,6 +2710,7 @@ function downloadThermoLabelHtml(modelName, printerName, materialName, hours, we
 <\/head>
 <body>
 <div id="labelContainer">
+  ${appData.labelSettings.logo ? `<img class="logo" src="data:image/png;base64,${appData.labelSettings.logo}">` : ''}
   <div class="label-header">${appData.labelSettings.companyName}<\/div>
   <div class="label-content">
     <div style="text-align: center;">${modelName}<\/div>
@@ -3674,6 +3716,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if(manageProfilesBtn) manageProfilesBtn.onclick = openMaterialProfilesManager;
     const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
     if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
+    document.getElementById('logoInput')?.addEventListener('change', onLogoFileChange);
+    const lp=document.getElementById('logoPreview');
+    if(lp && appData.labelSettings.logo) lp.src='data:image/png;base64,'+appData.labelSettings.logo;
 
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
   //   importPrinterJson(e.target.files[0]);
