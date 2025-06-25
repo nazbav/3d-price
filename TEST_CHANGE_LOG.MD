@@ -95,3 +95,4 @@
 - Проверено: интерактив sync_orca предлагает изменить связь только при её наличии
 - Переназначение профиля на другой принтер работает через диалог
 - tested import link with numeric profile id: material matched without errors
+- verified new label preview includes model thumbnail when available

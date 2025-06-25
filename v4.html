@@ -1526,7 +1526,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
           <td>${ln.subTotalModel.toFixed(2)}<\/td>
           <td>
             <button class="btn btn-sm btn-outline-secondary"
-              onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${ln.hours.toFixed(2)}', '${ln.weight.toFixed(2)}')">
+              onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${ln.hours.toFixed(2)}', '${ln.weight.toFixed(2)}', '${ln.thumbnail || ''}')">
               Этикетка
             <\/button>
           <\/td>
@@ -1784,7 +1784,7 @@ function generateQRCodeCanvas(data, size, callback){
   }, 100);
 }
 
-function downloadThermoLabelHtml(modelName, printerName, materialName, hours, weight) {
+function downloadThermoLabelHtml(modelName, printerName, materialName, hours, weight, thumbnail) {
   const qrSize = 100;
   generateQRCodeCanvas(appData.labelSettings.chatLink, qrSize, function(qrCanvas) {
     const qrDataUrl = qrCanvas ? qrCanvas.toDataURL("image/png") : "";
@@ -1819,8 +1819,15 @@ function downloadThermoLabelHtml(modelName, printerName, materialName, hours, we
       position: absolute;
       bottom: 2mm;
       right: 2mm;
-      width: 20mm;
-      height: 20mm;
+      width: 15mm;
+      height: 15mm;
+    }
+    .thumb {
+      position: absolute;
+      bottom: 2mm;
+      right: 20mm;
+      width: 15mm;
+      height: 15mm;
     }
   <\/style>
 <\/head>
@@ -1835,6 +1842,7 @@ function downloadThermoLabelHtml(modelName, printerName, materialName, hours, we
     <div>${weight} г<\/div>
     <div>${new Date().toLocaleDateString("ru-RU")}<\/div>
   <\/div>
+  ${thumbnail ? `<img class="thumb" src="data:image/png;base64,${thumbnail}">` : ''}
   <img class="qr-code" src="${qrDataUrl}" alt="QR-код">
 <\/div>
 <\/body>

@@ -74,3 +74,4 @@
 - диалоги sync_orca пропускают лишние вопросы и позволяют менять существующие связи.
 - Профиль можно перенести на другой принтер через менеджер профилей.
 - material lookup by profile now robust to numeric ids; fixed toLowerCase error
+- Thermo label supports optional model thumbnail

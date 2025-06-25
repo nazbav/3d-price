@@ -45,3 +45,4 @@
 - интерактив sync_orca спрашивает об изменении только когда профили уже связаны
 - в менеджере профилей можно переназначать профиль другому принтеру
 - fixed material profile lookup when importing models via link; handles numeric IDs
+- Thermo label shows model thumbnail if available; HTML template updated
