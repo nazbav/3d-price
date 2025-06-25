@@ -1,0 +1,17 @@
+body { margin: 0; font-family: Arial, sans-serif; display: flex; }
+#sidebar {
+  width: 220px; background:#343a40; color:#fff; min-height:100vh; padding:1rem;
+}
+#sidebar .logo { font-size:1.2rem; margin-bottom:1rem; }
+#sidebar ul { list-style:none; padding:0; }
+#sidebar li { padding:0.5rem 0; cursor:pointer; }
+#sidebar li.active { font-weight:bold; }
+#content { flex:1; padding:1rem; }
+.page { display:none; }
+.page.active { display:block; }
+.form-row { display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; }
+label { display:flex; flex-direction:column; }
+.btn { padding:0.5rem 1rem; background:#007bff; color:#fff; border:none; cursor:pointer; }
+.table { width:100%; border-collapse:collapse; }
+.table th, .table td { border:1px solid #ccc; padding:0.25rem 0.5rem; }
+.list { padding-left:1rem; }

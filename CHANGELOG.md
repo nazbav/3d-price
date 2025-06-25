@@ -38,3 +38,5 @@
 - sync_orca.py preserves user printers when merging machine configs, preventing accidental deletion
 - fixed Orca printer fields not displaying due to data-inited check
 - fixed missing closing tag in material modal causing Orca profile windows not to show
+- added modern version of test.html with AdminLTE-style sidebar and local styles
+- modern/test.html теперь повторяет все функции оригинального test.html
