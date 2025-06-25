@@ -337,7 +337,6 @@
         <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none" onclick="downloadAllThermoLabelsHtml()">Скачать все этикетки</button>
         <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none" onclick="downloadSummaryCardHtml()">Скачать итоговую карточку</button>
         <button class="btn btn-primary ms-2" id="sendMyNalogBtn" style="display:none" onclick="sendMyNalogReceipt()">Отправить чек</button>
-        <button class="btn btn-warning ms-2" id="sendMyNalogBillBtn" style="display:none" onclick="sendMyNalogBill()">Сформировать счёт</button>
       </div>
     </div>
 
@@ -3202,7 +3201,7 @@ async function sendMyNalogRequest(method,url,body){
   return resp;
 }
 
-async function sendMyNalogReceipt(){
+function sendMyNalogReceipt(){
   if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
   const payload = {
     operationTime: new Date().toISOString(),
@@ -3214,37 +3213,14 @@ async function sendMyNalogReceipt(){
     client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
   };
   try {
-    const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
+    const resp =  sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
     if(resp.ok){
-      const data = await resp.json().catch(()=>null);
+      const data =  resp.json().catch(()=>null);
       if(data?.approvedReceiptUuid) alert('Чек отправлен.');
       else alert('Запрос отправлен в Мой Налог');
     }else{
-      const text = await resp.text().catch(()=>resp.status);
+      const text =  resp.text().catch(()=>resp.status);
       alert('Ошибка отправки: '+text);
-    }
-  }catch(e){
-    alert('Не удалось подключиться к сервису Мой Налог');
-  }
-}
-
-async function sendMyNalogBill(){
-  if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
-  const payload = {
-    requestTime: new Date().toISOString(),
-    service: lastCalcFullData.calcName || 'Заказ',
-    amount: lastCalcFullData.total,
-    client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
-  };
-  try {
-    const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/bills',payload);
-    if(resp.ok){
-      const data = await resp.json().catch(()=>null);
-      if(data?.id) alert('Счёт создан. ID: '+data.id);
-      else alert('Счёт создан в сервисе Мой Налог');
-    } else {
-      const text = await resp.text().catch(()=>resp.status);
-      alert('Ошибка создания счёта: ' + text);
     }
   }catch(e){
     alert('Не удалось подключиться к сервису Мой Налог');
