@@ -170,7 +170,6 @@ def main():
                 continue
             for m in linked:
                 m['profileIds'] = [x for x in m.get('profileIds', []) if x != prof['id']]
-
         sel = select_item('Assign to materials', [m.get('name', '') for m in materials_list], multi=True)
         for idx in sel:
             mat = materials_list[idx]
@@ -292,11 +291,6 @@ def main():
                 pr_id_map[target.get('id')] = target
                 if host_key:
                     pr_map[host_key] = target
-            continue
-
-        sel = select_item('Select printer', [p.get('name', '') for p in printer_list], multi=False)
-        target = printer_list[sel] if sel is not None else None
-        if not target:
             continue
         pid = gen_id()
         profile_obj = {'id': pid, 'config': orca, 'info': info_text, 'printerId': target.get('id')}

@@ -43,3 +43,5 @@
 - sync_orca.py выдаёт раздел printerProfiles и связывает их с принтерами
 - sync_orca.py предлагает интерактивное назначение профилей и избегает дубликатов
 - интерактив sync_orca спрашивает об изменении только когда профили уже связаны
+- в менеджере профилей можно переназначать профиль другому принтеру
+- fixed material profile lookup when importing models via link; handles numeric IDs
