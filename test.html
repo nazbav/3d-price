@@ -875,7 +875,8 @@ function migrateOldData(obj){
   return obj;
 }
 
-function ucfirst(str){
+function showMultiPrompt(title, fields){
+  return new Promise(res=>{
     const body = document.getElementById('multiPromptBody');
     body.innerHTML = '';
     document.getElementById('multiPromptTitle').textContent = title;
