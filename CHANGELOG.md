@@ -15,3 +15,4 @@
 - clarified requirement to update CHANGELOG, FEATURE_LIST and TEST_CHANGE_LOG in AGENTS.md
 - unified material profile storage and updated sync_orca.py to import profiles without creating materials
 - added modal to map deleted printers when loading history
+- removed automatic creation of printers from history; unresolved printers must be added manually or via import
