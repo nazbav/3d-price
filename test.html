@@ -2384,13 +2384,29 @@ function renderPrinterProfilesTable(){
     const pr=appData.printers.find(x=>String(x.id)===String(p.printerId));
     const prName=pr?pr.name:'?';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${cfg.printer_settings_id||cfg.name||p.id}</td><td>${prName}</td><td><button class="btn btn-sm btn-danger" onclick="deletePrinterProfileGlobal('${p.id}')">✖</button></td>`;
+    tr.innerHTML=`<td>${cfg.printer_settings_id||cfg.name||p.id}</td><td>${prName}</td><td><button class="btn btn-sm btn-warning me-1" onclick="reassignPrinterProfile('${p.id}')">Изменить</button><button class="btn btn-sm btn-danger" onclick="deletePrinterProfileGlobal('${p.id}')">✖</button></td>`;
     tb.appendChild(tr);
   });
 }
 function openPrinterProfilesManager(){
   renderPrinterProfilesTable();
   new bootstrap.Modal(document.getElementById('managePrinterProfilesModal')).show();
+}
+async function reassignPrinterProfile(pid){
+  const pf=appData.printerProfiles.find(p=>String(p.id)===String(pid));
+  if(!pf) return;
+  const options=appData.printers.map(pr=>({value:String(pr.id),label:pr.name}));
+  const res=await showMultiPrompt('Переназначить профиль',[{id:'prid',label:'Принтер',type:'select',options,value:pf.printerId}]);
+  if(!res || !res.prid) return;
+  const newPr=appData.printers.find(pr=>String(pr.id)===String(res.prid));
+  if(!newPr) return;
+  const oldPr=appData.printers.find(pr=>String(pr.id)===String(pf.printerId));
+  if(oldPr) oldPr.profileIds=oldPr.profileIds.filter(id=>String(id)!==String(pid));
+  if(!Array.isArray(newPr.profileIds)) newPr.profileIds=[];
+  if(!newPr.profileIds.includes(pid)) newPr.profileIds.push(pid);
+  pf.printerId=newPr.id;
+  saveToLocalStorage();
+  renderPrinterProfilesTable();
 }
 function deletePrinterProfileGlobal(pid){
   appData.printers.forEach(pr=>{ if(Array.isArray(pr.profileIds)) pr.profileIds=pr.profileIds.filter(id=>String(id)!==String(pid)); });
