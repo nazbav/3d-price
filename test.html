@@ -280,7 +280,7 @@
         </div>
         <div class="col-md-4">
           <label for="calcOrderStatus" class="form-label">Статус заказа:</label>
-          <select id="calcOrderStatus" class="form-select">
+          <select id="calcOrderStatus" class="form-select" onchange="toggleFinalFields(this.value)">
             <option value="new">Новый</option>
             <option value="inprogress">В работе</option>
             <option value="done">Завершён</option>
@@ -314,6 +314,16 @@
         <div class="col-md-3">
           <label for="calcMarkupPercent" class="form-label">Наценка (%):</label>
           <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcDiscountPercent" class="form-label">Скидка (%):</label>
+          <input type="number" step="1" id="calcDiscountPercent" class="form-control" />
+        </div>
+        <div class="col-md-3 d-none" id="finalCostGroup">
+          <label for="calcFinalCost" class="form-label">Финальная цена (₽):</label>
+          <input type="number" step="0.01" id="calcFinalCost" class="form-control" />
         </div>
       </div>
       <hr/>
@@ -891,6 +901,7 @@ function migrateOldData(obj){
   // Обновление истории расчётов и calcData
   obj.calcHistory.forEach(h=>{
     if(!h.markupPercent) h.markupPercent = 0;
+    if(!h.discountPercent) h.discountPercent = 0;
     if(!h.globalAdditional) h.globalAdditional = {sumGlobalAdd:0,taxAmount:0,details:[]};
     if(Array.isArray(h.details)){
       h.details.forEach(d=>{
@@ -1212,7 +1223,8 @@ let appData = {
     shipping: 300,
     taxPercent: 6,
     parallelPrinting: "no",
-    markupPercent: 0
+    markupPercent: 0,
+    discountPercent: 0
   },
   labelSettings: {
   companyName: "Компания",
@@ -1264,6 +1276,9 @@ function initAll(){
   document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
   document.getElementById("calcParallelPrinting").value = appData.calcSettings.parallelPrinting || "no";
   document.getElementById("calcMarkupPercent").value = appData.calcSettings.markupPercent || 0;
+  document.getElementById("calcDiscountPercent").value = appData.calcSettings.discountPercent || 0;
+  document.getElementById("calcFinalCost").value = '';
+  toggleFinalFields(document.getElementById("calcOrderStatus").value);
   document.getElementById("companyNameInput").value = appData.labelSettings.companyName || "";
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
   document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
@@ -2004,6 +2019,8 @@ function onCalculateAll() {
   const sDate = document.getElementById("calcStartDate").value;
   const parallelMode = document.getElementById("calcParallelPrinting").value;
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
+  const discountPercent = parseFloat(document.getElementById("calcDiscountPercent").value) || 0;
+  const manualFinalCost = parseFloat(document.getElementById("calcFinalCost").value) || 0;
   let orderId = document.getElementById("calcOrderId").value.trim();
 
   // итоговый HTML для вывода
@@ -2018,6 +2035,7 @@ function onCalculateAll() {
   appData.calcSettings.startDate = sDate;
   appData.calcSettings.parallelPrinting = parallelMode;
   appData.calcSettings.markupPercent = markupPercent;
+  appData.calcSettings.discountPercent = discountPercent;
   
   saveToLocalStorage();
   
@@ -2187,12 +2205,19 @@ function onCalculateAll() {
 
   
   let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost;
-  
+
   if (markupPercent > 0) {
     subtotal *= (1 + markupPercent / 100);
   }
-  const finalSum = subtotal / (1 - tPercent / 100);
-  const taxAmount = finalSum - subtotal;
+  const totalBeforeDiscount = subtotal / (1 - tPercent / 100);
+  const taxAmount = totalBeforeDiscount - subtotal;
+  let finalSum = totalBeforeDiscount;
+  if(discountPercent > 0){
+    finalSum = finalSum * (1 - discountPercent / 100);
+  }
+  if(manualFinalCost > 0){
+    finalSum = manualFinalCost;
+  }
 
   let finDateStr = calcFinishDate(sDate, Math.ceil(finalTimeOperator / (whDay || 8)));
 
@@ -2210,7 +2235,12 @@ function onCalculateAll() {
   htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
   htmlRes += `Подитог: ${safeFixed(subtotal)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${safeFixed(taxAmount)} ₽<br/>`;
-  htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
+  if(discountPercent > 0){
+    htmlRes += `Итого без скидки: <del>${safeFixed(totalBeforeDiscount)} ₽<\/del><br/>`;
+    htmlRes += `<strong>Итого со скидкой (${discountPercent}%): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
+  } else {
+    htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
+  }
  
   // Вывод цены за 1 грамм
   const totalWeight = detailsByPrinter.reduce((acc, printer) => 
@@ -2245,6 +2275,8 @@ function onCalculateAll() {
       totalTime: formatTimeForDisplay(finalTimeOperator) + ' ч',
       totalWeight: safeFixed(totalWeight),
       totalCost: safeFixed(finalSum),
+      priceOld: discountPercent > 0 ? safeFixed(totalBeforeDiscount) : '',
+      discountPercent,
       pricePerGram: safeFixed(pricePerGram),
       finDate: finDateStr,
       modelsHtml: summaryModels,
@@ -2380,7 +2412,10 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
       details: globalAdditionalDetails
     },
     parallelMode,
-    markupPercent
+    markupPercent,
+    discountPercent,
+    priceBeforeDiscount: totalBeforeDiscount,
+    realTotal: manualFinalCost > 0 ? manualFinalCost : null
   };
   
   lastCalcFullData.totalLabelsCost = totalLabelsCost;
@@ -2410,7 +2445,10 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
       details: globalAdditionalDetails
     },
     parallelMode,
-    markupPercent
+    markupPercent,
+    discountPercent,
+    priceBeforeDiscount: totalBeforeDiscount,
+    realTotal: manualFinalCost > 0 ? manualFinalCost : null
   };
   if (existingIndex !== -1) {
     appData.calcHistory[existingIndex] = newEntry;
@@ -3054,7 +3092,7 @@ function buildSummaryCardHtml(data){
     <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
     <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
     <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
-    <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.totalCost} ₽<\/span></div>
+    <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
     <div class="info-item"><span class="label">Цена за 1 грамм:<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
     ${data.finDate ? `<div class="info-item"><span class="label">Дата завершения:<\/span><span class="value">${data.finDate}<\/span></div>` : ''}
   <\/div>
@@ -3086,21 +3124,23 @@ function startNewCalculation(){
   document.getElementById("calcClientName").value="";
   document.getElementById("calcOrderStatus").value="new";
   document.getElementById("calcOrderId").value="";
-  document.getElementById("calcShipping").value="";
-  document.getElementById("calcStartDate").value="";
-  document.getElementById("calcParallelPrinting").value="no";
-  document.getElementById("calcMarkupPercent").value="";
-  document.getElementById("calcResult").style.display="none";
-  document.getElementById("downloadAllLabelsBtn").style.display="none";
-  document.getElementById("downloadSummaryCardBtn").style.display="none";
-  lastCalcFullData=null;
-  lastSummaryCardHtml="";
+  document.getElementById("calcDiscountPercent").value = 0;
+  document.getElementById("calcFinalCost").value = "";
+  toggleFinalFields('new');
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("calcStartDate").value=today;
   appData.printers.forEach(pr=>{
     const table=document.getElementById(`calcModelsTable_${pr.id}`);
     if(table) table.querySelector("tbody").innerHTML="";
   });
 }
 
+function toggleFinalFields(val){
+  const group=document.getElementById('finalCostGroup');
+  if(group){
+    group.classList.toggle('d-none', val !== 'done');
+  }
+}
 
 
 /* Настройки OrcaSlicer для принтера */
@@ -3190,7 +3230,7 @@ function generateMaxDetailedCalcHtml(d) {
 <body>
   <h1>Подробный расчёт<\/h1>
   <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${d.orderStatus || "?"}<\/p>
-  <p>Итог: <strong>${safeFixed(d.total)} ₽<\/strong><\/p>
+  <p>Итог: <strong>${safeFixed(d.total)} ₽<\/strong>${d.priceBeforeDiscount ? ` (скидка ${d.discountPercent}% от ${safeFixed(d.priceBeforeDiscount)} ₽)` : ''}<\/p>
   <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${safeFixed(d.totalOperatorCost)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
   <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
   <p>Подитог: ${safeFixed(d.total - d.globalAdditional.taxAmount)} ₽, Общий налог: ${safeFixed(d.globalAdditional.taxAmount)} ₽<\/p>
@@ -3271,6 +3311,9 @@ function onEditCalcHistory(timestamp){
   document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
   document.getElementById("calcParallelPrinting").value = it.parallelMode || "no";
   document.getElementById("calcMarkupPercent").value = it.markupPercent || 0;
+  document.getElementById("calcDiscountPercent").value = it.discountPercent || 0;
+  document.getElementById("calcFinalCost").value = it.realTotal || '';
+  toggleFinalFields(it.orderStatus || 'new');
   
   if(it.calcData){
     for(const printerId in it.calcData){
