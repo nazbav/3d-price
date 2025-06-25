@@ -31,5 +31,9 @@
 - fixed findMaterialByName to handle printers without material lists
 - added missing "Применить" button in material profile link modal to avoid null event handler
 - profile link handlers now check element existence, fixing error when importing a new model
+- fixed Orca printer fields not displaying due to data-inited check
+- менеджер профилей Orca теперь позволяет только импорт JSON, просмотр связей и удаление профилей
+- materials table shows linked Orca profiles; profile lookup is case-insensitive and link modal warns when list empty
+- removed printer detail view; materials table highlights color with readable text
 - sync_orca.py preserves user printers when merging machine configs, preventing accidental deletion
 - fixed Orca printer fields not displaying due to data-inited check
