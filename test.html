@@ -1907,10 +1907,11 @@ function onCalculateAll() {
     const rows = table.querySelectorAll("tbody tr");
     let modelsData = [];
     rows.forEach(row => {
-      const inpName = row.querySelectorAll("input")[0];
+      const inputs = row.querySelectorAll('input:not([type="file"])');
+      const inpName = inputs[0];
       const selStatus = row.querySelectorAll("select")[0];
-      const inpH = row.querySelectorAll("input")[1];
-      const inpW = row.querySelectorAll("input")[2];
+      const inpH = inputs[1];
+      const inpW = inputs[2];
       const selM = row.querySelectorAll("select")[1];
       const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
@@ -1945,10 +1946,11 @@ function onCalculateAll() {
     let lines = [];
     const rows = table.querySelectorAll("tbody tr");
     rows.forEach(row => {
-      const inpName = row.querySelectorAll("input")[0];
+      const inputs = row.querySelectorAll('input:not([type="file"])');
+      const inpName = inputs[0];
       const selStatus = row.querySelectorAll("select")[0];
-      const inpH = row.querySelectorAll("input")[1];
-      const inpW = row.querySelectorAll("input")[2];
+      const inpH = inputs[1];
+      const inpW = inputs[2];
       const selM = row.querySelectorAll("select")[1];
       const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
