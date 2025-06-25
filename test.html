@@ -622,6 +622,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" id="applyMaterialProfileLinkBtn">Применить</button>
       </div>
     </div>
   </div>
@@ -3697,11 +3698,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
-  document.getElementById('importJsonFile').addEventListener('change', importFromFile);
-    document.getElementById("applyMaterialProfileLinkBtn").onclick = applyMaterialProfileLink;
-    document.getElementById("manageMaterialProfilesBtn").onclick = openMaterialProfilesManager;
-    document.getElementById("importProfileBtn").onclick = () => document.getElementById("importProfileInput").click();
-    document.getElementById("importProfileInput").addEventListener("change",e=>importProfileFile(e.target.files[0]));
+    document.getElementById('importJsonFile')?.addEventListener('change', importFromFile);
+    const applyLinkBtn=document.getElementById("applyMaterialProfileLinkBtn");
+    if(applyLinkBtn) applyLinkBtn.onclick = applyMaterialProfileLink;
+    const manageProfilesBtn=document.getElementById("manageMaterialProfilesBtn");
+    if(manageProfilesBtn) manageProfilesBtn.onclick = openMaterialProfilesManager;
+    const importProfileBtn=document.getElementById("importProfileBtn");
+    if(importProfileBtn) importProfileBtn.onclick = () => document.getElementById("importProfileInput").click();
+    document.getElementById("importProfileInput")?.addEventListener("change",e=>importProfileFile(e.target.files[0]));
 
   document.getElementById('downloadPrinterInfoBtn').onclick = downloadPrinterInfo;
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{

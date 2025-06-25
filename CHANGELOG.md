@@ -29,3 +29,5 @@
 - importing models via link now matches materials by print profile; modal selection if multiple
 - removed Orca material settings modal; added simple profile linking and global profile manager
 - fixed findMaterialByName to handle printers without material lists
+- added missing "Применить" button in material profile link modal to avoid null event handler
+- profile link handlers now check element existence, fixing error when importing a new model
