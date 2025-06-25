@@ -2821,8 +2821,24 @@ function onModelThumbnailChange(e, code){
       canvas.width = 140;
       canvas.height = 110;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/png');
+
+      const targetRatio = canvas.width / canvas.height;
+      const imgRatio = img.width / img.height;
+      let sx, sy, sw, sh;
+      if(imgRatio > targetRatio){
+        sh = img.height;
+        sw = sh * targetRatio;
+        sx = (img.width - sw) / 2;
+        sy = 0;
+      } else {
+        sw = img.width;
+        sh = sw / targetRatio;
+        sx = 0;
+        sy = (img.height - sh) / 2;
+      }
+
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
       const base64 = dataUrl.split(',')[1];
       const tr = e.target.closest('tr');
       if(tr) tr.dataset.thumbnail = base64;
@@ -3125,7 +3141,6 @@ function toggleFinalFields(val){
     group.classList.toggle('d-none', val !== 'done');
   }
 }
-
 
 
 /* Настройки OrcaSlicer для принтера */
