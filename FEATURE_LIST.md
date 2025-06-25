@@ -79,4 +79,6 @@
 
 - Drag and drop prepared gcode files onto the page to automatically add models
 - download combined thermo labels for all models via single button
+- ability to download a modern summary card with order details and a model grid
+- summary card shows total weight and cost with 'Требуется' field
 - calculation results show a modern summary card with order details and a model grid
