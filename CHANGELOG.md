@@ -49,3 +49,4 @@
 - fixed printer detail calculations which broke due to added thumbnail column
 - added drag-and-drop support for gcode files in test.html to autofill model data
 - added button to download a combined label for all models at once in test.html
+- summary result now renders as a compact card with order info and model tiles
