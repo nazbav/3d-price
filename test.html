@@ -876,13 +876,6 @@ function migrateOldData(obj){
 }
 
 function ucfirst(str){
-  return str.charAt(0).toUpperCase()+str.slice(1);
-}
-
-let multiPromptResolve = null;
-function showMultiPrompt(title, fields){
-  return new Promise(res=>{
-    multiPromptResolve = res;
     const body = document.getElementById('multiPromptBody');
     body.innerHTML = '';
     document.getElementById('multiPromptTitle').textContent = title;
