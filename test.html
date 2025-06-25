@@ -2010,6 +2010,7 @@ let incomingLinkData = null;
 let lastSummaryCardHtml = '';
 
 let myNalogChallengeToken = '';
+const MY_NALOG_API = 'https://lknpd.nalog.ru';
 
 
 
@@ -3130,7 +3131,7 @@ async function refreshMyNalogToken(){
     }
   };
   try{
-    const resp = await fetch('https://lknpd.nalog.ru/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const resp = await fetch(MY_NALOG_API+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(resp.ok){
       const data = await resp.json();
       if(data.token){
@@ -3172,7 +3173,7 @@ async function sendMyNalogReceipt(){
     paymentType: 'CASH'
   };
   try {
-    const resp = await sendMyNalogRequest('POST','https://lknpd.nalog.ru/api/v1/income',payload);
+    const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
       if(data?.approvedReceiptUuid) alert('Чек отправлен.');
@@ -3194,7 +3195,7 @@ async function sendMyNalogBill(){
     amount: lastCalcFullData.total
   };
   try {
-    const resp = await sendMyNalogRequest('POST','https://lknpd.nalog.ru/api/v1/bills',payload);
+    const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/bills',payload);
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
       if(data?.id) alert('Счёт создан. ID: '+data.id);
@@ -3225,7 +3226,7 @@ async function checkMyNalogStatus(){
   }
   statusEl.textContent = 'Проверка...';
   try {
-    const resp = await sendMyNalogRequest('GET','https://lknpd.nalog.ru/api/v1/user');
+    const resp = await sendMyNalogRequest('GET',MY_NALOG_API+'/api/v1/user');
     if(resp.ok){
       const data = await resp.json();
       const name = data?.fio || data?.individual?.fio || 'неизвестно';
@@ -3250,7 +3251,7 @@ async function requestMyNalogSms(){
   }
   statusEl.textContent = 'Отправка SMS...';
   try{
-    const resp = await fetch('https://lknpd.nalog.ru/api/v2/auth/challenge/sms/start', {
+    const resp = await fetch(MY_NALOG_API+'/api/v2/auth/challenge/sms/start', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({phone: phoneNum, requireTpToBeActive: true})
@@ -3292,7 +3293,7 @@ async function confirmMyNalogSms(){
         metaDetails:{userAgent:navigator.userAgent}
       }
     };
-    const resp = await fetch('https://lknpd.nalog.ru/api/v1/auth/challenge/sms/verify', {
+    const resp = await fetch(MY_NALOG_API+'/api/v2/auth/challenge/sms/verify', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
