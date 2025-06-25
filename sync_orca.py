@@ -55,12 +55,16 @@ def main():
         'additionalGlobal': [],
         'calcSettings': {},
         'labelSettings': {},
-        'calcHistory': []
+        'calcHistory': [],
+        'printerProfiles': []
     }
 
     material_profiles = data.get('materialProfiles', [])
     if not isinstance(material_profiles, list):
         material_profiles = []
+    printer_profiles = data.get('printerProfiles', [])
+    if not isinstance(printer_profiles, list):
+        printer_profiles = []
 
     mat_map = {m.get('name', '').lower(): m for m in data.get('materials', [])}
 
@@ -140,30 +144,45 @@ def main():
         if score_printer(b) > score_printer(a):
             a, b = b, a
         existing = set()
-        for pf in a.get('orcaProfiles', []):
-            cfg = pf.get('config', {})
-            h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
-            ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
-            existing.add((h, ps))
-        for pf in b.get('orcaProfiles', []):
-            cfg = pf.get('config', {})
-            h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
-            ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
-            if (h, ps) not in existing:
-                a.setdefault('orcaProfiles', []).append(pf)
+        for pid in a.get('profileIds', []):
+            pf = next((x for x in printer_profiles if x['id'] == pid), None)
+            if pf:
+                cfg = pf.get('config', {})
+                h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
+                ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
                 existing.add((h, ps))
+        for pid in b.get('profileIds', []):
+            pf = next((x for x in printer_profiles if x['id'] == pid), None)
+            if pf:
+                cfg = pf.get('config', {})
+                h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
+                ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
+                if (h, ps) not in existing:
+                    a.setdefault('profileIds', []).append(pid)
+                    pf['printerId'] = a.get('id')
+                    existing.add((h, ps))
         b['_merged'] = True
         return a
 
     printers_in = data.get('printers', [])
     for p in printers_in:
-        if not isinstance(p.get('orcaProfiles'), list):
-            profs = []
-            if p.get('orca'):
-                profs.append({'id': gen_id(), 'config': p['orca'], 'info': p.get('orcaInfo', '')})
-            p['orcaProfiles'] = profs
+        if not isinstance(p.get('profileIds'), list):
+            p['profileIds'] = []
+        profs = []
+        if isinstance(p.get('orcaProfiles'), list):
+            profs = p['orcaProfiles']
+        elif p.get('orca') or p.get('orcaInfo'):
+            profs = [{'id': gen_id(), 'config': p.get('orca', {}), 'info': p.get('orcaInfo', '')}]
+        for op in profs:
+            pid = op.get('id') or gen_id()
+            printer_profiles.append({'id': pid, 'config': op.get('config', {}), 'info': op.get('info', ''), 'printerId': p.get('id')})
+            if pid not in p['profileIds']:
+                p['profileIds'].append(pid)
+        p.pop('orcaProfiles', None)
+        p.pop('orca', None)
+        p.pop('orcaInfo', None)
         host_keys = []
-        for prof in p['orcaProfiles']:
+        for prof in profs:
             cfg = prof.get('config', {})
             host = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
             if host:
@@ -197,9 +216,11 @@ def main():
         if not target:
             # skip machines that are not listed in input data
             continue
-        if 'orcaProfiles' not in target:
-            target['orcaProfiles'] = []
-        target['orcaProfiles'].append({'id': gen_id(), 'config': orca, 'info': info_text})
+        if not isinstance(target.get('profileIds'), list):
+            target['profileIds'] = []
+        pid = gen_id()
+        printer_profiles.append({'id': pid, 'config': orca, 'info': info_text, 'printerId': target.get('id')})
+        target['profileIds'].append(pid)
         if host_key:
             pr_map[host_key] = target
 
@@ -212,17 +233,13 @@ def main():
     printers = list(name_map.values())
 
     for p in printers:
-        if not isinstance(p.get('orcaProfiles'), list):
-            p['orcaProfiles'] = []
-        if 'orca' in p:
-            del p['orca']
-        if 'orcaInfo' in p:
-            del p['orcaInfo']
-
+        if not isinstance(p.get('profileIds'), list):
+            p['profileIds'] = []
         if '_merged' in p:
             del p['_merged']
 
     data['printers'] = printers
+    data['printerProfiles'] = printer_profiles
 
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

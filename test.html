@@ -123,6 +123,7 @@
           <button class="btn btn-primary btn-sm" onclick="onAddPrinter()">Добавить принтер</button>
           <button class="btn btn-danger btn-sm" onclick="massDelete('printers')">Массовое удаление</button>
           <button class="btn btn-warning btn-sm" onclick="massEdit('printers')">Массовое изменение</button>
+          <button class="btn btn-info btn-sm" id="managePrinterProfilesBtn">Профили принтеров</button>
         </div>
         <div class="table-responsive">
           <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('printersTable', this.value)">
@@ -501,13 +502,9 @@
         </div>
         <pre id="orcaPrinterJsonView" class="p-2 border mt-2"></pre>
         <pre id="orcaPrinterInfoView" class="p-2 border mt-2"></pre>
-        <input type="file" id="orcaPrinterJsonFile" class="d-none" accept=".json">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-        <button type="button" class="btn btn-outline-secondary" id="importPrinterJsonBtn">Импорт JSON</button>
-        <button type="button" class="btn btn-info" id="downloadPrinterJsonBtn">Скачать JSON</button>
-        <button type="button" class="btn btn-info" id="downloadPrinterInfoBtn">Скачать INFO</button>
       </div>
     </div>
   </div>
@@ -633,12 +630,31 @@
       </div>
       <div class="modal-body">
         <div class="mb-2">
-          <button type="button" class="btn btn-success btn-sm me-1" id="importProfileBtn">Импорт JSON</button>
-          <input type="file" class="d-none" id="importProfileInput" accept=".json">
         </div>
         <table class="table table-bordered table-sm">
           <thead><tr><th>Название</th><th>Действия</th></tr></thead>
           <tbody id="materialProfilesTable"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно профилей принтеров -->
+<div class="modal fade" id="managePrinterProfilesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Профили принтеров</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-bordered table-sm">
+          <thead><tr><th>Название</th><th>Принтер</th><th>Действия</th></tr></thead>
+          <tbody id="printerProfilesTable"></tbody>
         </table>
       </div>
       <div class="modal-footer">
@@ -748,12 +764,35 @@ function migrateOldData(obj){
   // Удаляем дубликаты принтеров по имени или адресу
   const uniqList = [];
   const pMap = {};
-  obj.printers.forEach(pr=>{ if(!Array.isArray(pr.orcaProfiles)) pr.orcaProfiles=[]; });
+  if(!Array.isArray(obj.printerProfiles)) obj.printerProfiles=[];
+  obj.printers.forEach(pr=>{
+    if(!Array.isArray(pr.profileIds)) pr.profileIds=[];
+    if(Array.isArray(pr.orcaProfiles)){
+      pr.orcaProfiles.forEach(op=>{
+        const pid=op.id||generateUUID();
+        obj.printerProfiles.push({id:pid,config:op.config||{},info:op.info||'',printerId:String(pr.id)});
+        if(!pr.profileIds.includes(pid)) pr.profileIds.push(pid);
+      });
+    } else if(pr.orca || pr.orcaInfo){
+      const pid=generateUUID();
+      obj.printerProfiles.push({id:pid,config:pr.orca||{},info:pr.orcaInfo||'',printerId:String(pr.id)});
+      pr.profileIds.push(pid);
+    }
+    delete pr.orcaProfiles;
+    delete pr.orca;
+    delete pr.orcaInfo;
+  });
   obj.printers.forEach(pr=>{
     const key = (pr.print_host||'').toLowerCase() + '|' + (pr.name||'').toLowerCase();
     const existing = pMap[key];
     if(existing){
-      pr.orcaProfiles.forEach(op=>{ if(!existing.orcaProfiles.some(e=>e.id===op.id)) existing.orcaProfiles.push(op); });
+      pr.profileIds.forEach(pid=>{
+        if(!existing.profileIds.includes(pid)){
+          existing.profileIds.push(pid);
+          const pf=obj.printerProfiles.find(x=>String(x.id)===String(pid));
+          if(pf) pf.printerId=String(existing.id);
+        }
+      });
       ['cost','hoursToRecoup','power','maintCostHour'].forEach(f=>{ if(!existing[f] && pr[f]) existing[f]=pr[f]; });
     } else {
       pMap[key]=pr; uniqList.push(pr);
@@ -785,8 +824,9 @@ function migrateOldData(obj){
     idMap[String(pr.id).toLowerCase()] = pr;
     if(pr.print_host) idMap[String(pr.print_host).toLowerCase()] = pr;
     if(pr.name) idMap[pr.name.toLowerCase()] = pr;
-    (pr.orcaProfiles||[]).forEach(op=>{
-      const cfg = op.config||{};
+    (pr.profileIds||[]).forEach(pid=>{
+      const pf=obj.printerProfiles.find(x=>String(x.id)===String(pid));
+      const cfg=pf?pf.config||{}:{};
       if(cfg.printer_settings_id) idMap[String(cfg.printer_settings_id).toLowerCase()] = pr;
       if(cfg.name) idMap[String(cfg.name).toLowerCase()] = pr;
     });
@@ -862,17 +902,8 @@ function migrateOldData(obj){
     delete m.orcaInfo;
   });
   obj.additionalGlobal.forEach(a=>{ if(!a.printers) a.printers=[]; });
-  obj.printers.forEach(p=>{
-    if(!Array.isArray(p.orcaProfiles)){
-      if(p.orca){
-        p.orcaProfiles=[{id:generateUUID(),config:p.orca,info:p.orcaInfo||''}];
-      }else{
-        p.orcaProfiles=[];
-      }
-    }
-    delete p.orca;
-    delete p.orcaInfo;
-  });
+  if(!Array.isArray(obj.printerProfiles)) obj.printerProfiles=[];
+  obj.printers.forEach(p=>{ if(!Array.isArray(p.profileIds)) p.profileIds=[]; });
 
   // Удаляем временные принтеры без использования
   const used = new Set();
@@ -1110,7 +1141,7 @@ let appData = {
       hoursToRecoup: 500,
       power: 350,
       maintCostHour: 5,
-      orcaProfiles: []
+      profileIds: []
     }
   ],
   // Глобальные материалы: добавлены новые поля: balance (остаток), declaredWeight, manufacturer, productionDate
@@ -1119,6 +1150,7 @@ let appData = {
     // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, wastePercent: 5, manufacturer: "XYZ", productionDate: "01.01.2025", printers: [] }
   ],
   materialProfiles: [],
+  printerProfiles: [],
   additionalGlobal: [],
   calcSettings: {
     operatorRate: 200,
@@ -1455,7 +1487,7 @@ function onAddPrinter(){
     hoursToRecoup: 1000,
     power: 0,
     maintCostHour: 0,
-    orcaProfiles: []
+    profileIds: []
   };
   appData.printers.push(p);
   saveToLocalStorage();
@@ -2343,6 +2375,45 @@ function deleteMaterialProfileGlobal(pid){
   saveToLocalStorage();
   renderMaterialProfilesTable();
 }
+
+function renderPrinterProfilesTable(){
+  const tb=document.getElementById('printerProfilesTable');
+  tb.innerHTML='';
+  appData.printerProfiles.forEach(p=>{
+    const cfg=p.config||{};
+    const pr=appData.printers.find(x=>String(x.id)===String(p.printerId));
+    const prName=pr?pr.name:'?';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${cfg.printer_settings_id||cfg.name||p.id}</td><td>${prName}</td><td><button class="btn btn-sm btn-warning me-1" onclick="reassignPrinterProfile('${p.id}')">Изменить</button><button class="btn btn-sm btn-danger" onclick="deletePrinterProfileGlobal('${p.id}')">✖</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function openPrinterProfilesManager(){
+  renderPrinterProfilesTable();
+  new bootstrap.Modal(document.getElementById('managePrinterProfilesModal')).show();
+}
+async function reassignPrinterProfile(pid){
+  const pf=appData.printerProfiles.find(p=>String(p.id)===String(pid));
+  if(!pf) return;
+  const options=appData.printers.map(pr=>({value:String(pr.id),label:pr.name}));
+  const res=await showMultiPrompt('Переназначить профиль',[{id:'prid',label:'Принтер',type:'select',options,value:pf.printerId}]);
+  if(!res || !res.prid) return;
+  const newPr=appData.printers.find(pr=>String(pr.id)===String(res.prid));
+  if(!newPr) return;
+  const oldPr=appData.printers.find(pr=>String(pr.id)===String(pf.printerId));
+  if(oldPr) oldPr.profileIds=oldPr.profileIds.filter(id=>String(id)!==String(pid));
+  if(!Array.isArray(newPr.profileIds)) newPr.profileIds=[];
+  if(!newPr.profileIds.includes(pid)) newPr.profileIds.push(pid);
+  pf.printerId=newPr.id;
+  saveToLocalStorage();
+  renderPrinterProfilesTable();
+}
+function deletePrinterProfileGlobal(pid){
+  appData.printers.forEach(pr=>{ if(Array.isArray(pr.profileIds)) pr.profileIds=pr.profileIds.filter(id=>String(id)!==String(pid)); });
+  appData.printerProfiles=appData.printerProfiles.filter(p=>String(p.id)!==String(pid));
+  saveToLocalStorage();
+  renderPrinterProfilesTable();
+}
 function downloadProfileJson(pid){
   const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
   if(!prof) return;
@@ -2698,9 +2769,10 @@ const ORCA_PRINTER_FIELDS = [];
 function populateOrcaProfileSelect(pr){
   const sel=document.getElementById('orcaProfileSelect');
   sel.innerHTML='';
-  pr.orcaProfiles.forEach((p,i)=>{
+  (pr.profileIds||[]).forEach((pid,i)=>{
+    const pf=appData.printerProfiles.find(p=>String(p.id)===String(pid));
+    const cfg=pf?pf.config||{}:{};
     const opt=document.createElement('option');
-    const cfg=p.config||{};
     opt.value=i;
     opt.textContent=cfg.printer_settings_id||cfg.name||('Профиль '+(i+1));
     sel.appendChild(opt);
@@ -2709,7 +2781,8 @@ function populateOrcaProfileSelect(pr){
 
 function loadOrcaProfile(pr,index){
   currentOrcaProfileIndex=index;
-  const profile=pr.orcaProfiles[index];
+  const pid=pr.profileIds[index];
+  const profile=appData.printerProfiles.find(p=>String(p.id)===String(pid));
   const cfg=profile?profile.config||{}:{};
   document.getElementById('orcaPrinterJsonView').textContent=JSON.stringify(cfg,null,2);
   document.getElementById('orcaPrinterInfoView').textContent=profile?profile.info||'':'';
@@ -2720,17 +2793,11 @@ function openPrinterOrca(id){
   const pr=appData.printers.find(p=>String(p.id)===String(id));
   if(!pr) return;
   currentOrcaPrinterId=String(id);
-  if(!Array.isArray(pr.orcaProfiles)){
-    if(pr.orca){
-      pr.orcaProfiles=[{id:generateUUID(),config:pr.orca,info:pr.orcaInfo||''}];
-    }else{
-      pr.orcaProfiles=[];
-    }
-    delete pr.orca;
-    delete pr.orcaInfo;
-  }
-  if(pr.orcaProfiles.length===0){
-    pr.orcaProfiles.push({id:generateUUID(),config:{},info:''});
+  if(!Array.isArray(pr.profileIds)) pr.profileIds=[];
+  if(pr.profileIds.length===0){
+    const pf={id:generateUUID(),config:{},info:'',printerId:String(pr.id)};
+    appData.printerProfiles.push(pf);
+    pr.profileIds.push(pf.id);
   }
   populateOrcaProfileSelect(pr);
   loadOrcaProfile(pr,0);
@@ -2738,54 +2805,15 @@ function openPrinterOrca(id){
 }
 
 
-function downloadPrinterJson(){
-  if(currentOrcaPrinterId===null) return;
-  const pr = appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
-  if(!pr) return;
-  const profile=pr.orcaProfiles[currentOrcaProfileIndex];
-  const cfg = profile?profile.config||{}:{};
-  const jsonBlob = new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
-  const name = (cfg.printer_settings_id||cfg.name||pr.name||'printer');
-  downloadBlob(jsonBlob, name+'.json');
-}
-
-function downloadPrinterInfo(){
-  if(currentOrcaPrinterId===null) return;
-  const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
-  if(!pr) return;
-  const profile=pr.orcaProfiles[currentOrcaProfileIndex];
-  const info = profile?profile.info||'':'';
-  const cfg = profile?profile.config||{}:{};
-  const name = (cfg.printer_settings_id||cfg.name||pr.name||'printer');
-  downloadBlob(new Blob([info],{type:'text/plain'}), name+'.info');
-}
-
-function importPrinterJson(file){
-  if(!file) return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    try{
-      const data=JSON.parse(reader.result);
-      const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
-      if(!pr) return;
-      pr.orcaProfiles.push({id:generateUUID(),config:data,info:''});
-      populateOrcaProfileSelect(pr);
-      loadOrcaProfile(pr,pr.orcaProfiles.length-1);
-      saveToLocalStorage();
-    }catch(err){
-      alert('Ошибка чтения файла: '+err);
-    }
-  };
-  reader.readAsText(file);
-}
 
 
 function deleteOrcaProfile(){
   if(currentOrcaPrinterId===null) return;
   const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
   if(!pr) return;
-  if(pr.orcaProfiles.length<=1) return;
-  pr.orcaProfiles.splice(currentOrcaProfileIndex,1);
+  if(pr.profileIds.length<=1) return;
+  const pid=pr.profileIds.splice(currentOrcaProfileIndex,1)[0];
+  appData.printerProfiles=appData.printerProfiles.filter(p=>String(p.id)!==String(pid));
   const idx=Math.max(0,currentOrcaProfileIndex-1);
   populateOrcaProfileSelect(pr);
   loadOrcaProfile(pr,idx);
@@ -3446,7 +3474,10 @@ function parseIncomingLinkParams(params){
 async function resolvePrinterForLink(key){
   const list = appData.printers.filter(p=>{
     if(p.name===key) return true;
-    return (p.orcaProfiles||[]).some(prf=>prf.config && prf.config.printer_settings_id===key);
+    return (p.profileIds||[]).some(pid=>{
+      const pf=appData.printerProfiles.find(x=>String(x.id)===String(pid));
+      return pf && pf.config && pf.config.printer_settings_id===key;
+    });
   });
   if(list.length===1) return list[0];
   if(list.length>1){
@@ -3625,9 +3656,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
-  document.getElementById('importPrinterJsonBtn').onclick = ()=>document.getElementById('orcaPrinterJsonFile').click();
-  document.getElementById('orcaPrinterJsonFile').addEventListener('change',e=>importPrinterJson(e.target.files[0]));
-  document.getElementById('downloadPrinterJsonBtn').onclick = downloadPrinterJson;
   document.getElementById('delOrcaProfileBtn').onclick = ()=>deleteOrcaProfile();
   document.getElementById('orcaProfileSelect').addEventListener('change',e=>{
     const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
@@ -3641,11 +3669,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if(applyLinkBtn) applyLinkBtn.onclick = applyMaterialProfileLink;
     const manageProfilesBtn=document.getElementById("manageMaterialProfilesBtn");
     if(manageProfilesBtn) manageProfilesBtn.onclick = openMaterialProfilesManager;
-    const importProfileBtn=document.getElementById("importProfileBtn");
-    if(importProfileBtn) importProfileBtn.onclick = () => document.getElementById("importProfileInput").click();
-    document.getElementById("importProfileInput")?.addEventListener("change",e=>importProfileFile(e.target.files[0]));
+    const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
+    if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
 
-  document.getElementById('downloadPrinterInfoBtn').onclick = downloadPrinterInfo;
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
   //   importPrinterJson(e.target.files[0]);
   //   e.target.value='';

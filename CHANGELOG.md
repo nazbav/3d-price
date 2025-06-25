@@ -38,3 +38,7 @@
 - sync_orca.py preserves user printers when merging machine configs, preventing accidental deletion
 - fixed Orca printer fields not displaying due to data-inited check
 - fixed missing closing tag in material modal causing Orca profile windows not to show
+- printer profiles stored globally with unique IDs; manager available via "Профили принтеров"
+- removed импорт и скачивание профилей из интерфейса
+- sync_orca.py выдаёт раздел printerProfiles и связывает их с принтерами
+- в менеджере профилей можно переназначать профиль другому принтеру
