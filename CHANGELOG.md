@@ -26,3 +26,5 @@
 - removed printer mapping feature; history now keeps original IDs
 - fixed showMultiPrompt promise wrapper to prevent script errors
 - expanded AGENTS.md with detailed Ubuntu console testing steps
+- importing models via link now matches materials by print profile; modal selection if multiple
+- removed Orca material settings modal; added simple profile linking and global profile manager
