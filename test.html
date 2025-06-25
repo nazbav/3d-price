@@ -2004,6 +2004,9 @@ function onCalculateAll() {
   const parallelMode = document.getElementById("calcParallelPrinting").value;
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
   let orderId = document.getElementById("calcOrderId").value.trim();
+
+  // итоговый HTML для вывода
+  var htmlRes = '';
   
   // Сохранение настроек расчёта
   appData.calcSettings.operatorRate = opRate;
@@ -2195,7 +2198,21 @@ function onCalculateAll() {
   if(!orderId) orderId = generateUUID();
   document.getElementById("calcOrderId").value = orderId;
 
-  const totalWeight = detailsByPrinter.reduce((acc, printer) =>
+  htmlRes = `<strong>Общий результат:<\/strong><br/>`;
+  htmlRes += `Код: ${orderId}<br/>`;
+  htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
+  htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
+  htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
+  htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽<br/>`;
+  htmlRes += `Наценка: ${markupPercent}%.<br/>`;
+  htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
+  htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
+  htmlRes += `Подитог: ${safeFixed(subtotal)} ₽<br/>`;
+  htmlRes += `Общий налог (${tPercent}%): ${safeFixed(taxAmount)} ₽<br/>`;
+  htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
+ 
+  // Вывод цены за 1 грамм
+  const totalWeight = detailsByPrinter.reduce((acc, printer) => 
     acc + printer.linesDetail.reduce((sum, line) => sum + line.realWeight, 0), 0);
   const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
 

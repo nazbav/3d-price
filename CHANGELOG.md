@@ -51,4 +51,5 @@
 - added button to download a combined label for all models at once in test.html
 - added option to download a stylish summary card with order info and model tiles
 - summary card now shows total plastic weight and final cost; model cards use 'Требуется' for hours
+- fixed ReferenceError in onCalculateAll when generating summary card
 - summary result now renders as a compact card with order info and model tiles
