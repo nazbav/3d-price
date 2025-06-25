@@ -516,10 +516,6 @@
             <input type="text" id="myNalogPhone" class="form-control" />
           </div>
           <div class="mb-3">
-            <label for="myNalogPass" class="form-label">Пароль:</label>
-            <input type="password" id="myNalogPass" class="form-control" />
-          </div>
-          <div class="mb-3">
             <button class="btn btn-secondary" id="requestSmsBtn" onclick="requestMyNalogSms()">Запросить SMS</button>
           </div>
           <div class="mb-3">
@@ -2009,6 +2005,9 @@ let incomingLinkData = null;
 
 let lastSummaryCardHtml = '';
 
+let myNalogChallengeToken = '';
+const MY_NALOG_API = 'https://lknpd.nalog.ru';
+
 
 
 
@@ -3107,62 +3106,95 @@ function downloadSummaryCardHtml(){
   downloadBlob(blob,`OrderSummary_${Date.now()}.html`);
 }
 
-async function sendMyNalogReceipt(){
-  if(!lastCalcFullData){ alert('Нет данных расчета.'); return; }
-  const token = localStorage.getItem('my_nalog_token');
-  if(!token){
-    alert('Токен Мой Налог не указан в настройках.');
-    return;
+function generateDeviceId(len=16){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let out='';
+  for(let i=0;i<len;i++) out+=chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+
+async function refreshMyNalogToken(){
+  const refresh = localStorage.getItem('my_nalog_refresh');
+  const deviceId = localStorage.getItem('my_nalog_device_id');
+  if(!refresh || !deviceId) return false;
+  const body={
+    refreshToken: refresh,
+    deviceInfo:{
+      sourceDeviceId: deviceId,
+      sourceType:'WEB',
+      appVersion:'1.0.0',
+      metaDetails:{userAgent:navigator.userAgent}
+    }
+  };
+  try{
+    const resp = await fetch(MY_NALOG_API+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(resp.ok){
+      const data = await resp.json();
+      if(data.token){
+        localStorage.setItem('my_nalog_token', data.token);
+        if(data.refreshToken) localStorage.setItem('my_nalog_refresh', data.refreshToken);
+        return true;
+      }
+    }
+  }catch(e){
+    console.error('token refresh failed');
   }
+  return false;
+}
+
+async function sendMyNalogRequest(method,url,body){
+  let token = localStorage.getItem('my_nalog_token');
+  if(!token) throw new Error('no token');
+  const opt={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
+  if(body) opt.body=JSON.stringify(body);
+  let resp = await fetch(url,opt);
+  if(resp.status===401){
+    const ok = await refreshMyNalogToken();
+    if(ok){
+      token = localStorage.getItem('my_nalog_token');
+      opt.headers['Authorization']='Bearer '+token;
+      resp = await fetch(url,opt);
+    }
+  }
+  return resp;
+}
+
+async function sendMyNalogReceipt(){
+  if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
   const payload = {
     operationTime: new Date().toISOString(),
     requestTime: new Date().toISOString(),
-    services: [{ name: lastCalcFullData.calcName || 'Заказ', amount: lastCalcFullData.total }],
-    totalAmount: lastCalcFullData.total
+    services: [{ name: lastCalcFullData.calcName || 'Заказ', amount: lastCalcFullData.total, quantity: 1 }],
+    totalAmount: lastCalcFullData.total,
+    paymentType: 'CASH',
+    ignoreMaxTotalIncomeRestriction: false,
+    client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
   };
   try {
-    const resp = await fetch('https://my.nalog.ru/api/self-employed/receipts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify(payload)
-    });
+    const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
-      if(data?.id) alert('Чек отправлен. ID: '+data.id);
+      if(data?.approvedReceiptUuid) alert('Чек отправлен.');
       else alert('Запрос отправлен в Мой Налог');
-    } else {
+    }else{
       const text = await resp.text().catch(()=>resp.status);
-      alert('Ошибка отправки: ' + text);
+      alert('Ошибка отправки: '+text);
     }
-  } catch (e) {
+  }catch(e){
     alert('Не удалось подключиться к сервису Мой Налог');
   }
 }
 
 async function sendMyNalogBill(){
-  if(!lastCalcFullData){ alert('Нет данных расчета.'); return; }
-  const token = localStorage.getItem('my_nalog_token');
-  if(!token){
-    alert('Токен Мой Налог не указан в настройках.');
-    return;
-  }
+  if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
   const payload = {
     requestTime: new Date().toISOString(),
     service: lastCalcFullData.calcName || 'Заказ',
-    amount: lastCalcFullData.total
+    amount: lastCalcFullData.total,
+    client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
   };
   try {
-    const resp = await fetch('https://my.nalog.ru/api/self-employed/bills', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify(payload)
-    });
+    const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/bills',payload);
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
       if(data?.id) alert('Счёт создан. ID: '+data.id);
@@ -3171,7 +3203,7 @@ async function sendMyNalogBill(){
       const text = await resp.text().catch(()=>resp.status);
       alert('Ошибка создания счёта: ' + text);
     }
-  } catch (e) {
+  }catch(e){
     alert('Не удалось подключиться к сервису Мой Налог');
   }
 }
@@ -3193,9 +3225,7 @@ async function checkMyNalogStatus(){
   }
   statusEl.textContent = 'Проверка...';
   try {
-    const resp = await fetch('https://my.nalog.ru/api/self-employed/profile', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
+    const resp = await sendMyNalogRequest('GET',MY_NALOG_API+'/api/v1/user');
     if(resp.ok){
       const data = await resp.json();
       const name = data?.fio || data?.individual?.fio || 'неизвестно';
@@ -3212,20 +3242,21 @@ async function checkMyNalogStatus(){
 
 async function requestMyNalogSms(){
   const phoneNum = document.getElementById('myNalogPhone').value.trim();
-  const pass = document.getElementById('myNalogPass').value.trim();
   const statusEl = document.getElementById('myNalogStatus');
-  if(!phoneNum || !pass){
-    alert('Введите телефон и пароль');
+  if(!phoneNum){
+    alert('Введите телефон');
     return;
   }
   statusEl.textContent = 'Отправка SMS...';
   try{
-    const resp = await fetch('https://my.nalog.ru/api/self-employed/login', {
+    const resp = await fetch(MY_NALOG_API+'/api/v2/auth/challenge/sms/start', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({phone: phoneNum, password: pass})
+      body: JSON.stringify({phone: phoneNum, requireTpToBeActive: true})
     });
     if(resp.ok){
+      const data = await resp.json();
+      myNalogChallengeToken = data.challengeToken;
       statusEl.textContent = 'SMS отправлено';
     }else{
       const text = await resp.text().catch(()=>resp.status);
@@ -3246,15 +3277,30 @@ async function confirmMyNalogSms(){
   }
   statusEl.textContent = 'Подтверждение...';
   try{
-    const resp = await fetch('https://my.nalog.ru/api/self-employed/login/confirm', {
+    const challenge = myNalogChallengeToken || '';
+    const deviceId = localStorage.getItem('my_nalog_device_id') || generateDeviceId();
+    localStorage.setItem('my_nalog_device_id', deviceId);
+    const body = {
+      phone: phoneNum,
+      code,
+      challengeToken: challenge,
+      deviceInfo:{
+        sourceDeviceId: deviceId,
+        sourceType:'WEB',
+        appVersion:'1.0.0',
+        metaDetails:{userAgent:navigator.userAgent}
+      }
+    };
+    const resp = await fetch(MY_NALOG_API+'/api/v2/auth/challenge/sms/verify', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({phone: phoneNum, code})
+      body: JSON.stringify(body)
     });
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
       if(data?.token){
         localStorage.setItem('my_nalog_token', data.token);
+        localStorage.setItem('my_nalog_refresh', data.refreshToken || '');
         document.getElementById('myNalogToken').value = data.token;
         statusEl.textContent = 'Токен получен';
       }else{
