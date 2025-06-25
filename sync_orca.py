@@ -198,7 +198,12 @@ def main():
             pr_map[host_key] = target
 
 
-    printers = [p for p in name_map.values() if not p.get('_merged')]
+    # keep all printers from the input even if they were "merged" with
+    # additional profiles. previously the code removed entries marked as
+    # `_merged`, which could unexpectedly drop user defined printers when
+    # a matching machine file existed.  Instead of filtering them out we
+    # keep every printer and simply clean the helper flag.
+    printers = list(name_map.values())
 
     for p in printers:
         if not isinstance(p.get('orcaProfiles'), list):

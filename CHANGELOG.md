@@ -31,3 +31,4 @@
 - fixed findMaterialByName to handle printers without material lists
 - added missing "Применить" button in material profile link modal to avoid null event handler
 - profile link handlers now check element existence, fixing error when importing a new model
+- sync_orca.py preserves user printers when merging machine configs, preventing accidental deletion
