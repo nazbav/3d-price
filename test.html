@@ -2126,8 +2126,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
       <\/tr><\/thead><tbody>`;
       d.linesDetail.forEach(ln => {
         htmlRes += `<tr>
-          <td>${ln.id || ''}<\/td>
-          <td>${ln.name}<\/td>
+          <td>${ln.name} (${ln.id || ''})<\/td>
           <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
           <td>${ln.status}<\/td>
           <td>${formatTimeForDisplay(ln.hours)}<\/td>
@@ -2880,8 +2879,7 @@ function generateMaxDetailedCalcHtml(d) {
         <tbody>`;
       pr.linesDetail.forEach(ln => {
         s += `<tr>
-          <td>${ln.id || ''}<\/td>
-          <td>${ln.name}<\/td>
+          <td>${ln.name} (${ln.id || ''})<\/td>
           <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
           <td>${ln.status}<\/td>
           <td>${safeFixed(ln.hours)}<\/td>
