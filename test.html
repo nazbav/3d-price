@@ -516,10 +516,6 @@
             <input type="text" id="myNalogPhone" class="form-control" />
           </div>
           <div class="mb-3">
-            <label for="myNalogPass" class="form-label">Пароль:</label>
-            <input type="password" id="myNalogPass" class="form-control" />
-          </div>
-          <div class="mb-3">
             <button class="btn btn-secondary" id="requestSmsBtn" onclick="requestMyNalogSms()">Запросить SMS</button>
           </div>
           <div class="mb-3">
@@ -3243,10 +3239,9 @@ async function checkMyNalogStatus(){
 
 async function requestMyNalogSms(){
   const phoneNum = document.getElementById('myNalogPhone').value.trim();
-  const pass = document.getElementById('myNalogPass').value.trim();
   const statusEl = document.getElementById('myNalogStatus');
-  if(!phoneNum || !pass){
-    alert('Введите телефон и пароль');
+  if(!phoneNum){
+    alert('Введите телефон');
     return;
   }
   statusEl.textContent = 'Отправка SMS...';
