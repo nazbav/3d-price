@@ -464,6 +464,17 @@
             <input type="text" id="paymentInfoInput" class="form-control"/>
           </div>
           <div class="mb-3">
+            <label for="paymentMethodSelect" class="form-label">Способ оплаты QR:</label>
+            <select id="paymentMethodSelect" class="form-select">
+              <option value="account">По реквизитам</option>
+              <option value="sbp">СБП по телефону</option>
+            </select>
+          </div>
+          <div class="mb-3" id="sbpPhoneGroup" style="display:none;">
+            <label for="sbpPhoneInput" class="form-label">Телефон для СБП:</label>
+            <input type="text" id="sbpPhoneInput" class="form-control"/>
+          </div>
+          <div class="mb-3">
             <label for="calcWorkHoursDay" class="form-label">Раб. часов в день:</label>
             <input type="number" id="calcWorkHoursDay" class="form-control" />
           </div>
@@ -1261,6 +1272,8 @@ let appData = {
   companyName: "Компания",
   chatLink: "https://t.me/dur",
   paymentInfo: "",
+  paymentMethod: "account",
+  sbpPhone: "",
   costPerLabel: 0,
   printLabels: false
 },
@@ -1285,6 +1298,8 @@ function loadFromLocalStorage(){
       appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
       if(!appData.labelSettings) appData.labelSettings = {};
       if(!('paymentInfo' in appData.labelSettings)) appData.labelSettings.paymentInfo = '';
+      if(!('paymentMethod' in appData.labelSettings)) appData.labelSettings.paymentMethod = 'account';
+      if(!('sbpPhone' in appData.labelSettings)) appData.labelSettings.sbpPhone = '';
     }
   } catch(e){}
 }
@@ -1315,6 +1330,9 @@ function initAll(){
   document.getElementById("companyNameInput").value = appData.labelSettings.companyName || "";
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
   document.getElementById("paymentInfoInput").value = appData.labelSettings.paymentInfo || "";
+  document.getElementById("paymentMethodSelect").value = appData.labelSettings.paymentMethod || "account";
+  document.getElementById("sbpPhoneInput").value = appData.labelSettings.sbpPhone || "";
+  updatePaymentFields();
   document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
   document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
 }
@@ -2306,7 +2324,8 @@ if(discountPercent > 0){
       `</div>`;
     });
   });
-  generateQRCodeCanvas(appData.labelSettings.chatLink, 120, function(qrCanvas){
+  const qrText = buildPaymentQrString(finalSum, orderId);
+  generateQRCodeCanvas(qrText, 120, function(qrCanvas){
     const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : '';
     lastSummaryCardHtml = buildSummaryCardHtml({
       company: appData.labelSettings.companyName,
@@ -2323,7 +2342,9 @@ if(discountPercent > 0){
       finDate: finDateStr,
       modelsHtml: summaryModels,
       qr: qrDataUrl,
-      paymentInfo: appData.labelSettings.paymentInfo
+      paymentInfo: appData.labelSettings.paymentMethod === 'sbp' ?
+        'СБП: ' + (appData.labelSettings.sbpPhone || '') :
+        appData.labelSettings.paymentInfo
     });
   });
   if (warnings.length > 0) {
@@ -2858,10 +2879,14 @@ function saveBrandingSettings(){
   const cn = document.getElementById("companyNameInput").value.trim();
   const cl = document.getElementById("chatLinkInput").value.trim();
   const pay = document.getElementById("paymentInfoInput").value.trim();
+  const method = document.getElementById("paymentMethodSelect").value;
+  const phone = document.getElementById("sbpPhoneInput").value.trim();
   const hours = parseFloat(document.getElementById("calcWorkHoursDay").value) || 0;
   appData.labelSettings.companyName = cn || "Моя компания";
   appData.labelSettings.chatLink = cl || "https://t.me/example";
   appData.labelSettings.paymentInfo = pay;
+  appData.labelSettings.paymentMethod = method;
+  appData.labelSettings.sbpPhone = phone;
   appData.calcSettings.workHoursDay = hours;
   saveToLocalStorage();
   alert("Сохранено");
@@ -3185,6 +3210,18 @@ function generateDeviceId(len=16){
   return out;
 }
 
+function buildPaymentQrString(amount, orderId){
+  const method = appData.labelSettings.paymentMethod || 'account';
+  if(method === 'sbp'){
+    const phone = (appData.labelSettings.sbpPhone || '').replace(/[^0-9+]/g,'');
+    return `https://qr.nspk.ru/redirect?phone=${encodeURIComponent(phone)}&sum=${safeFixed(amount)}`;
+  }
+  const acc = appData.labelSettings.paymentInfo || '';
+  const name = appData.labelSettings.companyName || '';
+  const sum = Math.round((amount || 0)*100);
+  return `ST00012|Name=${name}|PersonalAcc=${acc}|Sum=${sum}|Purpose=Order_${orderId}`;
+}
+
 async function refreshMyNalogToken(){
   const refresh = localStorage.getItem('my_nalog_refresh');
   const deviceId = localStorage.getItem('my_nalog_device_id');
@@ -3423,6 +3460,14 @@ function toggleFinalFields(val){
   const group=document.getElementById('finalCostGroup');
   if(group){
     group.classList.toggle('d-none', val !== 'done' && val !== 'paid');
+  }
+}
+
+function updatePaymentFields(){
+  const method = document.getElementById('paymentMethodSelect').value;
+  const group = document.getElementById('sbpPhoneGroup');
+  if(group){
+    group.style.display = method === 'sbp' ? 'block' : 'none';
   }
 }
 
@@ -4346,6 +4391,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       localStorage.setItem('my_nalog_phone', e.target.value.trim());
     });
   }
+  const payMethodSel = document.getElementById('paymentMethodSelect');
+  if (payMethodSel) payMethodSel.addEventListener('change', updatePaymentFields);
   const requestSmsBtn = document.getElementById('requestSmsBtn');
   if (requestSmsBtn) requestSmsBtn.addEventListener('click', requestMyNalogSms);
   const confirmSmsBtn = document.getElementById('confirmSmsBtn');
@@ -4359,6 +4406,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
   if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
   loadMyNalogSettings();
+  updatePaymentFields();
 
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
   //   importPrinterJson(e.target.files[0]);
