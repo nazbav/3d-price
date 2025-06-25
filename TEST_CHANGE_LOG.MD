@@ -97,3 +97,5 @@
 - tested import link with numeric profile id: material matched without errors
 - Проверено: иконка в таблице моделей позволяет загрузить PNG, который ужимается до 140x110 и сохраняется в Base64.
 - Исправлено: детализация по принтерам снова отображается после добавления колонки иконок.
+
+- Verified drag-and-drop gcode parsing adds models without errors

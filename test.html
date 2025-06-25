@@ -1262,6 +1262,72 @@ function parseTimeFromLink(str){
   return parseTimeInput(str);
 }
 
+async function parseGcodeText(text){
+  const lines=text.split(/\r?\n/);
+  let code='',timeStr='',weight='',printer='Unknown',matProfile='',thumb='';
+  let afterExec=false,inConfig=false,inThumb=false;
+  for(let raw of lines){
+    const line=raw.trim();
+    if(line.startsWith('; MODEL_CODE:')){ code=line.split(':')[1].trim(); continue; }
+    if(line.startsWith('; THUMBNAIL_BLOCK_START')) continue;
+    if(line.startsWith('; thumbnail begin')){ inThumb=true; continue; }
+    if(line.startsWith('; thumbnail end')){ inThumb=false; continue; }
+    if(inThumb){
+      if(line.startsWith(';')) thumb+=line.slice(1).trim();
+      else thumb+=line.trim();
+      continue;
+    }
+    if(line==='; EXECUTABLE_BLOCK_END'){ afterExec=true; continue; }
+    if(!afterExec) continue;
+    if(line==='; CONFIG_BLOCK_START'){ inConfig=true; continue; }
+    if(line==='; CONFIG_BLOCK_END'){ inConfig=false; continue; }
+    if(line.startsWith('; estimated printing time') && line.includes('=')){
+      timeStr=line.split('=')[1].trim();
+    }else if(line.startsWith('; total filament used [g]') && line.includes('=')){
+      weight=line.split('=')[1].trim();
+    }else if(inConfig){
+      if(line.includes('printer_settings_id') && line.includes('=')){
+        printer=line.split('=')[1].replace(/"/g,'').trim();
+      }else if(line.startsWith('; filament_settings_id') && line.includes('=')){
+        matProfile=line.split('=')[1].replace(/"/g,'').trim();
+      }
+    }
+  }
+  if(!code) code=generateUUID();
+  return {code,timeStr,weight,printer,matProfile,thumb};
+}
+
+async function addModelFromGcode(parsed){
+  const pr=await resolvePrinterForLink(parsed.printer);
+  if(!pr){
+    alert('Не найден принтер '+parsed.printer);
+    return;
+  }
+  const mid=await resolveMaterialIdByProfile(parsed.matProfile);
+  addModelRow(pr.id,{
+    id:parsed.code,
+    name:parsed.code,
+    thumbnail:parsed.thumb,
+    status:'new',
+    hours:parseTimeFromLink(parsed.timeStr),
+    weight:parseFloat(parsed.weight)||0,
+    materialId:mid
+  });
+}
+
+function setupGcodeDrop(){
+  window.addEventListener('dragover',e=>{e.preventDefault();});
+  window.addEventListener('drop',async e=>{
+    e.preventDefault();
+    const files=Array.from(e.dataTransfer.files).filter(f=>f.name.toLowerCase().endsWith('.gcode'));
+    for(const f of files){
+      const txt=await f.text();
+      const parsed=await parseGcodeText(txt);
+      await addModelFromGcode(parsed);
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => { instrumentFunctions(); initAll(); });
 
 /* Функции массовых действий */
@@ -3721,6 +3787,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if(params.toString()){
     window.history.replaceState({}, document.title, window.location.pathname);
   }
+  setupGcodeDrop();
 });
 </script>
 

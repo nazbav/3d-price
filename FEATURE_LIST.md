@@ -76,3 +76,5 @@
 - material lookup by profile now robust to numeric ids; fixed toLowerCase error
 - models table supports PNG thumbnail upload; image is resized to 140x110 and stored in Base64
 - printer detail summary works correctly with thumbnail column
+
+- Drag and drop prepared gcode files onto the page to automatically add models
