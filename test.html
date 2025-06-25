@@ -320,6 +320,7 @@
       <div id="calcPrintersContainer"></div>
       <div class="mt-3">
         <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
+        <button class="btn btn-secondary ms-2" onclick="startNewCalculation()">Новый расчёт</button>
       </div>
       <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
       <div class="mt-2">
@@ -3080,6 +3081,26 @@ function downloadBlob(blob, filename){
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+function startNewCalculation(){
+  document.getElementById("calcName").value="";
+  document.getElementById("calcClientName").value="";
+  document.getElementById("calcOrderStatus").value="new";
+  document.getElementById("calcOrderId").value="";
+  document.getElementById("calcShipping").value="";
+  document.getElementById("calcStartDate").value="";
+  document.getElementById("calcParallelPrinting").value="no";
+  document.getElementById("calcMarkupPercent").value="";
+  document.getElementById("calcResult").style.display="none";
+  document.getElementById("downloadAllLabelsBtn").style.display="none";
+  document.getElementById("downloadSummaryCardBtn").style.display="none";
+  lastCalcFullData=null;
+  lastSummaryCardHtml="";
+  appData.printers.forEach(pr=>{
+    const table=document.getElementById(`calcModelsTable_${pr.id}`);
+    if(table) table.querySelector("tbody").innerHTML="";
+  });
+}
+
 
 
 /* Настройки OrcaSlicer для принтера */

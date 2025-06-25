@@ -83,4 +83,5 @@
 - summary card shows total weight and cost with 'Требуется' field
 - bugfix: summary card generation no longer throws htmlRes undefined error
 - calculation results show a modern summary card with order details and a model grid
+- кнопка "Новый расчёт" сбрасывает форму калькулятора
 - model thumbnail upload crops the image to fit 140x110 and saves compressed JPEG
