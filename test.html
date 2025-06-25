@@ -1887,8 +1887,7 @@ function addModelRow(printerId, modelData) {
   tr.dataset.modelId = code;
   tr.dataset.thumbnail = modelData.thumbnail || '';
   tr.innerHTML = `
-    <td>${code}<\/td>
-    <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /><\/td>
+    <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /> (${code})<\/td>
     <td>
       ${modelData.thumbnail ? `<img id="thumb_${code}" src="data:image/png;base64,${modelData.thumbnail}" style="height:40px;width:40px;object-fit:contain;border:1px solid #ccc;cursor:pointer" onclick="document.getElementById('thumbFile_${code}').click()"/>` : `<i id="thumb_${code}" class="bi bi-image" style="font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('thumbFile_${code}').click()"></i>`}
       <input type="file" id="thumbFile_${code}" accept="image/png" class="d-none" onchange="onModelThumbnailChange(event, '${code}')">
