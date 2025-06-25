@@ -3166,7 +3166,9 @@ async function sendMyNalogReceipt(){
     requestTime: new Date().toISOString(),
     services: [{ name: lastCalcFullData.calcName || 'Заказ', amount: lastCalcFullData.total, quantity: 1 }],
     totalAmount: lastCalcFullData.total,
-    paymentType: 'CASH'
+    paymentType: 'CASH',
+    ignoreMaxTotalIncomeRestriction: false,
+    client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
   };
   try {
     const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
@@ -3188,7 +3190,8 @@ async function sendMyNalogBill(){
   const payload = {
     requestTime: new Date().toISOString(),
     service: lastCalcFullData.calcName || 'Заказ',
-    amount: lastCalcFullData.total
+    amount: lastCalcFullData.total,
+    client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
   };
   try {
     const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/bills',payload);
