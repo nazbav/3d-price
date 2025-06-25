@@ -731,6 +731,7 @@ function migrateOldData(obj){
     delete pr.materials;
     delete pr.additional;
 
+
   });
 
   // Удаляем дубликаты принтеров по имени или адресу
@@ -804,7 +805,6 @@ function migrateOldData(obj){
       }
       h.calcData = newCD;
     }
-
   });
 
   // Перенос клиентов из истории
@@ -2928,14 +2928,10 @@ ensureIconsLoaded();
   // 1. Расчет капитальных вложений
   const calculateCapitalInvestments = () => {
     const capital = {
-      printersCost: appData.printers.reduce((sum, p) => sum + p.cost, 0),
-      printersAdds: appData.printers.reduce(
-        (sum, p) => sum + p.additional.reduce((aSum, a) => aSum + a.cost, 0), 0),
-      printersMats: appData.printers.reduce(
-        (sum, p) => sum + p.materials.reduce((mSum, m) => mSum + (m.costPerKg * m.declaredWeight), 0), 0),
+      printersCost: appData.printers.reduce((sum, p) => sum + (p.cost || 0), 0),
       globalMats: appData.materials.reduce(
-        (sum, m) => sum + (m.costPerKg * m.declaredWeight), 0),
-      globalAdds: appData.additionalGlobal.reduce((sum, a) => sum + a.cost, 0)
+        (sum, m) => sum + ((m.costPerKg || 0) * (m.declaredWeight || 0)), 0),
+      globalAdds: appData.additionalGlobal.reduce((sum, a) => sum + (a.cost || 0), 0)
     };
 
     capital.total = Object.values(capital).reduce((sum, val) => sum + val, 0);
@@ -3187,13 +3183,11 @@ ensureIconsLoaded();
             </div>
             <div class="col-md-4">
               <h6>Материалы:</h6>
-              <p>Принтерные: <strong>${formatCurrency(capital.printersMats)}</strong></p>
-              <p>Глобальные: <strong>${formatCurrency(capital.globalMats)}</strong></p>
+              <p class="mb-1">Глобальные: <strong>${formatCurrency(capital.globalMats)}</strong></p>
             </div>
             <div class="col-md-4">
               <h6>Дополнительно:</h6>
-              <p>Принтерные: <strong>${formatCurrency(capital.printersAdds)}</strong></p>
-              <p>Глобальные: <strong>${formatCurrency(capital.globalAdds)}</strong></p>
+              <p class="mb-1">Глобальные: <strong>${formatCurrency(capital.globalAdds)}</strong></p>
             </div>
           </div>
           <div class="alert alert-primary mt-3 mb-0">
