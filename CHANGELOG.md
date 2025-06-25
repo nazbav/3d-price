@@ -20,4 +20,5 @@
 - printer mapping table shows model name and supports bulk assignment
 - sync_orca.py skips machine configs for unknown printers; add devices in advance
 - removed temporary printer cleanup logic after disabling auto creation
+- material profile editor shows all profiles in dropdown for любого материала
 - removed printer mapping feature; history now keeps original IDs

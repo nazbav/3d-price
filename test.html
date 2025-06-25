@@ -2445,6 +2445,7 @@ function downloadMaterialLabelHtml(materialId) {
 
 /* Настройки OrcaSlicer для материала */
 let currentOrcaMaterialId = null;
+let currentMaterialProfileId = null;
 let currentMaterialProfileIndex = 0;
 const ORCA_FIELDS = [
   'type','filament_id','setting_id','name','from','instantiation','inherits','filament_diameter','filament_density','filament_cost','spool_weight','filament_runout_sensor','enable_volumetric_extrusion','filament_start_gcode','filament_end_gcode','enable_cooling','fan_speed_min','fan_speed_max','start_layer','stop_cooling_first_layers','min_layer_time','bridge_fan_speed','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','perimeter_speed','infill_speed','support_speed','external_wall_speed','travel_speed','flow_rate_overrides','retraction_distance','retraction_speed','extra_restart_distance','coasting_distance','wipe_distance','enable_pressure_advance','pressure_advance','min_extrusion_before_retract','filament_runout_gcode','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','steps_per_mm','filament_drive_gear_diameter','volumetric_extrusion','extrusion_multiplier','compatible_printers','required_nozzle_sizes','required_extruder_count','requires_heated_bed','notes','version','author','based_on','profile_type','shared_with','uuid'
@@ -2492,22 +2493,25 @@ function ensureOrcaFieldsHtml(){
   container.dataset.inited='1';
 }
 
-function populateMaterialProfileSelect(mat){
+function populateMaterialProfileSelect(mat, selectedId){
   const sel=document.getElementById('materialProfileSelect');
   sel.innerHTML='';
-  (mat.profileIds||[]).forEach((pid,i)=>{
-    const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  appData.materialProfiles.forEach((p,i)=>{
     const opt=document.createElement('option');
-    const cfg=prof?prof.config||{}:{};
-    opt.value=i;
+    const cfg=p.config||{};
+    opt.value=p.id;
     opt.textContent=cfg.filament_settings_id||cfg.name||('Профиль '+(i+1));
     sel.appendChild(opt);
   });
+  if(selectedId) sel.value=selectedId;
 }
 
-function loadMaterialProfile(mat,index){
-  currentMaterialProfileIndex=index;
-  const pid=mat.profileIds[index];
+function loadMaterialProfile(mat,pid){
+  if(!pid) return;
+  currentMaterialProfileId=String(pid);
+  if(!Array.isArray(mat.profileIds)) mat.profileIds=[];
+  if(!mat.profileIds.includes(currentMaterialProfileId)) mat.profileIds.push(currentMaterialProfileId);
+  currentMaterialProfileIndex=mat.profileIds.indexOf(currentMaterialProfileId);
   const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
   document.querySelectorAll('#orcaMaterialModal .orca-input').forEach(el=>{el.value='';});
   const cfg=prof?prof.config||{}:{};
@@ -2517,7 +2521,7 @@ function loadMaterialProfile(mat,index){
   }
   document.getElementById('orcaJsonView').textContent=JSON.stringify(cfg,null,2);
   document.getElementById('orcaInfoView').textContent=prof?prof.info||'' : '';
-  document.getElementById('materialProfileSelect').value=index;
+  document.getElementById('materialProfileSelect').value=pid;
 }
 
 function openOrcaConfig(matId){
@@ -2538,8 +2542,9 @@ function openOrcaConfig(matId){
     appData.materialProfiles.push(pf);
     mat.profileIds.push(pf.id);
   }
-  populateMaterialProfileSelect(mat);
-  loadMaterialProfile(mat,0);
+  const firstPid=mat.profileIds[0];
+  populateMaterialProfileSelect(mat, firstPid);
+  loadMaterialProfile(mat, firstPid);
   new bootstrap.Modal(document.getElementById('orcaMaterialModal')).show();
 }
 
@@ -2547,7 +2552,7 @@ function saveOrcaConfig(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const pid=mat.profileIds[currentMaterialProfileIndex];
+  const pid=currentMaterialProfileId;
   let prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
   if(!prof){
     prof={id:pid||generateUUID(),config:{},info:''};
@@ -2578,7 +2583,7 @@ function downloadOrcaJson(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const pid=mat.profileIds[currentMaterialProfileIndex];
+  const pid=currentMaterialProfileId;
   const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
   const cfg = prof?prof.config||{}:{};
   const jsonBlob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
@@ -2589,7 +2594,7 @@ function downloadOrcaInfo(){
   if(currentOrcaMaterialId===null) return;
   const mat = findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const pid=mat.profileIds[currentMaterialProfileIndex];
+  const pid=currentMaterialProfileId;
   const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
   const info = prof?prof.info||'':'';
   const infoBlob = new Blob([info],{type:'text/plain'});
@@ -2832,8 +2837,8 @@ async function addMaterialProfile(){
     pid=String(pf.id);
   }
   if(!mat.profileIds.includes(pid)) mat.profileIds.push(pid);
-  populateMaterialProfileSelect(mat);
-  loadMaterialProfile(mat,mat.profileIds.indexOf(pid));
+  populateMaterialProfileSelect(mat, pid);
+  loadMaterialProfile(mat,pid);
 }
 
 function removeMaterialProfile(){
@@ -2841,17 +2846,20 @@ function removeMaterialProfile(){
   const mat=findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
   if(mat.profileIds.length<=1) return;
-  mat.profileIds.splice(currentMaterialProfileIndex,1);
-  const idx=Math.max(0,currentMaterialProfileIndex-1);
-  populateMaterialProfileSelect(mat);
-  loadMaterialProfile(mat,idx);
+  const idx=mat.profileIds.indexOf(currentMaterialProfileId);
+  if(idx===-1) return;
+  mat.profileIds.splice(idx,1);
+  const newIdx=Math.max(0,idx-1);
+  const newPid=mat.profileIds[newIdx];
+  populateMaterialProfileSelect(mat,newPid);
+  loadMaterialProfile(mat,newPid);
 }
 
 function deleteMaterialProfile(){
   if(currentOrcaMaterialId===null) return;
   const mat=findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const pid=mat.profileIds[currentMaterialProfileIndex];
+  const pid=currentMaterialProfileId;
   appData.materials.forEach(m=>{ if(Array.isArray(m.profileIds)) m.profileIds = m.profileIds.filter(id=>String(id)!==String(pid)); });
   appData.materialProfiles = appData.materialProfiles.filter(p=>String(p.id)!==String(pid));
   if(mat.profileIds.length===0){
@@ -2859,8 +2867,9 @@ function deleteMaterialProfile(){
     appData.materialProfiles.push(pf);
     mat.profileIds.push(pf.id);
   }
-  populateMaterialProfileSelect(mat);
-  loadMaterialProfile(mat,0);
+  const firstPid=mat.profileIds[0];
+  populateMaterialProfileSelect(mat,firstPid);
+  loadMaterialProfile(mat,firstPid);
 }
 
 function downloadFullDetailedCalculation(){
@@ -3707,7 +3716,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('delMaterialProfileBtn').onclick = ()=>deleteMaterialProfile();
   document.getElementById('materialProfileSelect').addEventListener('change',e=>{
     const mat=findMaterialById(currentOrcaMaterialId);
-    if(mat) loadMaterialProfile(mat,parseInt(e.target.value,10));
+    if(mat) loadMaterialProfile(mat,e.target.value);
   });
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
