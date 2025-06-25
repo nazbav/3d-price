@@ -826,14 +826,12 @@ function migrateOldData(obj){
     if(Array.isArray(h.details)){
       h.details.forEach(d=>{
         let pr = ensurePrinter(d.printerId) || ensurePrinter(d.printerName?.toLowerCase());
-        if(!pr){
-          pr = {id: generateUUID(), name: d.printerName||'Temp', cost:0, hoursToRecoup:1000, power:0, maintCostHour:0,
-                 orcaProfiles:[], additional:[], materials:[], isTemp:true};
-          obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
-          unresolved.push({history:h,tempId:pr.id,origName:d.printerName||d.printerId});
+        if(pr){
+          d.printerId = pr.id;
+          d.printerName = pr.name;
+        } else {
+          unresolved.push({history:h,ref:d.printerId,origName:d.printerName||d.printerId});
         }
-        d.printerId = pr.id;
-        d.printerName = pr.name;
       });
     }
     if(h.calcData){
@@ -844,13 +842,12 @@ function migrateOldData(obj){
           const det = (h.details||[]).find(d=>String(d.printerId)===String(pid));
           pr = det? ensurePrinter(det.printerId) : null;
         }
-        if(!pr){
-          pr = {id: generateUUID(), name: pid, cost:0, hoursToRecoup:1000, power:0, maintCostHour:0,
-                 orcaProfiles:[], additional:[], materials:[], isTemp:true};
-          obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
-          unresolved.push({history:h,tempId:pr.id,origName:pid});
+        if(pr){
+          newCD[pr.id] = h.calcData[pid];
+        } else {
+          unresolved.push({history:h,ref:pid,origName:pid});
+          newCD[pid] = h.calcData[pid];
         }
-        newCD[pr.id] = h.calcData[pid];
       }
       h.calcData = newCD;
     }
@@ -1044,17 +1041,16 @@ function showPrinterMapModal(list){
       if(target){
         const hist=entry.history;
         if(Array.isArray(hist.details)) hist.details.forEach(d=>{
-          if(String(d.printerId)===String(entry.tempId)){
+          if(String(d.printerId)===String(entry.ref) || d.printerName===entry.origName){
             d.printerId=target.id; d.printerName=target.name;
           }
         });
-        if(hist.calcData && hist.calcData[entry.tempId]){
-          hist.calcData[target.id]=hist.calcData[entry.tempId];
-          delete hist.calcData[entry.tempId];
+        if(hist.calcData && hist.calcData[entry.ref]){
+          hist.calcData[target.id]=hist.calcData[entry.ref];
+          delete hist.calcData[entry.ref];
         }
       }
     });
-    appData.printers=appData.printers.filter(p=>!p.isTemp);
     modal.hide();
     renderHistoryTable();
     renderPrintersTable();
