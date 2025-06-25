@@ -74,3 +74,6 @@
 - диалоги sync_orca пропускают лишние вопросы и позволяют менять существующие связи.
 - Профиль можно перенести на другой принтер через менеджер профилей.
 - material lookup by profile now robust to numeric ids; fixed toLowerCase error
+- models table supports PNG thumbnail upload; image is resized to 140x110 and stored in Base64
+- printer detail summary works correctly with thumbnail column
+- model row parsing ignores file inputs when calculating costs

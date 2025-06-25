@@ -1165,7 +1165,7 @@ let appData = {
   labelSettings: {
   companyName: "Компания",
   chatLink: "https://t.me/dur",
-  costPerLabel: 0,   
+  costPerLabel: 0,
   printLabels: false
 },
   clients: [],
@@ -1187,6 +1187,7 @@ function loadFromLocalStorage(){
       if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
       appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
       appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
+      if(!appData.labelSettings) appData.labelSettings = {};
     }
   } catch(e){}
 }
@@ -1791,6 +1792,7 @@ function renderCalcPrinters(){
   });
 }
 function addModelRow(printerId, modelData) {
+  ensureIconsLoaded();
   const table = document.getElementById(`calcModelsTable_${printerId}`);
   if(!table) return;
   const tbody = table.querySelector("tbody");
@@ -1821,7 +1823,10 @@ function addModelRow(printerId, modelData) {
   tr.innerHTML = `
     <td>${code}<\/td>
     <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /><\/td>
-    <td>${modelData.thumbnail ? `<img src="data:image/png;base64,${modelData.thumbnail}" style="height:40px;"/>` : ''}<\/td>
+    <td>
+      ${modelData.thumbnail ? `<img id="thumb_${code}" src="data:image/png;base64,${modelData.thumbnail}" style="height:40px;width:40px;object-fit:contain;border:1px solid #ccc;cursor:pointer" onclick="document.getElementById('thumbFile_${code}').click()"/>` : `<i id="thumb_${code}" class="bi bi-image" style="font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('thumbFile_${code}').click()"></i>`}
+      <input type="file" id="thumbFile_${code}" accept="image/png" class="d-none" onchange="onModelThumbnailChange(event, '${code}')">
+    <\/td>
     <td>
       <select class="form-select form-select-sm" id="${statusId}">
         ${optsStatus}
@@ -1902,10 +1907,11 @@ function onCalculateAll() {
     const rows = table.querySelectorAll("tbody tr");
     let modelsData = [];
     rows.forEach(row => {
-      const inpName = row.querySelectorAll("input")[0];
+      const inputs = Array.from(row.querySelectorAll('input')).filter(inp => inp.type !== 'file');
+      const inpName = inputs[0];
       const selStatus = row.querySelectorAll("select")[0];
-      const inpH = row.querySelectorAll("input")[1];
-      const inpW = row.querySelectorAll("input")[2];
+      const inpH = inputs[1];
+      const inpW = inputs[2];
       const selM = row.querySelectorAll("select")[1];
       const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
@@ -1940,10 +1946,11 @@ function onCalculateAll() {
     let lines = [];
     const rows = table.querySelectorAll("tbody tr");
     rows.forEach(row => {
-      const inpName = row.querySelectorAll("input")[0];
+      const inputs = Array.from(row.querySelectorAll('input')).filter(inp => inp.type !== 'file');
+      const inpName = inputs[0];
       const selStatus = row.querySelectorAll("select")[0];
-      const inpH = row.querySelectorAll("input")[1];
-      const inpW = row.querySelectorAll("input")[2];
+      const inpH = inputs[1];
+      const inpW = inputs[2];
       const selM = row.querySelectorAll("select")[1];
       const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
@@ -2603,6 +2610,37 @@ function saveCalcSettings(){
   appData.calcSettings.taxPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
   saveToLocalStorage();
   alert("Сохранено");
+}
+
+function onModelThumbnailChange(e, code){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 140;
+      canvas.height = 110;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/png');
+      const base64 = dataUrl.split(',')[1];
+      const tr = e.target.closest('tr');
+      if(tr) tr.dataset.thumbnail = base64;
+      let imgEl = document.getElementById('thumb_'+code);
+      if(imgEl){
+        if(imgEl.tagName.toLowerCase() === 'img'){
+          imgEl.src = dataUrl;
+        } else {
+          imgEl.outerHTML = `<img id="thumb_${code}" src="${dataUrl}" style="height:40px;width:40px;object-fit:contain;border:1px solid #ccc;cursor:pointer" onclick=\"document.getElementById('thumbFile_${code}').click()\">`;
+        }
+      }
+      saveToLocalStorage();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 /* Функция генерации QR-кода */
