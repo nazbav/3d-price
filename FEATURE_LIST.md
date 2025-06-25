@@ -83,6 +83,7 @@
 - summary card shows total weight and cost with 'Требуется' field
 - bugfix: summary card generation no longer throws htmlRes undefined error
 - calculation results show a modern summary card with order details and a model grid
+- авторизация по телефону и SMS для автоматического получения токена
 - кнопка "Новый расчёт" очищает модели и основные поля заказа
 - скидка в процентах с выводом зачеркнутой цены и возможность задать финальную стоимость
 - кнопка "Новый расчёт" сбрасывает форму калькулятора

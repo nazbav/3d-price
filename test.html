@@ -487,6 +487,22 @@
             <label for="calcTaxPercent" class="form-label">Налог (%):</label>
             <input type="number" step="1" id="calcTaxPercent" class="form-control" />
           </div>
+          <div class="mb-3">
+            <label for="myNalogPhone" class="form-label">Телефон:</label>
+            <input type="text" id="myNalogPhone" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label for="myNalogPass" class="form-label">Пароль:</label>
+            <input type="password" id="myNalogPass" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <button class="btn btn-secondary" id="requestSmsBtn" onclick="requestMyNalogSms()">Запросить SMS</button>
+          </div>
+          <div class="mb-3">
+            <label for="myNalogSms" class="form-label">Код из SMS:</label>
+            <input type="text" id="myNalogSms" class="form-control" />
+            <button class="btn btn-primary mt-2" id="confirmSmsBtn" onclick="confirmMyNalogSms()">Получить токен</button>
+          </div>
           <button class="btn btn-primary" onclick="saveCalcSettings()">Сохранить</button>
         </div>
     <div class="tab-pane fade" id="cloudSet" role="tabpanel">
@@ -3138,6 +3154,70 @@ async function sendMyNalogReceipt(){
   if(!lastCalcFullData){ alert('Нет данных расчета.'); return; }
   const token = localStorage.getItem('my_nalog_token');
   if(!token){
+  const phone = document.getElementById('myNalogPhone');
+  if(phone) localStorage.setItem('my_nalog_phone', phone.value.trim());
+async function requestMyNalogSms(){
+  const phone = document.getElementById('myNalogPhone').value.trim();
+  const pass = document.getElementById('myNalogPass').value.trim();
+  const statusEl = document.getElementById('myNalogStatus');
+  if(!phone || !pass){
+    alert('Введите телефон и пароль');
+    return;
+  }
+  statusEl.textContent = 'Отправка SMS...';
+  try{
+    const resp = await fetch('https://my.nalog.ru/api/self-employed/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, password: pass})
+    });
+    if(resp.ok){
+      statusEl.textContent = 'SMS отправлено';
+    }else{
+      const text = await resp.text().catch(()=>resp.status);
+      statusEl.textContent = 'Ошибка: ' + text;
+    }
+  }catch(e){
+    statusEl.textContent = 'Нет соединения';
+  }
+}
+
+async function confirmMyNalogSms(){
+  const phone = document.getElementById('myNalogPhone').value.trim();
+  const code = document.getElementById('myNalogSms').value.trim();
+  const statusEl = document.getElementById('myNalogStatus');
+  if(!phone || !code){
+    alert('Нужен телефон и код');
+    return;
+  }
+  statusEl.textContent = 'Подтверждение...';
+  try{
+    const resp = await fetch('https://my.nalog.ru/api/self-employed/login/confirm', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone, code})
+    });
+    if(resp.ok){
+      const data = await resp.json().catch(()=>null);
+      if(data?.token){
+        localStorage.setItem('my_nalog_token', data.token);
+        document.getElementById('myNalogToken').value = data.token;
+        statusEl.textContent = 'Токен получен';
+      }else{
+        statusEl.textContent = 'Код подтвержден';
+      }
+    }else{
+      const text = await resp.text().catch(()=>resp.status);
+      statusEl.textContent = 'Ошибка: ' + text;
+    }
+  }catch(e){
+    statusEl.textContent = 'Нет соединения';
+  }
+}
+
+  const phone = localStorage.getItem('my_nalog_phone') || '';
+  const phoneInp = document.getElementById('myNalogPhone');
+  if(phoneInp) phoneInp.value = phone;
     alert('Токен Мой Налог не указан в настройках.');
     return;
   }
@@ -4112,6 +4192,9 @@ async function saveSettingsToCloud() {
 
 async function loadSettingsFromCloud() {
   const { data, error } = await _supabase
+  document.getElementById('myNalogPhone')?.addEventListener('change', e => localStorage.setItem('my_nalog_phone', e.target.value.trim()));
+  document.getElementById('requestSmsBtn')?.addEventListener('click', requestMyNalogSms);
+  document.getElementById('confirmSmsBtn')?.addEventListener('click', confirmMyNalogSms);
     .from('user_settings')
     .select('*')
     .eq('sync_id', syncId)
