@@ -189,16 +189,8 @@ def main():
         elif name.lower() in name_map:
             target = name_map[name.lower()]
         if not target:
-            target = {
-                'id': int(time.time()*1000) + len(name_map),
-                'name': name,
-                'cost': 0,
-                'hoursToRecoup': 1000,
-                'power': 0,
-                'maintCostHour': 0,
-                'orcaProfiles': []
-            }
-            name_map[name.lower()] = target
+            # skip machines that are not listed in input data
+            continue
         if 'orcaProfiles' not in target:
             target['orcaProfiles'] = []
         target['orcaProfiles'].append({'id': int(time.time()*1000), 'config': orca, 'info': info_text})

@@ -18,3 +18,4 @@
 - removed automatic creation of printers from history; unresolved printers must be added manually or via import
 - materials can now link existing Orca profiles from the global list
 - printer mapping table shows model name and supports bulk assignment
+- sync_orca.py skips machine configs for unknown printers; add devices in advance
