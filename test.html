@@ -826,14 +826,12 @@ function migrateOldData(obj){
     if(Array.isArray(h.details)){
       h.details.forEach(d=>{
         let pr = ensurePrinter(d.printerId) || ensurePrinter(d.printerName?.toLowerCase());
-        if(!pr){
-          pr = {id: generateUUID(), name: d.printerName||'Temp', cost:0, hoursToRecoup:1000, power:0, maintCostHour:0,
-                 orcaProfiles:[], additional:[], materials:[], isTemp:true};
-          obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
-          unresolved.push({history:h,tempId:pr.id,origName:d.printerName||d.printerId});
+        if(pr){
+          d.printerId = pr.id;
+          d.printerName = pr.name;
+        } else {
+          unresolved.push({history:h,ref:d.printerId,origName:d.printerName||d.printerId});
         }
-        d.printerId = pr.id;
-        d.printerName = pr.name;
       });
     }
     if(h.calcData){
@@ -844,13 +842,12 @@ function migrateOldData(obj){
           const det = (h.details||[]).find(d=>String(d.printerId)===String(pid));
           pr = det? ensurePrinter(det.printerId) : null;
         }
-        if(!pr){
-          pr = {id: generateUUID(), name: pid, cost:0, hoursToRecoup:1000, power:0, maintCostHour:0,
-                 orcaProfiles:[], additional:[], materials:[], isTemp:true};
-          obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
-          unresolved.push({history:h,tempId:pr.id,origName:pid});
+        if(pr){
+          newCD[pr.id] = h.calcData[pid];
+        } else {
+          unresolved.push({history:h,ref:pid,origName:pid});
+          newCD[pid] = h.calcData[pid];
         }
-        newCD[pr.id] = h.calcData[pid];
       }
       h.calcData = newCD;
     }
@@ -1044,17 +1041,16 @@ function showPrinterMapModal(list){
       if(target){
         const hist=entry.history;
         if(Array.isArray(hist.details)) hist.details.forEach(d=>{
-          if(String(d.printerId)===String(entry.tempId)){
+          if(String(d.printerId)===String(entry.ref) || d.printerName===entry.origName){
             d.printerId=target.id; d.printerName=target.name;
           }
         });
-        if(hist.calcData && hist.calcData[entry.tempId]){
-          hist.calcData[target.id]=hist.calcData[entry.tempId];
-          delete hist.calcData[entry.tempId];
+        if(hist.calcData && hist.calcData[entry.ref]){
+          hist.calcData[target.id]=hist.calcData[entry.ref];
+          delete hist.calcData[entry.ref];
         }
       }
     });
-    appData.printers=appData.printers.filter(p=>!p.isTemp);
     modal.hide();
     renderHistoryTable();
     renderPrintersTable();
@@ -2912,16 +2908,27 @@ function deleteOrcaProfile(){
   loadOrcaProfile(pr,idx);
 }
 
-function addMaterialProfile(){
+async function addMaterialProfile(){
   if(currentOrcaMaterialId===null) return;
   const mat=findMaterialById(currentOrcaMaterialId);
   if(!mat) return;
-  const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
-  appData.materialProfiles.push(pf);
   if(!Array.isArray(mat.profileIds)) mat.profileIds=[];
-  mat.profileIds.push(pf.id);
+  const options = appData.materialProfiles.map(p=>{
+    const cfg=p.config||{};
+    return {value:String(p.id),label:cfg.filament_settings_id||cfg.name||p.id};
+  });
+  options.unshift({value:'new',label:'<Новый профиль>'});
+  const vals = await showMultiPrompt('Добавить профиль',[{id:'pid',label:'Профиль',type:'select',options:options}]);
+  if(!vals || !vals.pid) return;
+  let pid=vals.pid;
+  if(pid==='new'){
+    const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
+    appData.materialProfiles.push(pf);
+    pid=String(pf.id);
+  }
+  if(!mat.profileIds.includes(pid)) mat.profileIds.push(pid);
   populateMaterialProfileSelect(mat);
-  loadMaterialProfile(mat,mat.profileIds.length-1);
+  loadMaterialProfile(mat,mat.profileIds.indexOf(pid));
 }
 
 function removeMaterialProfile(){
