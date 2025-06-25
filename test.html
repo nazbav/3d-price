@@ -658,42 +658,6 @@
   </div>
 </div>
 
-<!-- Модальное окно сопоставления принтеров -->
-<div class="modal fade" id="printerMapModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Неопределённые принтеры</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <table class="table table-bordered" id="printerMapTable">
-          <thead>
-          <tr>
-            <th></th>
-            <th>Дата/время</th>
-            <th>Код</th>
-            <th>Название расчёта</th>
-            <th>Клиент</th>
-            <th>Статус</th>
-            <th>Итог (₽)</th>
-            <th>Модель</th>
-            <th>Исходный</th>
-            <th>Целевой принтер</th>
-          </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="modal-footer">
-        <select class="form-select w-auto" id="bulkPrinterSelect"></select>
-        <button type="button" class="btn btn-secondary" id="applyBulkMap">Назначить выбранным</button>
-        <button type="button" class="btn btn-primary ms-auto" id="printerMapSave">Сохранить</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const _instrumentInitialKeys = new Set(Object.keys(window));
@@ -908,7 +872,6 @@ function migrateOldData(obj){
     if(h.calcData) Object.keys(h.calcData).forEach(pid=> used.add(String(pid)) );
   });
   obj.printers = obj.printers.filter(p=> !p.isTemp || used.has(String(p.id)) );
-  obj._unresolvedPrinters = unresolved;
   return obj;
 }
 
@@ -1014,68 +977,6 @@ function populatePrintersSelect(sel, selected){
   });
 }
 
-function showPrinterMapModal(list){
-  if(!list || list.length===0) return;
-  const tbody=document.querySelector('#printerMapTable tbody');
-  tbody.innerHTML='';
-  list.forEach((rec,i)=>{
-    const h=rec.history;
-    const tr=document.createElement('tr');
-    tr.dataset.index=i;
-    tr.innerHTML=`<td><input type="checkbox" class="form-check-input"></td>`+
-                 `<td>${new Date(h.timestamp||0).toLocaleString()}</td>`+
-                 `<td>${h.id||''}</td>`+
-                 `<td>${h.calcName||''}</td>`+
-                 `<td>${h.clientName||''}</td>`+
-                 `<td>${h.orderStatus||''}</td>`+
-                 `<td>${safeFixed(h.total||0)}</td>`+
-                 `<td>${rec.model||''}</td>`+
-                 `<td>${rec.origName}</td>`+
-                 '<td></td>';
-    const sel=document.createElement('select');
-    populatePrintersSelect(sel);
-    tr.lastChild.appendChild(sel);
-    tbody.appendChild(tr);
-  });
-  const bulkSel=document.getElementById('bulkPrinterSelect');
-  populatePrintersSelect(bulkSel);
-  document.getElementById('applyBulkMap').onclick=()=>{
-    const rows=tbody.querySelectorAll('tr');
-    rows.forEach(row=>{
-      if(row.querySelector('input[type=checkbox]').checked){
-        const sel=row.querySelector('select');
-        sel.value=bulkSel.value;
-      }
-    });
-  };
-  const modal=new bootstrap.Modal(document.getElementById('printerMapModal'));
-  document.getElementById('printerMapSave').onclick=()=>{
-    const rows=tbody.querySelectorAll('tr');
-    rows.forEach(row=>{
-      const idx=parseInt(row.dataset.index,10);
-      const sel=row.querySelector('select');
-      const entry=list[idx];
-      const target=appData.printers.find(p=>String(p.id)===String(sel.value));
-      if(target){
-        const hist=entry.history;
-        if(Array.isArray(hist.details)) hist.details.forEach(d=>{
-          if(String(d.printerId)===String(entry.ref) || d.printerName===entry.origName){
-            d.printerId=target.id; d.printerName=target.name;
-          }
-        });
-        if(hist.calcData && hist.calcData[entry.ref]){
-          hist.calcData[target.id]=hist.calcData[entry.ref];
-          delete hist.calcData[entry.ref];
-        }
-      }
-    });
-    modal.hide();
-    renderHistoryTable();
-    renderPrintersTable();
-    saveToLocalStorage();
-  };
-  modal.show();
-}
 
 function printerNameById(id){
   const p=appData.printers.find(pr=>String(pr.id)===String(id));
@@ -1165,14 +1066,7 @@ function initAll(){
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
   document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
   document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
-
-  if(appData._unresolvedPrinters && appData._unresolvedPrinters.length){
-    showPrinterMapModal(appData._unresolvedPrinters);
-    appData._unresolvedPrinters = [];
-  }
-
 }
-
 
 // Функции для работы с форматами времени
 function parseTimeInput(input) {
