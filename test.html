@@ -970,6 +970,89 @@ function populatePrintersSelect(sel, selected){
   });
 }
 
+function collectUnresolvedPrinters(){
+  const idSet=new Set(appData.printers.map(p=>String(p.id)));
+  const list=[];
+  appData.calcHistory.forEach(h=>{
+    if(Array.isArray(h.details)) h.details.forEach(d=>{
+      if(!idSet.has(String(d.printerId))){
+        list.push({history:h,ref:d.printerId,origName:d.printerName||d.printerId,model:d.modelName||''});
+      }
+    });
+    if(h.calcData){
+      for(const pid in h.calcData){
+        if(!idSet.has(String(pid))){
+          const det=(h.details||[]).find(dd=>String(dd.printerId)===String(pid));
+          list.push({history:h,ref:pid,origName:pid,model:det?det.modelName||'':''});
+        }
+      }
+    }
+  });
+  return list;
+}
+
+function showPrinterMapModal(list){
+  if(!list || list.length===0) return;
+  const tbody=document.querySelector('#printerMapTable tbody');
+  tbody.innerHTML='';
+  list.forEach((rec,i)=>{
+    const h=rec.history;
+    const tr=document.createElement('tr');
+    tr.dataset.index=i;
+    tr.innerHTML=`<td><input type="checkbox" class="form-check-input"></td>`+
+                 `<td>${new Date(h.timestamp||0).toLocaleString()}</td>`+
+                 `<td>${h.id||''}</td>`+
+                 `<td>${h.calcName||''}</td>`+
+                 `<td>${h.clientName||''}</td>`+
+                 `<td>${h.orderStatus||''}</td>`+
+                 `<td>${safeFixed(h.total||0)}</td>`+
+                 `<td>${rec.model||''}</td>`+
+                 `<td>${rec.origName}</td>`+
+                 '<td></td>';
+    const sel=document.createElement('select');
+    populatePrintersSelect(sel);
+    tr.lastChild.appendChild(sel);
+    tbody.appendChild(tr);
+  });
+  const bulkSel=document.getElementById('bulkPrinterSelect');
+  populatePrintersSelect(bulkSel);
+  document.getElementById('applyBulkMap').onclick=()=>{
+    const rows=tbody.querySelectorAll('tr');
+    rows.forEach(row=>{
+      if(row.querySelector('input[type=checkbox]').checked){
+        const sel=row.querySelector('select');
+        sel.value=bulkSel.value;
+      }
+    });
+  };
+  const modal=new bootstrap.Modal(document.getElementById('printerMapModal'));
+  document.getElementById('printerMapSave').onclick=()=>{
+    const rows=tbody.querySelectorAll('tr');
+    rows.forEach(row=>{
+      const idx=parseInt(row.dataset.index,10);
+      const sel=row.querySelector('select');
+      const entry=list[idx];
+      const target=appData.printers.find(p=>String(p.id)===String(sel.value));
+      if(target){
+        const hist=entry.history;
+        if(Array.isArray(hist.details)) hist.details.forEach(d=>{
+          if(String(d.printerId)===String(entry.ref) || d.printerName===entry.origName){
+            d.printerId=target.id; d.printerName=target.name;
+          }
+        });
+        if(hist.calcData && hist.calcData[entry.ref]){
+          hist.calcData[target.id]=hist.calcData[entry.ref];
+          delete hist.calcData[entry.ref];
+        }
+      }
+    });
+    modal.hide();
+    renderHistoryTable();
+    renderPrintersTable();
+    saveToLocalStorage();
+  };
+  modal.show();
+}
 
 function printerNameById(id){
   const p=appData.printers.find(pr=>String(pr.id)===String(id));
@@ -1141,13 +1224,20 @@ function massDelete(type) {
   if(!confirm("Удалить выбранные элементы?")) return;
   switch(type) {
     case 'printers':
+      const removed = [];
       appData.printers = appData.printers.filter(p => {
         const chk = document.getElementById("chk_printers_"+p.id);
-        return !(chk && chk.checked);
+        const del = chk && chk.checked;
+        if(del) removed.push(String(p.id));
+        return !del;
       });
       renderPrintersTable();
       renderCalcPrinters();
       renderSummary();
+      if(removed.length){
+        const unresolved = collectUnresolvedPrinters();
+        if(unresolved.length) showPrinterMapModal(unresolved);
+      }
       break;
     case 'globalMaterials':
       appData.materials = appData.materials.filter(m => {
@@ -1372,6 +1462,8 @@ function onDeletePrinter(id){
   renderCalcPrinters();
   renderSummary();
   document.getElementById("printerDetails").style.display = "none";
+  const unresolved = collectUnresolvedPrinters();
+  if(unresolved.length) showPrinterMapModal(unresolved);
 }
 function onShowPrinterDetails(id){
   const printer = appData.printers.find(p => String(p.id) === String(id));
