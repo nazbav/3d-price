@@ -25,3 +25,4 @@
 - material profile editor shows all profiles in dropdown for любого материала
 - removed printer mapping feature; history now keeps original IDs
 - fixed showMultiPrompt promise wrapper to prevent script errors
+- expanded AGENTS.md with detailed Ubuntu console testing steps
