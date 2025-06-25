@@ -158,6 +158,7 @@
           <button class="btn btn-primary btn-sm" onclick="onAddGlobalMaterial()">Добавить материал</button>
           <button class="btn btn-danger btn-sm" onclick="massDelete('globalMaterials')">Массовое удаление</button>
           <button class="btn btn-warning btn-sm" onclick="massEdit('globalMaterials')">Массовое изменение</button>
+          <button class="btn btn-info btn-sm" id="manageMaterialProfilesBtn">Профили Orca</button>
         </div>
         <div class="table-responsive">
           <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('materialsTable', this.value)">
@@ -488,37 +489,6 @@
   </div>
 </div>
 
-<!-- Модальное окно настроек материала OrcaSlicer -->
-<div class="modal fade" id="orcaMaterialModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Настройки материала OrcaSlicer</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="d-flex mb-2">
-          <select id="materialProfileSelect" class="form-select me-2"></select>
-          <button type="button" class="btn btn-success btn-sm me-1" id="addMaterialProfileBtn">+</button>
-          <button type="button" class="btn btn-warning btn-sm me-1" id="removeMaterialProfileBtn">−</button>
-          <button type="button" class="btn btn-danger btn-sm" id="delMaterialProfileBtn">✖</button>
-        </div>
-        <div id="orcaFields" data-inited="0"></div>
-        <pre id="orcaJsonView" class="p-2 border mt-2"></pre>
-        <pre id="orcaInfoView" class="p-2 border mt-2"></pre>
-        <input type="file" id="orcaJsonFileInput" class="d-none" accept=".json">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-        <button type="button" class="btn btn-outline-secondary" id="importOrcaJsonBtn">Импорт JSON</button>
-        <button type="button" class="btn btn-info" id="downloadOrcaJsonBtn">Скачать JSON</button>
-        <button type="button" class="btn btn-info" id="downloadOrcaInfoBtn">Скачать INFO</button>
-        <button type="button" class="btn btn-primary" id="saveOrcaConfigBtn">Сохранить</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Модальное окно настроек принтера OrcaSlicer -->
 <div class="modal fade" id="orcaPrinterModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
@@ -639,6 +609,49 @@
       </div>
     </div>
   </div>
+<!-- Модальное окно связывания материала с профилями -->
+<div class="modal fade" id="materialProfileLinkModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Профили материала</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <select multiple class="form-select" id="materialProfileLinkSelect"></select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно профилей Orca -->
+<div class="modal fade" id="manageMaterialProfilesModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Профили Orca</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <button type="button" class="btn btn-success btn-sm me-1" id="importProfileBtn">Импорт JSON</button>
+          <input type="file" class="d-none" id="importProfileInput" accept=".json">
+        </div>
+        <table class="table table-bordered table-sm">
+          <thead><tr><th>Название</th><th>Действия</th></tr></thead>
+          <tbody id="materialProfilesTable"></tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <!-- Универсальное модальное окно для ввода данных -->
@@ -1493,7 +1506,7 @@ function renderGlobalMaterialsTable(){
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditGlobalMaterial('${m.id}')">Ред.<\/button>
-          <button class="btn btn-success" onclick="openOrcaConfig('${m.id}')">Orca<\/button>
+          <button class="btn btn-success" onclick="openMaterialProfileLink('${m.id}')">Профиль<\/button>
           <button class="btn btn-info" onclick="downloadMaterialLabelHtml('${m.id}')">Этикетка<\/button>
           <button class="btn btn-warning" onclick="copyElement('globalMaterials', '${m.id}')">Копировать<\/button>
           <button class="btn btn-danger" onclick="onDeleteGlobalMaterial('${m.id}')">Удл.<\/button>
@@ -2213,16 +2226,126 @@ function findMaterialByName(name) {
   let mat = appData.materials.find(m => m.name === name);
   if (mat) return mat;
   for (let p of appData.printers) {
-    mat = p.materials.find(m => m.name === name);
-    if (mat) return mat;
+    if(Array.isArray(p.materials)){
+      mat = p.materials.find(m => m.name === name);
+      if (mat) return mat;
+    }
   }
   return null;
+}
+
+function findMaterialsByProfile(profile){
+  if(!profile) return [];
+  const ids = appData.materialProfiles
+    .filter(p=>{
+      const cfg=p.config||{};
+      return cfg.filament_settings_id===profile || cfg.name===profile;
+    })
+    .map(p=>String(p.id));
+  if(ids.length===0) return [];
+  const list=[];
+  const check=(m)=>Array.isArray(m.profileIds) && m.profileIds.some(id=>ids.includes(String(id)));
+  appData.materials.forEach(m=>{ if(check(m)) list.push(m); });
+  appData.printers.forEach(pr=>{ (pr.materials||[]).forEach(m=>{ if(check(m)) list.push(m); }); });
+  return list;
+}
+
+async function resolveMaterialIdByProfile(profile){
+  const mats=findMaterialsByProfile(profile);
+  if(mats.length===1) return mats[0].id;
+  if(mats.length>1){
+    const options=mats.map(m=>({value:String(m.id),label:m.name}));
+    const res=await showMultiPrompt('Материал для профиля '+profile,[{id:'mid',label:'Материал',type:'select',options}]);
+    return res&&res.mid?res.mid:'';
+  }
+  return '';
 }
 
 function defaultOrcaConfig(){
   return {};
 }
 
+let currentMaterialForProfiles = null;
+function populateProfileSelect(selected){
+  const sel=document.getElementById('materialProfileLinkSelect');
+  sel.innerHTML='';
+  appData.materialProfiles.forEach(p=>{
+    const cfg=p.config||{};
+    const name=cfg.filament_settings_id||cfg.name||p.id;
+    const opt=document.createElement('option');
+    opt.value=p.id;
+    opt.textContent=name;
+    if(selected.includes(String(p.id))) opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+function openMaterialProfileLink(mid){
+  const mat=findMaterialById(mid);
+  if(!mat) return;
+  currentMaterialForProfiles=String(mid);
+  populateProfileSelect((mat.profileIds||[]).map(String));
+  new bootstrap.Modal(document.getElementById('materialProfileLinkModal')).show();
+}
+function applyMaterialProfileLink(){
+  if(currentMaterialForProfiles===null) return;
+  const mat=findMaterialById(currentMaterialForProfiles);
+  if(!mat) return;
+  const sel=document.getElementById('materialProfileLinkSelect');
+  mat.profileIds=Array.from(sel.selectedOptions).map(o=>o.value);
+  saveToLocalStorage();
+  bootstrap.Modal.getInstance(document.getElementById('materialProfileLinkModal')).hide();
+}
+function renderMaterialProfilesTable(){
+  const tb=document.getElementById('materialProfilesTable');
+  tb.innerHTML='';
+  appData.materialProfiles.forEach(p=>{
+    const cfg=p.config||{};
+    const name=cfg.filament_settings_id||cfg.name||p.id;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${name}</td><td><button class="btn btn-sm btn-info" onclick="downloadProfileJson('${p.id}')">JSON</button> <button class="btn btn-sm btn-info ms-1" onclick="downloadProfileInfo('${p.id}')">INFO</button> <button class="btn btn-sm btn-secondary ms-1" onclick="editMaterialProfile('${p.id}')">Ред.</button> <button class="btn btn-sm btn-danger ms-1" onclick="deleteMaterialProfileGlobal('${p.id}')">✖</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function openMaterialProfilesManager(){
+  renderMaterialProfilesTable();
+  new bootstrap.Modal(document.getElementById('manageMaterialProfilesModal')).show();
+}
+function deleteMaterialProfileGlobal(pid){
+  appData.materials.forEach(m=>{if(Array.isArray(m.profileIds)) m.profileIds=m.profileIds.filter(id=>String(id)!==String(pid));});
+  appData.materialProfiles=appData.materialProfiles.filter(p=>String(p.id)!==String(pid));
+  saveToLocalStorage();
+  renderMaterialProfilesTable();
+}
+function downloadProfileJson(pid){
+  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  if(!prof) return;
+  const cfg=prof.config||{};
+  downloadBlob(new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'}),(cfg.name||cfg.filament_settings_id||'filament')+'.json');
+}
+function downloadProfileInfo(pid){
+  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  if(!prof) return;
+  const info=prof.info||'';
+  const cfg=prof.config||{};
+  downloadBlob(new Blob([info],{type:'text/plain'}),(cfg.name||cfg.filament_settings_id||'filament')+'.info');
+}
+function editMaterialProfile(pid){
+  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
+  if(!prof) return;
+  const val=prompt('JSON', JSON.stringify(prof.config,null,2));
+  if(!val) return;
+  try{ prof.config=JSON.parse(val); saveToLocalStorage(); renderMaterialProfilesTable(); }
+  catch(e){ alert('Ошибка: '+e); }
+}
+function importProfileFile(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{ const data=JSON.parse(reader.result); appData.materialProfiles.push({id:generateUUID(),config:data,info:''}); saveToLocalStorage(); renderMaterialProfilesTable(); }
+    catch(e){ alert('Ошибка: '+e); }
+  };
+  reader.readAsText(file);
+}
 function calcFinishDate(sv, days){
   if(!sv) return "";
   try{
@@ -2535,135 +2658,9 @@ function downloadMaterialLabelHtml(materialId) {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
-
-/* Настройки OrcaSlicer для материала */
-let currentOrcaMaterialId = null;
-let currentMaterialProfileId = null;
-let currentMaterialProfileIndex = 0;
-const ORCA_FIELDS = [
-  'type','filament_id','setting_id','name','from','instantiation','inherits','filament_diameter','filament_density','filament_cost','spool_weight','filament_runout_sensor','enable_volumetric_extrusion','filament_start_gcode','filament_end_gcode','enable_cooling','fan_speed_min','fan_speed_max','start_layer','stop_cooling_first_layers','min_layer_time','bridge_fan_speed','filament_flow_ratio','filament_max_volumetric_speed','slow_down_layer_time','support_material_interface_fan_speed','slow_down_min_speed','perimeter_speed','infill_speed','support_speed','external_wall_speed','travel_speed','flow_rate_overrides','retraction_distance','retraction_speed','extra_restart_distance','coasting_distance','wipe_distance','enable_pressure_advance','pressure_advance','min_extrusion_before_retract','filament_runout_gcode','temperature_vitrification','hot_plate_temp_initial_layer','hot_plate_temp','steps_per_mm','filament_drive_gear_diameter','volumetric_extrusion','extrusion_multiplier','compatible_printers','required_nozzle_sizes','required_extruder_count','requires_heated_bed','notes','version','author','based_on','profile_type','shared_with','uuid'
-];
-const ORCA_TEXTAREA_FIELDS = ['filament_start_gcode','filament_end_gcode','compatible_printers','notes','filament_runout_gcode','flow_rate_overrides'];
-
-function createOrcaField(f, container, removable=false){
-  const div=document.createElement('div');
-  div.className='mb-3 d-flex align-items-start orca-field';
-  div.dataset.field=f;
-  const label=document.createElement('label');
-  label.className='form-label';
-  label.textContent=f;
-  label.setAttribute('for','orca_'+f);
-  label.style.minWidth='180px';
-  div.appendChild(label);
-  let el;
-  if(ORCA_TEXTAREA_FIELDS.includes(f)){
-    el=document.createElement('textarea');
-    el.className='form-control orca-input';
-    el.rows=2;
-  } else {
-    el=document.createElement('input');
-    el.className='form-control orca-input';
-  }
-  el.id='orca_'+f;
-  el.dataset.orcaField=f;
-  el.style.flex='1 1 auto';
-  div.appendChild(el);
-  if(removable){
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.className='btn btn-danger btn-sm ms-2';
-    btn.textContent='✖';
-    btn.onclick=()=>{div.remove(); ORCA_FIELDS=ORCA_FIELDS.filter(x=>x!==f);};
-    div.appendChild(btn);
-  }
-  container.appendChild(div);
-}
-
-function ensureOrcaFieldsHtml(){
-  const container=document.getElementById('orcaFields');
-  if(container.dataset.inited) return;
-  ORCA_FIELDS.forEach(f=>createOrcaField(f, container,false));
-  container.dataset.inited='1';
-}
-
-function populateMaterialProfileSelect(mat, selectedId){
-  const sel=document.getElementById('materialProfileSelect');
-  sel.innerHTML='';
-  appData.materialProfiles.forEach((p,i)=>{
-    const opt=document.createElement('option');
-    const cfg=p.config||{};
-    opt.value=p.id;
-    opt.textContent=cfg.filament_settings_id||cfg.name||('Профиль '+(i+1));
-    sel.appendChild(opt);
-  });
-  if(selectedId) sel.value=selectedId;
-}
-
-function loadMaterialProfile(mat,pid){
-  if(!pid) return;
-  currentMaterialProfileId=String(pid);
-  if(!Array.isArray(mat.profileIds)) mat.profileIds=[];
-  if(!mat.profileIds.includes(currentMaterialProfileId)) mat.profileIds.push(currentMaterialProfileId);
-  currentMaterialProfileIndex=mat.profileIds.indexOf(currentMaterialProfileId);
-  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
-  document.querySelectorAll('#orcaMaterialModal .orca-input').forEach(el=>{el.value='';});
-  const cfg=prof?prof.config||{}:{};
-  for(const [k,v] of Object.entries(cfg)){
-    const el=document.getElementById('orca_'+k);
-    if(el) el.value=Array.isArray(v)?v.join(k==='compatible_printers'?', ':''):v;
-  }
-  document.getElementById('orcaJsonView').textContent=JSON.stringify(cfg,null,2);
-  document.getElementById('orcaInfoView').textContent=prof?prof.info||'' : '';
-  document.getElementById('materialProfileSelect').value=pid;
-}
-
-function openOrcaConfig(matId){
-  const mat = findMaterialById(matId);
-  if(!mat) return;
-  currentOrcaMaterialId = String(matId);
-  ensureOrcaFieldsHtml();
-  if(!Array.isArray(appData.materialProfiles)) appData.materialProfiles=[];
-  if(!Array.isArray(mat.profileIds)) mat.profileIds=[];
-  if((mat.orca || mat.orcaInfo) && mat.profileIds.length===0){
-    const pf={id:generateUUID(),config:mat.orca||{},info:mat.orcaInfo||''};
-    appData.materialProfiles.push(pf);
-    mat.profileIds=[pf.id];
-    delete mat.orca; delete mat.orcaInfo;
-  }
-  if(mat.profileIds.length===0){
-    const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
-    appData.materialProfiles.push(pf);
-    mat.profileIds.push(pf.id);
-  }
-  const firstPid=mat.profileIds[0];
-  populateMaterialProfileSelect(mat, firstPid);
-  loadMaterialProfile(mat, firstPid);
-  new bootstrap.Modal(document.getElementById('orcaMaterialModal')).show();
-}
-
-function saveOrcaConfig(){
-  if(currentOrcaMaterialId===null) return;
-  const mat = findMaterialById(currentOrcaMaterialId);
-  if(!mat) return;
-  const pid=currentMaterialProfileId;
-  let prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
-  if(!prof){
-    prof={id:pid||generateUUID(),config:{},info:''};
-    appData.materialProfiles.push(prof);
-    if(!mat.profileIds.includes(prof.id)) mat.profileIds.push(prof.id);
-  }
-  prof.config={};
-  document.querySelectorAll('#orcaMaterialModal .orca-input').forEach(el=>{
-    prof.config[el.dataset.orcaField]=el.value;
-  });
-  saveToLocalStorage();
-  const modalEl = document.getElementById('orcaMaterialModal');
-  bootstrap.Modal.getInstance(modalEl).hide();
-}
-
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
@@ -2672,55 +2669,6 @@ function downloadBlob(blob, filename){
   URL.revokeObjectURL(url);
 }
 
-function downloadOrcaJson(){
-  if(currentOrcaMaterialId===null) return;
-  const mat = findMaterialById(currentOrcaMaterialId);
-  if(!mat) return;
-  const pid=currentMaterialProfileId;
-  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
-  const cfg = prof?prof.config||{}:{};
-  const jsonBlob = new Blob([JSON.stringify(cfg, null, 2)], {type:'application/json'});
-  downloadBlob(jsonBlob,(cfg.name||'filament')+'.json');
-}
-
-function downloadOrcaInfo(){
-  if(currentOrcaMaterialId===null) return;
-  const mat = findMaterialById(currentOrcaMaterialId);
-  if(!mat) return;
-  const pid=currentMaterialProfileId;
-  const prof=appData.materialProfiles.find(p=>String(p.id)===String(pid));
-  const info = prof?prof.info||'':'';
-  const infoBlob = new Blob([info],{type:'text/plain'});
-  const cfg = prof?prof.config||{}:{};
-  const name = (cfg.name||cfg.filament_settings_id||'filament');
-  downloadBlob(infoBlob,name+'.info');
-}
-
-function importOrcaJson(file){
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      for(const [k,v] of Object.entries(data)){
-        let el = document.getElementById('orca_'+k);
-        if(!el){
-          ORCA_FIELDS.push(k);
-          createOrcaField(k, document.getElementById('orcaExtraFields'), true);
-          el = document.getElementById('orca_'+k);
-        }
-        if(el){
-          let val = v;
-          if(Array.isArray(val)) val = val.join(k==='compatible_printers'?', ':'');
-          el.value = val;
-        }
-      }
-    } catch(err){
-      alert('Ошибка чтения файла: '+err);
-    }
-  };
-  reader.readAsText(file);
-}
 
 /* Настройки OrcaSlicer для принтера */
 let currentOrcaPrinterId = null;
@@ -2909,60 +2857,6 @@ function deleteOrcaProfile(){
   const idx=Math.max(0,currentOrcaProfileIndex-1);
   populateOrcaProfileSelect(pr);
   loadOrcaProfile(pr,idx);
-}
-
-async function addMaterialProfile(){
-  if(currentOrcaMaterialId===null) return;
-  const mat=findMaterialById(currentOrcaMaterialId);
-  if(!mat) return;
-  if(!Array.isArray(mat.profileIds)) mat.profileIds=[];
-  const options = appData.materialProfiles.map(p=>{
-    const cfg=p.config||{};
-    return {value:String(p.id),label:cfg.filament_settings_id||cfg.name||p.id};
-  });
-  options.unshift({value:'new',label:'<Новый профиль>'});
-  const vals = await showMultiPrompt('Добавить профиль',[{id:'pid',label:'Профиль',type:'select',options:options}]);
-  if(!vals || !vals.pid) return;
-  let pid=vals.pid;
-  if(pid==='new'){
-    const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
-    appData.materialProfiles.push(pf);
-    pid=String(pf.id);
-  }
-  if(!mat.profileIds.includes(pid)) mat.profileIds.push(pid);
-  populateMaterialProfileSelect(mat, pid);
-  loadMaterialProfile(mat,pid);
-}
-
-function removeMaterialProfile(){
-  if(currentOrcaMaterialId===null) return;
-  const mat=findMaterialById(currentOrcaMaterialId);
-  if(!mat) return;
-  if(mat.profileIds.length<=1) return;
-  const idx=mat.profileIds.indexOf(currentMaterialProfileId);
-  if(idx===-1) return;
-  mat.profileIds.splice(idx,1);
-  const newIdx=Math.max(0,idx-1);
-  const newPid=mat.profileIds[newIdx];
-  populateMaterialProfileSelect(mat,newPid);
-  loadMaterialProfile(mat,newPid);
-}
-
-function deleteMaterialProfile(){
-  if(currentOrcaMaterialId===null) return;
-  const mat=findMaterialById(currentOrcaMaterialId);
-  if(!mat) return;
-  const pid=currentMaterialProfileId;
-  appData.materials.forEach(m=>{ if(Array.isArray(m.profileIds)) m.profileIds = m.profileIds.filter(id=>String(id)!==String(pid)); });
-  appData.materialProfiles = appData.materialProfiles.filter(p=>String(p.id)!==String(pid));
-  if(mat.profileIds.length===0){
-    const pf={id:generateUUID(),config:defaultOrcaConfig(),info:''};
-    appData.materialProfiles.push(pf);
-    mat.profileIds.push(pf.id);
-  }
-  const firstPid=mat.profileIds[0];
-  populateMaterialProfileSelect(mat,firstPid);
-  loadMaterialProfile(mat,firstPid);
 }
 
 function downloadFullDetailedCalculation(){
@@ -3638,7 +3532,7 @@ function showIncomingDataModal(){
   modal.show();
 }
 
-function applyIncomingData(){
+async function applyIncomingData(){
   const sel = document.getElementById('targetOrderSelect');
   const val = sel.value;
   const modalEl = document.getElementById('incomingDataModal');
@@ -3660,8 +3554,8 @@ function applyIncomingData(){
     if(!pr){
       alert('Не найден принтер '+incomingLinkData.printerKey);
     } else {
-      incomingLinkData.models.forEach(m=>{
-        const mat = findMaterialByName(m.matName);
+      for(const m of incomingLinkData.models){
+        const mid = await resolveMaterialIdByProfile(m.matName);
         addModelRow(pr.id, {
           id: m.id,
           name: m.name,
@@ -3669,9 +3563,9 @@ function applyIncomingData(){
           status: m.status,
           hours: parseTimeFromLink(m.timeStr),
           weight: parseFloat(m.weight)||0,
-          materialId: mat?mat.id:''
+          materialId: mid
         });
-      });
+      }
     }
   }
   const tabEl = document.querySelector('#calculate-tab');
@@ -3790,13 +3684,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
   }
-  document.getElementById('saveOrcaConfigBtn').onclick = saveOrcaConfig;
-  document.getElementById('importOrcaJsonBtn').onclick = ()=>document.getElementById('orcaJsonFileInput').click();
-  document.getElementById('orcaJsonFileInput').addEventListener('change',e=>importOrcaJson(e.target.files[0]));
   document.getElementById('savePrinterJsonBtn').onclick = savePrinterJson;
   document.getElementById('importPrinterJsonBtn').onclick = ()=>document.getElementById('orcaPrinterJsonFile').click();
   document.getElementById('orcaPrinterJsonFile').addEventListener('change',e=>importPrinterJson(e.target.files[0]));
-  document.getElementById('downloadOrcaJsonBtn').onclick = downloadOrcaJson;
   document.getElementById('downloadPrinterJsonBtn').onclick = downloadPrinterJson;
   document.getElementById('addOrcaProfileBtn').onclick = ()=>addOrcaProfile();
   document.getElementById('delOrcaProfileBtn').onclick = ()=>deleteOrcaProfile();
@@ -3804,19 +3694,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
     if(pr) loadOrcaProfile(pr,parseInt(e.target.value,10));
   });
-  document.getElementById('addMaterialProfileBtn').onclick = ()=>addMaterialProfile();
-  document.getElementById('removeMaterialProfileBtn').onclick = ()=>removeMaterialProfile();
-  document.getElementById('delMaterialProfileBtn').onclick = ()=>deleteMaterialProfile();
-  document.getElementById('materialProfileSelect').addEventListener('change',e=>{
-    const mat=findMaterialById(currentOrcaMaterialId);
-    if(mat) loadMaterialProfile(mat,e.target.value);
-  });
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
   document.getElementById('importJsonFile').addEventListener('change', importFromFile);
+    document.getElementById("applyMaterialProfileLinkBtn").onclick = applyMaterialProfileLink;
+    document.getElementById("manageMaterialProfilesBtn").onclick = openMaterialProfilesManager;
+    document.getElementById("importProfileBtn").onclick = () => document.getElementById("importProfileInput").click();
+    document.getElementById("importProfileInput").addEventListener("change",e=>importProfileFile(e.target.files[0]));
 
-  document.getElementById('downloadOrcaInfoBtn').onclick = downloadOrcaInfo;
   document.getElementById('downloadPrinterInfoBtn').onclick = downloadPrinterInfo;
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
   //   importPrinterJson(e.target.files[0]);
