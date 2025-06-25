@@ -735,13 +735,20 @@ function migrateOldData(obj){
   });
 
   // Удаляем дубликаты принтеров по имени или адресу
-  const uniqPrinters = [];
+  const uniqList = [];
   const pMap = {};
+  obj.printers.forEach(pr=>{ if(!Array.isArray(pr.orcaProfiles)) pr.orcaProfiles=[]; });
   obj.printers.forEach(pr=>{
-    const key = (pr.print_host||'') + '|' + (pr.name||'');
-    if(!pMap[key]){ pMap[key]=pr; uniqPrinters.push(pr); }
+    const key = (pr.print_host||'').toLowerCase() + '|' + (pr.name||'').toLowerCase();
+    const existing = pMap[key];
+    if(existing){
+      pr.orcaProfiles.forEach(op=>{ if(!existing.orcaProfiles.some(e=>e.id===op.id)) existing.orcaProfiles.push(op); });
+      ['cost','hoursToRecoup','power','maintCostHour'].forEach(f=>{ if(!existing[f] && pr[f]) existing[f]=pr[f]; });
+    } else {
+      pMap[key]=pr; uniqList.push(pr);
+    }
   });
-  obj.printers = uniqPrinters;
+  obj.printers = uniqList;
 
   // Удаляем дубликаты материалов
   const uniqMat = [];
@@ -849,6 +856,14 @@ function migrateOldData(obj){
     delete p.orca;
     delete p.orcaInfo;
   });
+
+  // Удаляем временные принтеры без использования
+  const used = new Set();
+  obj.calcHistory.forEach(h=>{
+    if(Array.isArray(h.details)) h.details.forEach(d=> used.add(String(d.printerId)) );
+    if(h.calcData) Object.keys(h.calcData).forEach(pid=> used.add(String(pid)) );
+  });
+  obj.printers = obj.printers.filter(p=> !p.isTemp || used.has(String(p.id)) );
   return obj;
 }
 
@@ -1043,6 +1058,11 @@ function formatTimeForDisplay(time) {
   const hours = Math.floor(time);
   const minutes = Math.round((time - hours) * 60);
   return `${hours}:${minutes.toString().padStart(2, '0')}`;
+}
+
+function safeFixed(val, digits = 2) {
+  const num = Number(val);
+  return isNaN(num) ? '0.00' : num.toFixed(digits);
 }
 
 function handleTimeInput(event) {
@@ -1808,7 +1828,7 @@ function onCalculateAll() {
     const required = materialConsumption[mid];
     const mat = findMaterialById(mid);
     if (mat && required > (mat.balance * 1000)) {
-      warnings.push(`Материала "${mat.name}" недостаточно: требуется ${required.toFixed(2)} г, остаток ${(mat.balance * 1000).toFixed(2)} г.`);
+      warnings.push(`Материала "${mat.name}" недостаточно: требуется ${safeFixed(required)} г, остаток ${safeFixed(mat.balance * 1000)} г.`);
     }
   }
   
@@ -1863,19 +1883,19 @@ function onCalculateAll() {
   htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
   htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
-  htmlRes += `Стоимость работы оператора: ${totalOperatorCost.toFixed(2)} ₽<br/>`;
+  htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
-  htmlRes += `Упаковка/Доставка: ${ship.toFixed(2)} ₽<br/>`;
-  htmlRes += `Стоимость этикеток: ${totalLabelsCost.toFixed(2)} ₽<br/>`;
-  htmlRes += `Подитог: ${subtotal.toFixed(2)} ₽<br/>`;
-  htmlRes += `Общий налог (${tPercent}%): ${taxAmount.toFixed(2)} ₽<br/>`;
-  htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${finalSum.toFixed(2)} ₽<\/strong><br/>`;
+  htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
+  htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
+  htmlRes += `Подитог: ${safeFixed(subtotal)} ₽<br/>`;
+  htmlRes += `Общий налог (${tPercent}%): ${safeFixed(taxAmount)} ₽<br/>`;
+  htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
  
   // Вывод цены за 1 грамм
   const totalWeight = detailsByPrinter.reduce((acc, printer) => 
     acc + printer.linesDetail.reduce((sum, line) => sum + line.realWeight, 0), 0);
   const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
-  htmlRes += `<strong>Цена за 1 грамм: ${pricePerGram.toFixed(2)} ₽<\/strong><br/>`;
+  htmlRes += `<strong>Цена за 1 грамм: ${safeFixed(pricePerGram)} ₽<\/strong><br/>`;
 
  if (finDateStr) {
     htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
@@ -1894,7 +1914,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
 	  
     htmlRes += `<div style="margin-top:1em;">`;
     htmlRes += `<strong>${d.printerName} (ID: ${d.printerId})<\/strong><br/>`;
-    htmlRes += `Время: ${d.printerTime.toFixed(2)} ч; Сумма: ${d.subTotal.toFixed(2)} ₽<br/>`;
+    htmlRes += `Время: ${safeFixed(d.printerTime)} ч; Сумма: ${safeFixed(d.subTotal)} ₽<br/>`;
     if (d.linesDetail.length > 0) {
       htmlRes += `<div class="table-responsive"><table class="table table-sm table-bordered mt-1" style="max-width:800px;">`;
       htmlRes += `<thead><tr>
@@ -1920,17 +1940,17 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
           <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
           <td>${ln.status}<\/td>
           <td>${formatTimeForDisplay(ln.hours)}<\/td>
-          <td>${ln.weight.toFixed(2)}<\/td>
+          <td>${safeFixed(ln.weight)}<\/td>
           <td>${ln.matName}<\/td>
-          <td>${ln.realWeight.toFixed(2)}<\/td>
-          <td>${ln.costPrinterPart.toFixed(2)}<\/td>
-          <td>${ln.costMaterial.toFixed(2)}<\/td>
-          <td>${ln.costElectric.toFixed(2)}<\/td>
-          <td>${ln.costMaintenance.toFixed(2)}<\/td>
-          <td>${ln.subTotalModel.toFixed(2)}<\/td>
+          <td>${safeFixed(ln.realWeight)}<\/td>
+          <td>${safeFixed(ln.costPrinterPart)}<\/td>
+          <td>${safeFixed(ln.costMaterial)}<\/td>
+          <td>${safeFixed(ln.costElectric)}<\/td>
+          <td>${safeFixed(ln.costMaintenance)}<\/td>
+          <td>${safeFixed(ln.subTotalModel)}<\/td>
           <td>
             <button class="btn btn-sm btn-outline-secondary"
-              onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${ln.hours.toFixed(2)}', '${ln.weight.toFixed(2)}')">
+              onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${safeFixed(ln.hours)}', '${safeFixed(ln.weight)}')">
               Этикетка
             <\/button>
           <\/td>
@@ -1949,13 +1969,13 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
         sumPrinterAdditional += ad.costDistributed;
         htmlResadditionalDetails += `<tr>
           <td>${ad.description}<\/td>
-          <td>${ad.baseCost.toFixed(2)}<\/td>
+          <td>${safeFixed(ad.baseCost)}<\/td>
           <td>${ad.hoursToRecoup}<\/td>
-          <td>${ad.costDistributed.toFixed(2)}<\/td>
+          <td>${safeFixed(ad.costDistributed)}<\/td>
         <\/tr>`;
       });
       htmlResadditionalDetails += `<\/tbody><\/table>`;
-      htmlResadditionalDetails += `Доп. расходы для принтера: ${sumPrinterAdditional.toFixed(2)} ₽<br/>`;
+      htmlResadditionalDetails += `Доп. расходы для принтера: ${safeFixed(sumPrinterAdditional)} ₽<br/>`;
 	    if(sumPrinterAdditional > 0)
 	    htmlRes += htmlResadditionalDetails;
     }
@@ -1970,13 +1990,13 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     globalAdditionalDetails.forEach(gd => {
       htmlRes += `<tr>
         <td>${gd.description}<\/td>
-        <td>${gd.baseCost.toFixed(2)}<\/td>
+        <td>${safeFixed(gd.baseCost)}<\/td>
         <td>${gd.hoursToRecoup}<\/td>
-        <td>${gd.costDistributed.toFixed(2)}<\/td>
+        <td>${safeFixed(gd.costDistributed)}<\/td>
       <\/tr>`;
     });
     htmlRes += `<\/tbody><\/table>`;
-    htmlRes += `Глобальные расходы: ${sumGlobalAdd.toFixed(2)} ₽<br/>`;
+    htmlRes += `Глобальные расходы: ${safeFixed(sumGlobalAdd)} ₽<br/>`;
   }
   
   document.getElementById("calcResult").style.display = "block";
@@ -2098,7 +2118,7 @@ function renderHistoryTable(){
           <option value="canceled" ${h.orderStatus==="canceled"?"selected":""}>Отменён<\/option>
         <\/select>
       <\/td>
-      <td>${h.total.toFixed(2)}<\/td>
+      <td>${safeFixed(h.total)}<\/td>
       <td>
         <button class="btn btn-sm btn-warning" onclick="onEditCalcHistory(${h.timestamp})">Редакт.<\/button>
         <button class="btn btn-sm btn-danger" onclick="onDeleteCalcHistoryEntry(${h.timestamp})">Удалить<\/button>
@@ -2127,7 +2147,7 @@ function updateHistoryStats(){
   const sum = list.reduce((s,h)=>s+h.total,0);
   const hrs = list.reduce((s,h)=>s+h.totalHours,0);
   const div = document.getElementById('historyStats');
-  div.textContent = `Всего заказов: ${list.length}, сумма: ${sum.toFixed(2)} ₽, часы печати: ${hrs.toFixed(2)}`;
+  div.textContent = `Всего заказов: ${list.length}, сумма: ${safeFixed(sum)} ₽, часы печати: ${safeFixed(hrs)}`;
 }
 function onDeleteCalcHistoryEntry(timestamp) {
   if(!confirm("Удалить выбранный расчет из истории?")) return;
@@ -2821,10 +2841,10 @@ function generateMaxDetailedCalcHtml(d) {
 <body>
   <h1>Подробный расчёт<\/h1>
   <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${d.orderStatus || "?"}<\/p>
-  <p>Итог: <strong>${d.total.toFixed(2)} ₽<\/strong><\/p>
-  <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${d.totalOperatorCost.toFixed(2)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
+  <p>Итог: <strong>${safeFixed(d.total)} ₽<\/strong><\/p>
+  <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${safeFixed(d.totalOperatorCost)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
   <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
-  <p>Подитог: ${(d.total - d.globalAdditional.taxAmount).toFixed(2)} ₽, Общий налог: ${d.globalAdditional.taxAmount.toFixed(2)} ₽<\/p>
+  <p>Подитог: ${safeFixed(d.total - d.globalAdditional.taxAmount)} ₽, Общий налог: ${safeFixed(d.globalAdditional.taxAmount)} ₽<\/p>
   <hr/>
 `;
   d.detailsByPrinter.forEach(pr => {
@@ -2852,11 +2872,11 @@ function generateMaxDetailedCalcHtml(d) {
           <td>${ln.name}<\/td>
           <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
           <td>${ln.status}<\/td>
-          <td>${ln.hours.toFixed(2)}<\/td>
-          <td>${ln.weight.toFixed(2)}<\/td>
+          <td>${safeFixed(ln.hours)}<\/td>
+          <td>${safeFixed(ln.weight)}<\/td>
           <td>${ln.matName}<\/td>
-          <td>${ln.realWeight.toFixed(2)}<\/td>
-          <td>${ln.subTotalModel.toFixed(2)}<\/td>
+          <td>${safeFixed(ln.realWeight)}<\/td>
+          <td>${safeFixed(ln.subTotalModel)}<\/td>
         <\/tr>`;
       });
       s += `<\/tbody><\/table>`;
@@ -2869,6 +2889,29 @@ function generateMaxDetailedCalcHtml(d) {
 function onEditCalcHistory(timestamp){
   const it = appData.calcHistory.find(x => x.timestamp === timestamp);
   if(!it){ alert("Нет такого элемента в истории"); return; }
+
+  const missing = [];
+  if(it.calcData){
+    for(const pid in it.calcData){
+      if(!appData.printers.find(p=>String(p.id)===String(pid))) missing.push(pid);
+    }
+  }
+  if(missing.length){
+    const opts = appData.printers.map(p=>({value:String(p.id),label:p.name||p.id}));
+    const fields = missing.map(id=>({id:id,label:`Принтер для ${id}`,type:'select',options:opts}));
+    showMultiPrompt('Не найдены принтеры', fields).then(vals=>{
+      if(!vals) return;
+      missing.forEach(id=>{
+        const newId = vals[id];
+        if(newId && it.calcData[id]){
+          it.calcData[newId] = (it.calcData[newId]||[]).concat(it.calcData[id]);
+        }
+        delete it.calcData[id];
+      });
+      onEditCalcHistory(timestamp);
+    });
+    return;
+  }
   document.getElementById("calcOrderId").value = it.id || "";
   document.getElementById("calcName").value = it.calcName || "";
   document.getElementById("calcClientName").value = it.clientName || "";
