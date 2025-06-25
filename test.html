@@ -326,6 +326,8 @@
       <div class="mt-2">
         <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none" onclick="downloadAllThermoLabelsHtml()">Скачать все этикетки</button>
         <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none" onclick="downloadSummaryCardHtml()">Скачать итоговую карточку</button>
+        <button class="btn btn-primary ms-2" id="sendMyNalogBtn" style="display:none" onclick="sendMyNalogReceipt()">Отправить чек</button>
+        <button class="btn btn-warning ms-2" id="sendMyNalogBillBtn" style="display:none" onclick="sendMyNalogBill()">Сформировать счёт</button>
       </div>
     </div>
 
@@ -432,6 +434,7 @@
         <button class="nav-link active" id="brand-set-tab" data-bs-toggle="pill" data-bs-target="#brandSet" type="button" role="tab">Брендинг</button>
         <button class="nav-link" id="calc-set-tab" data-bs-toggle="pill" data-bs-target="#calcSet" type="button" role="tab">Калькуляция</button>
         <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Импорт/Экспорт</button>
+        <button class="nav-link" id="nalog-set-tab" data-bs-toggle="pill" data-bs-target="#nalogSet" type="button" role="tab">Мой Налог</button>
       </div>
     </div>
     <div class="col-md-9">
@@ -476,7 +479,7 @@
           </div>
           <button class="btn btn-primary" onclick="saveCalcSettings()">Сохранить</button>
         </div>
-        <div class="tab-pane fade" id="cloudSet" role="tabpanel">
+    <div class="tab-pane fade" id="cloudSet" role="tabpanel">
 <div class="mt-4">
           <h3>Облачный экспорт</h3>
           <button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
@@ -500,7 +503,19 @@
     <button class="btn btn-info mt-2" onclick="importFromFile()">Импорт из файла</button>
     <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
 </div>
-		
+
+        </div>
+        <div class="tab-pane fade" id="nalogSet" role="tabpanel">
+          <h3>Мой Налог</h3>
+          <div class="mb-3">
+            <label for="myNalogToken" class="form-label">Токен доступа:</label>
+            <input type="text" id="myNalogToken" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <button class="btn btn-primary" onclick="saveMyNalogSettings()">Сохранить</button>
+            <button class="btn btn-info ms-2" onclick="checkMyNalogStatus()">Проверить статус</button>
+          </div>
+          <div id="myNalogStatus" class="small-text"></div>
         </div>
       </div>
     </div>
@@ -2358,7 +2373,11 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   if(allBtn) allBtn.style.display='inline-block';
   const summaryBtn=document.getElementById("downloadSummaryCardBtn");
   if(summaryBtn) summaryBtn.style.display='inline-block';
-  
+  const myNalogBtn=document.getElementById("sendMyNalogBtn");
+  if(myNalogBtn) myNalogBtn.style.display='inline-block';
+  const myNalogBillBtn=document.getElementById("sendMyNalogBillBtn");
+  if(myNalogBillBtn) myNalogBillBtn.style.display='inline-block';
+
   lastCalcFullData = {
     id: orderId,
     calcName,
@@ -3071,6 +3090,100 @@ function downloadSummaryCardHtml(){
   const blob=new Blob([lastSummaryCardHtml],{type:'text/html'});
   downloadBlob(blob,`OrderSummary_${Date.now()}.html`);
 }
+
+async function sendMyNalogReceipt(){
+  if(!lastCalcFullData){ alert('Нет данных расчета.'); return; }
+  const token = localStorage.getItem('my_nalog_token');
+  if(!token){
+    alert('Токен Мой Налог не указан в настройках.');
+    return;
+  }
+  const payload = {
+    operationTime: new Date().toISOString(),
+    requestTime: new Date().toISOString(),
+    services: [{ name: lastCalcFullData.calcName || 'Заказ', amount: lastCalcFullData.total }],
+    totalAmount: lastCalcFullData.total
+  };
+  try {
+    const resp = await fetch('https://my.nalog.ru/api/self-employed/receipts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(payload)
+    });
+    if(resp.ok) alert('Запрос отправлен в Мой Налог');
+    else alert('Ошибка отправки: ' + resp.status);
+  } catch (e) {
+    alert('Не удалось подключиться к сервису Мой Налог');
+  }
+}
+
+async function sendMyNalogBill(){
+  if(!lastCalcFullData){ alert('Нет данных расчета.'); return; }
+  const token = localStorage.getItem('my_nalog_token');
+  if(!token){
+    alert('Токен Мой Налог не указан в настройках.');
+    return;
+  }
+  const payload = {
+    requestTime: new Date().toISOString(),
+    service: lastCalcFullData.calcName || 'Заказ',
+    amount: lastCalcFullData.total
+  };
+  try {
+    const resp = await fetch('https://my.nalog.ru/api/self-employed/bills', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify(payload)
+    });
+    if(resp.ok) alert('Счёт создан в сервисе Мой Налог');
+    else alert('Ошибка создания счёта: ' + resp.status);
+  } catch (e) {
+    alert('Не удалось подключиться к сервису Мой Налог');
+  }
+}
+
+function saveMyNalogSettings(){
+  const token = document.getElementById('myNalogToken').value.trim();
+  localStorage.setItem('my_nalog_token', token);
+  alert('Сохранено');
+}
+
+async function checkMyNalogStatus(){
+  const token = localStorage.getItem('my_nalog_token');
+  const statusEl = document.getElementById('myNalogStatus');
+  if(!token){
+    statusEl.textContent = 'Токен не задан';
+    return;
+  }
+  try {
+    const resp = await fetch('https://my.nalog.ru/api/self-employed/profile', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if(resp.ok){
+      const data = await resp.json();
+      const name = data?.fio || data?.individual?.fio || 'неизвестно';
+      const inn = data?.inn || data?.individual?.inn || '';
+      statusEl.textContent = `Подключено: ${name} ${inn ? '(ИНН '+inn+')' : ''}`;
+    } else {
+      statusEl.textContent = 'Ошибка: ' + resp.status;
+    }
+  }catch(e){
+    statusEl.textContent = 'Нет соединения';
+  }
+}
+
+function loadMyNalogSettings(){
+  const token = localStorage.getItem('my_nalog_token') || '';
+  const inp = document.getElementById('myNalogToken');
+  if(inp) inp.value = token;
+  if(token) checkMyNalogStatus();
+}
 function downloadBlob(blob, filename){
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -3093,6 +3206,8 @@ function startNewCalculation(){
   document.getElementById("calcResult").style.display="none";
   document.getElementById("downloadAllLabelsBtn").style.display="none";
   document.getElementById("downloadSummaryCardBtn").style.display="none";
+  document.getElementById("sendMyNalogBtn").style.display="none";
+  document.getElementById("sendMyNalogBillBtn").style.display="none";
   lastCalcFullData=null;
   lastSummaryCardHtml="";
   appData.printers.forEach(pr=>{
@@ -4006,13 +4121,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
   document.getElementById('downloadAllLabelsBtn')?.addEventListener('click', downloadAllThermoLabelsHtml);
   document.getElementById('downloadSummaryCardBtn')?.addEventListener('click', downloadSummaryCardHtml);
-    document.getElementById('importJsonFile')?.addEventListener('change', importFromFile);
-    const applyLinkBtn=document.getElementById("applyMaterialProfileLinkBtn");
-    if(applyLinkBtn) applyLinkBtn.onclick = applyMaterialProfileLink;
-    const manageProfilesBtn=document.getElementById("manageMaterialProfilesBtn");
-    if(manageProfilesBtn) manageProfilesBtn.onclick = openMaterialProfilesManager;
-    const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
-    if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
+  document.getElementById('sendMyNalogBtn')?.addEventListener('click', sendMyNalogReceipt);
+  document.getElementById('sendMyNalogBillBtn')?.addEventListener('click', sendMyNalogBill);
+  document.getElementById('importJsonFile')?.addEventListener('change', importFromFile);
+  const applyLinkBtn=document.getElementById("applyMaterialProfileLinkBtn");
+  if(applyLinkBtn) applyLinkBtn.onclick = applyMaterialProfileLink;
+  const manageProfilesBtn=document.getElementById("manageMaterialProfilesBtn");
+  if(manageProfilesBtn) manageProfilesBtn.onclick = openMaterialProfilesManager;
+  const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
+  if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
+  loadMyNalogSettings();
 
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
   //   importPrinterJson(e.target.files[0]);

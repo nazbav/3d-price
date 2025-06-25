@@ -85,3 +85,6 @@
 - calculation results show a modern summary card with order details and a model grid
 - кнопка "Новый расчёт" сбрасывает форму калькулятора
 - model thumbnail upload crops the image to fit 140x110 and saves compressed JPEG
+- интеграция с сервисом 'Мой Налог' для формирования чеков
+- отдельная вкладка настроек для хранения токена и проверки подключения к 'Мой Налог'
+- возможность сформировать счёт через сервис 'Мой Налог'
