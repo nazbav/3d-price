@@ -29,3 +29,5 @@
 - importing models via link now matches materials by print profile; modal selection if multiple
 - removed Orca material settings modal; added simple profile linking and global profile manager
 - fixed findMaterialByName to handle printers without material lists
+- added Spoolman sync with two-way update of material balances
+- fixed Spoolman integration using official API endpoints

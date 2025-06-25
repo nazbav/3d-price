@@ -382,6 +382,7 @@
         <button class="nav-link active" id="brand-set-tab" data-bs-toggle="pill" data-bs-target="#brandSet" type="button" role="tab">Брендинг</button>
         <button class="nav-link" id="calc-set-tab" data-bs-toggle="pill" data-bs-target="#calcSet" type="button" role="tab">Калькуляция</button>
         <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Импорт/Экспорт</button>
+        <button class="nav-link" id="spoolman-set-tab" data-bs-toggle="pill" data-bs-target="#spoolmanSet" type="button" role="tab">Spoolman</button>
       </div>
     </div>
     <div class="col-md-9">
@@ -451,6 +452,18 @@
     <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
 </div>
 		
+        </div>
+        <div class="tab-pane fade" id="spoolmanSet" role="tabpanel">
+          <h3>Spoolman</h3>
+          <div class="mb-3">
+            <label for="spoolmanUrlInput" class="form-label">URL сервера:</label>
+            <input type="text" id="spoolmanUrlInput" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label for="spoolmanTokenInput" class="form-label">API ключ:</label>
+            <input type="text" id="spoolmanTokenInput" class="form-control" />
+          </div>
+          <button class="btn btn-primary" onclick="syncSpoolman()">Синхронизировать</button>
         </div>
       </div>
     </div>
@@ -597,6 +610,10 @@
         <div class="mb-2">
           <label class="form-label">Дата производства</label>
           <input type="text" class="form-control" id="matProdDateInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">ID Spoolman</label>
+          <input type="text" class="form-control" id="matSpoolmanIdInput">
         </div>
         <div class="mb-2">
           <label class="form-label">Принтеры</label>
@@ -1106,9 +1123,13 @@ let appData = {
   labelSettings: {
   companyName: "Компания",
   chatLink: "https://t.me/dur",
-  costPerLabel: 0,   
+  costPerLabel: 0,
   printLabels: false
 },
+  spoolman: {
+    url: "",
+    token: ""
+  },
   clients: [],
   calcHistory: []
 };
@@ -1126,6 +1147,7 @@ function loadFromLocalStorage(){
       if(!Array.isArray(appData.additionalGlobal)) appData.additionalGlobal = [];
       if(!Array.isArray(appData.clients)) appData.clients = [];
       if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
+      if(!appData.spoolman) appData.spoolman = {url:'',token:''};
       appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
       appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
     }
@@ -1156,6 +1178,8 @@ function initAll(){
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
   document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
   document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
+  document.getElementById("spoolmanUrlInput").value = appData.spoolman.url || "";
+  document.getElementById("spoolmanTokenInput").value = appData.spoolman.token || "";
 }
 
 // Функции для работы с форматами времени
@@ -1527,6 +1551,7 @@ function onAddGlobalMaterial(){
   document.getElementById('matColorInput').value = '#ffffff';
   document.getElementById('matManufInput').value = '';
   document.getElementById('matProdDateInput').value = '';
+  document.getElementById('matSpoolmanIdInput').value = '';
   populatePrintersSelect(document.getElementById('matPrintersSelect'), []);
   new bootstrap.Modal(document.getElementById('materialModal')).show();
 }
@@ -1542,6 +1567,7 @@ function onEditGlobalMaterial(id){
   document.getElementById('matColorInput').value = m.color || '#ffffff';
   document.getElementById('matManufInput').value = m.manufacturer || '';
   document.getElementById('matProdDateInput').value = m.productionDate || '';
+  document.getElementById('matSpoolmanIdInput').value = m.spoolmanId || '';
   populatePrintersSelect(document.getElementById('matPrintersSelect'), m.printers||[]);
   new bootstrap.Modal(document.getElementById('materialModal')).show();
 }
@@ -1557,8 +1583,10 @@ function saveMaterialFromModal(){
   m.color = document.getElementById('matColorInput').value;
   m.manufacturer = document.getElementById('matManufInput').value;
   m.productionDate = document.getElementById('matProdDateInput').value;
+  m.spoolmanId = document.getElementById('matSpoolmanIdInput').value.trim();
   m.printers = Array.from(document.getElementById('matPrintersSelect').selectedOptions).map(o=>o.value);
   if(isNew) appData.materials.push(m);
+  updateSpoolmanMaterial(m);
   saveToLocalStorage();
   renderGlobalMaterialsTable();
   renderSummary();
@@ -3572,6 +3600,61 @@ async function applyIncomingData(){
   const tab = new bootstrap.Tab(tabEl);
   tab.show();
   incomingLinkData = null;
+}
+
+async function updateSpoolmanMaterial(mat){
+  if(!mat.spoolmanId || !appData.spoolman.url) return;
+  try{
+    await fetch(appData.spoolman.url + '/api/v1/spool/' + mat.spoolmanId, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type':'application/json',
+        'X-Api-Key': appData.spoolman.token
+      },
+      body: JSON.stringify({ remaining_weight: Math.round((mat.balance||0)*1000) })
+    });
+  }catch(e){ console.error(e); }
+}
+
+async function syncSpoolman(){
+  const base = document.getElementById('spoolmanUrlInput').value.trim();
+  const token = document.getElementById('spoolmanTokenInput').value.trim();
+  appData.spoolman.url = base;
+  appData.spoolman.token = token;
+  saveToLocalStorage();
+  if(!base) { alert('Не указан URL'); return; }
+  try{
+    const resp = await fetch(base + '/api/v1/spool', { headers: { 'X-Api-Key': token } });
+    const list = await resp.json();
+    if(Array.isArray(list)){
+      list.forEach(sp=>{
+        let m = appData.materials.find(x=>String(x.spoolmanId)===String(sp.id));
+        const fil = sp.filament || {};
+        const pricePerKg = fil.weight ? ((sp.price ?? fil.price ?? 0) / fil.weight * 1000) : 0;
+        if(!m){
+          m = {id: generateUUID(), name: fil.name || fil.material || 'spool', costPerKg: pricePerKg, balance:(sp.remaining_weight||0)/1000, declaredWeight:(sp.initial_weight ?? fil.weight ?? 0)/1000, wastePercent:0, printers:[], profileIds:[], spoolmanId: sp.id};
+          appData.materials.push(m);
+        }else{
+          m.balance = (sp.remaining_weight||0)/1000;
+          m.declaredWeight = (sp.initial_weight ?? fil.weight ?? 0)/1000;
+          if(fil.name) m.name = fil.name;
+          if(pricePerKg) m.costPerKg = pricePerKg;
+        }
+      });
+      for(const m of appData.materials){
+        if(m.spoolmanId){
+          await updateSpoolmanMaterial(m);
+        }
+      }
+      saveToLocalStorage();
+      renderGlobalMaterialsTable();
+      alert('✅ Синхронизация завершена');
+    }else{
+      alert('Ошибка ответа Spoolman');
+    }
+  }catch(e){
+    alert('Ошибка Spoolman: '+e);
+  }
 }
 
 </script>
