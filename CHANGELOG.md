@@ -19,3 +19,4 @@
 - materials can now link existing Orca profiles from the global list
 - printer mapping table shows model name and supports bulk assignment
 - material profile editor shows all profiles in dropdown for любого материала
+- removed printer mapping feature; history now keeps original IDs
