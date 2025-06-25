@@ -46,3 +46,4 @@
 - в менеджере профилей можно переназначать профиль другому принтеру
 - fixed material profile lookup when importing models via link; handles numeric IDs
 - added ability to upload model thumbnails via icon in table; PNG resized to 140x110 and stored as base64
+- fixed printer detail calculations which broke due to added thumbnail column
