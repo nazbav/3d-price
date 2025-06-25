@@ -2235,17 +2235,22 @@ function onCalculateAll() {
   htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
   htmlRes += `Подитог: ${safeFixed(subtotal)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${safeFixed(taxAmount)} ₽<br/>`;
-  if(discountPercent > 0){
+ 
+ 
+  // Вывод цены за 1 грамм
+  const totalWeight = detailsByPrinter.reduce((acc, printer) => 
+    acc + printer.linesDetail.reduce((sum, line) => sum + line.realWeight, 0), 0);
+  const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;	
+	
+	
+if(discountPercent > 0){
     htmlRes += `Итого без скидки: <del>${safeFixed(totalBeforeDiscount)} ₽<\/del><br/>`;
     htmlRes += `<strong>Итого со скидкой (${discountPercent}%): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
   } else {
     htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
   }
- 
-  // Вывод цены за 1 грамм
-  const totalWeight = detailsByPrinter.reduce((acc, printer) => 
-    acc + printer.linesDetail.reduce((sum, line) => sum + line.realWeight, 0), 0);
-  const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
+
+  htmlRes += `Цена за 1 грамм: ${pricePerGram}<br/>`;
 
   if (finDateStr) {
     htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
