@@ -4187,15 +4187,28 @@ async function saveSettingsToCloud() {
     }, { onConflict: 'sync_id' });
 
   if (error) alert("Ошибка сохранения: " + error.message);
-  else alert("✅ Данные сохранены в облако.");
-}
-
-async function loadSettingsFromCloud() {
-  const { data, error } = await _supabase
-  document.getElementById('myNalogPhone')?.addEventListener('change', e => localStorage.setItem('my_nalog_phone', e.target.value.trim()));
-  document.getElementById('requestSmsBtn')?.addEventListener('click', requestMyNalogSms);
-  document.getElementById('confirmSmsBtn')?.addEventListener('click', confirmMyNalogSms);
-    .from('user_settings')
+  const jsonBtn = document.getElementById('downloadJsonFileBtn');
+  if (jsonBtn) jsonBtn.addEventListener('click', downloadJsonFile);
+  const allLabelsBtn = document.getElementById('downloadAllLabelsBtn');
+  if (allLabelsBtn) allLabelsBtn.addEventListener('click', downloadAllThermoLabelsHtml);
+  const summaryBtn = document.getElementById('downloadSummaryCardBtn');
+  if (summaryBtn) summaryBtn.addEventListener('click', downloadSummaryCardHtml);
+  const myNalogBtn = document.getElementById('sendMyNalogBtn');
+  if (myNalogBtn) myNalogBtn.addEventListener('click', sendMyNalogReceipt);
+  const myNalogBillBtn = document.getElementById('sendMyNalogBillBtn');
+  if (myNalogBillBtn) myNalogBillBtn.addEventListener('click', sendMyNalogBill);
+  const phoneInput = document.getElementById('myNalogPhone');
+  if (phoneInput) {
+    phoneInput.addEventListener('change', e => {
+      localStorage.setItem('my_nalog_phone', e.target.value.trim());
+    });
+  }
+  const requestSmsBtn = document.getElementById('requestSmsBtn');
+  if (requestSmsBtn) requestSmsBtn.addEventListener('click', requestMyNalogSms);
+  const confirmSmsBtn = document.getElementById('confirmSmsBtn');
+  if (confirmSmsBtn) confirmSmsBtn.addEventListener('click', confirmMyNalogSms);
+  const importFileInput = document.getElementById('importJsonFile');
+  if (importFileInput) importFileInput.addEventListener('change', importFromFile);
     .select('*')
     .eq('sync_id', syncId)
     .single();

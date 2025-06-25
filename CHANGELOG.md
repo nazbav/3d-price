@@ -57,6 +57,7 @@
 - раздел «Мой Налог» позволяет войти по телефону и СМС, автоматически сохраняя токен
 
 - исправлена ошибка дублирования переменной phone
+- исправлена синтаксическая ошибка в блоке DOMContentLoaded (убрана опциональная цепочка для старых браузеров)
 - added discount field with old price strikeout and final cost override for completed orders
 - added 'New calculation' button to reset calculator form
 - thumbnail upload now crops the image to fit 140x110 and compresses it to JPEG for smaller size
