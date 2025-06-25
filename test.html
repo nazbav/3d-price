@@ -2726,9 +2726,9 @@ function createPrinterField(f, removable=false){
 
 function ensureOrcaPrinterFields(){
   const c=document.getElementById('orcaPrinterFields');
-  if(c.dataset.inited) return;
+  if(c.dataset.inited === '1') return;
   ORCA_PRINTER_FIELDS.forEach(f=>createPrinterField(f,false));
-  c.dataset.inited='1';
+  c.dataset.inited = '1';
 }
 
 function populateOrcaProfileSelect(pr){
