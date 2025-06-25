@@ -112,25 +112,12 @@ def main():
             material_profiles.append(prof)
             pf_map[key] = prof
 
-        if key in mat_map:
-            mat = mat_map[key]
-        else:
-            mat = {
-                'id': int(time.time()*1000) + len(mat_map),
-                'name': name,
-                'costPerKg': 0,
-                'balance': 0,
-                'declaredWeight': 0,
-                'wastePercent': 0,
-                'manufacturer': '',
-                'productionDate': ''
-            }
-            mat_map[key] = mat
-
-        if not isinstance(mat.get('profileIds'), list):
-            mat['profileIds'] = []
-        if prof['id'] not in mat['profileIds']:
-            mat['profileIds'].append(prof['id'])
+        mat = mat_map.get(key)
+        if mat:
+            if not isinstance(mat.get('profileIds'), list):
+                mat['profileIds'] = []
+            if prof['id'] not in mat['profileIds']:
+                mat['profileIds'].append(prof['id'])
 
     data['materials'] = list(mat_map.values())
     data['materialProfiles'] = material_profiles
