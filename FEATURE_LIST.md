@@ -78,3 +78,4 @@
 - printer detail summary works correctly with thumbnail column
 
 - Drag and drop prepared gcode files onto the page to automatically add models
+- download combined thermo labels for all models via single button
