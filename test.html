@@ -670,12 +670,14 @@
         <table class="table table-bordered" id="printerMapTable">
           <thead>
           <tr>
+            <th></th>
             <th>Дата/время</th>
             <th>Код</th>
             <th>Название расчёта</th>
             <th>Клиент</th>
             <th>Статус</th>
             <th>Итог (₽)</th>
+            <th>Модель</th>
             <th>Исходный</th>
             <th>Целевой принтер</th>
           </tr>
@@ -684,7 +686,9 @@
         </table>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" id="printerMapSave">Сохранить</button>
+        <select class="form-select w-auto" id="bulkPrinterSelect"></select>
+        <button type="button" class="btn btn-secondary" id="applyBulkMap">Назначить выбранным</button>
+        <button type="button" class="btn btn-primary ms-auto" id="printerMapSave">Сохранить</button>
       </div>
     </div>
   </div>
@@ -830,7 +834,7 @@ function migrateOldData(obj){
           d.printerId = pr.id;
           d.printerName = pr.name;
         } else {
-          unresolved.push({history:h,ref:d.printerId,origName:d.printerName||d.printerId});
+          unresolved.push({history:h,ref:d.printerId,origName:d.printerName||d.printerId,model:d.modelName||''});
         }
       });
     }
@@ -845,7 +849,8 @@ function migrateOldData(obj){
         if(pr){
           newCD[pr.id] = h.calcData[pid];
         } else {
-          unresolved.push({history:h,ref:pid,origName:pid});
+          const det = (h.details||[]).find(d=>String(d.printerId)===String(pid));
+          unresolved.push({history:h,ref:pid,origName:pid,model:det?det.modelName||'':''});
           newCD[pid] = h.calcData[pid];
         }
       }
@@ -1017,12 +1022,14 @@ function showPrinterMapModal(list){
     const h=rec.history;
     const tr=document.createElement('tr');
     tr.dataset.index=i;
-    tr.innerHTML=`<td>${new Date(h.timestamp||0).toLocaleString()}</td>`+
+    tr.innerHTML=`<td><input type="checkbox" class="form-check-input"></td>`+
+                 `<td>${new Date(h.timestamp||0).toLocaleString()}</td>`+
                  `<td>${h.id||''}</td>`+
                  `<td>${h.calcName||''}</td>`+
                  `<td>${h.clientName||''}</td>`+
                  `<td>${h.orderStatus||''}</td>`+
                  `<td>${safeFixed(h.total||0)}</td>`+
+                 `<td>${rec.model||''}</td>`+
                  `<td>${rec.origName}</td>`+
                  '<td></td>';
     const sel=document.createElement('select');
@@ -1030,6 +1037,17 @@ function showPrinterMapModal(list){
     tr.lastChild.appendChild(sel);
     tbody.appendChild(tr);
   });
+  const bulkSel=document.getElementById('bulkPrinterSelect');
+  populatePrintersSelect(bulkSel);
+  document.getElementById('applyBulkMap').onclick=()=>{
+    const rows=tbody.querySelectorAll('tr');
+    rows.forEach(row=>{
+      if(row.querySelector('input[type=checkbox]').checked){
+        const sel=row.querySelector('select');
+        sel.value=bulkSel.value;
+      }
+    });
+  };
   const modal=new bootstrap.Modal(document.getElementById('printerMapModal'));
   document.getElementById('printerMapSave').onclick=()=>{
     const rows=tbody.querySelectorAll('tr');
