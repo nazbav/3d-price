@@ -53,6 +53,8 @@
 - summary card now shows total plastic weight and final cost; model cards use 'Требуется' for hours
 - fixed ReferenceError in onCalculateAll when generating summary card
 - summary result now renders as a compact card with order info and model tiles
+- added 'New calculation' button to clear models and main order fields
+- added discount field with old price strikeout and final cost override for completed orders
 - added 'New calculation' button to reset calculator form
 - thumbnail upload now crops the image to fit 140x110 and compresses it to JPEG for smaller size
 - добавлена кнопка отправки чека в систему Мой Налог

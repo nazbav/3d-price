@@ -83,6 +83,8 @@
 - summary card shows total weight and cost with 'Требуется' field
 - bugfix: summary card generation no longer throws htmlRes undefined error
 - calculation results show a modern summary card with order details and a model grid
+- кнопка "Новый расчёт" очищает модели и основные поля заказа
+- скидка в процентах с выводом зачеркнутой цены и возможность задать финальную стоимость
 - кнопка "Новый расчёт" сбрасывает форму калькулятора
 - model thumbnail upload crops the image to fit 140x110 and saves compressed JPEG
 - интеграция с сервисом 'Мой Налог' для формирования чеков
