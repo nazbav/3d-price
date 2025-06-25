@@ -34,6 +34,53 @@
     .form-select.form-select-sm { min-width: 120px; }
     /* Стили для этикетки */
     .label-preview { border: 1px solid #000; width: 30mm; height: 20mm; padding: 2mm; font-family: sans-serif; }
+
+    /* Карточка итогов для клиента */
+    .order-summary-card {
+      max-width: 1200px;
+      margin: 1rem auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .order-summary-card .order-info {
+      flex: 1 1 300px;
+      background: #f9fafb;
+      padding: 1.5rem;
+    }
+    .order-summary-card .order-info h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: #4a90e2;
+    }
+    .order-summary-card .order-info .qr {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .order-summary-card .order-info .qr img {
+      width: 120px;
+      height: 120px;
+    }
+    .order-summary-card .info-item { margin-bottom: 0.5rem; font-size: 0.95rem; }
+    .order-summary-card .info-item .label { font-weight: 600; color: #666; }
+    .order-summary-card .info-item .value { margin-left: 0.5rem; font-weight: 500; }
+
+    .order-summary-card .models { flex: 2 1 600px; padding: 1.5rem; }
+    .models-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .model-card { background: #fff; border-radius: 8px; padding: 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform .3s ease, box-shadow .3s ease; }
+    .model-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .model-card img { width: 48px; height: 48px; margin-bottom: 0.5rem; }
+    .model-card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #4a90e2; }
+    .model-card p { font-size: 0.9rem; margin: 0.25rem 0; color: #666; }
+    .model-card p strong { color: #333; }
+
+    @media (max-width: 800px) {
+      .order-summary-card { flex-direction: column; }
+      .order-summary-card .order-info, .order-summary-card .models { flex: 1 1 auto; }
+    }
   </style>
 </head>
 <body>
@@ -2168,7 +2215,6 @@ function onCalculateAll() {
   const totalWeight = detailsByPrinter.reduce((acc, printer) => 
     acc + printer.linesDetail.reduce((sum, line) => sum + line.realWeight, 0), 0);
   const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
-  htmlRes += `<strong>Цена за 1 грамм: ${safeFixed(pricePerGram)} ₽<\/strong><br/>`;
 
   if (finDateStr) {
     htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
@@ -2303,6 +2349,10 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   
   document.getElementById("calcResult").style.display = "block";
   document.getElementById("calcResult").innerHTML = htmlRes;
+  const qrTarget=document.getElementById("orderSummaryQr");
+  if(qrTarget){
+    new QRCode(qrTarget,{text:appData.labelSettings.chatLink,width:120,height:120,correctLevel:QRCode.CorrectLevel.H});
+  }
   const allBtn=document.getElementById("downloadAllLabelsBtn");
   if(allBtn) allBtn.style.display='inline-block';
   const summaryBtn=document.getElementById("downloadSummaryCardBtn");
