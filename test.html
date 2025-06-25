@@ -275,6 +275,9 @@
         <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
       </div>
       <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
+      <div class="mt-2">
+        <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none" onclick="downloadAllThermoLabelsHtml()">Скачать все этикетки</button>
+      </div>
     </div>
 
     <!-- Итоги -->
@@ -2263,6 +2266,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   
   document.getElementById("calcResult").style.display = "block";
   document.getElementById("calcResult").innerHTML = htmlRes;
+  const allBtn=document.getElementById("downloadAllLabelsBtn");
+  if(allBtn) allBtn.style.display='inline-block';
   
   lastCalcFullData = {
     id: orderId,
@@ -2791,11 +2796,56 @@ function downloadThermoLabelHtml(modelName, printerName, materialName, hours, we
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `ThermoLabel_${modelName}_${Date.now()}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  link.download = `ThermoLabel_${modelName}_${Date.now()}.html`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  });
+}
+
+function downloadAllThermoLabelsHtml(){
+  if(!lastCalcFullData || !lastCalcFullData.detailsByPrinter){ alert("Нет данных."); return; }
+  const qrSize=100;
+  generateQRCodeCanvas(appData.labelSettings.chatLink, qrSize, function(qrCanvas){
+    const qrDataUrl=qrCanvas?qrCanvas.toDataURL("image/png"):"";
+    let htmlContent=`<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Этикетки<\/title>
+  <style>
+    body{font-family:sans-serif;}
+    .label{width:58mm;height:40mm;margin:2mm;padding:2mm;box-sizing:border-box;position:relative;border:1px solid #000;display:inline-block;}
+    .label-header{text-align:center;font-size:12pt;font-weight:bold;margin-bottom:2mm;}
+    .label-content{font-size:10pt;line-height:1.2;}
+    .label-content div{margin-bottom:1mm;}
+    .qr-code{position:absolute;bottom:2mm;right:2mm;width:15mm;height:15mm;}
+    .thumb{position:absolute;bottom:2mm;right:20mm;width:15mm;height:15mm;}
+  <\/style>
+<\/head>
+<body>`;
+    lastCalcFullData.detailsByPrinter.forEach(pr=>{
+      pr.linesDetail.forEach(ln=>{
+        htmlContent+=`<div class="label">
+  <div class="label-header">${appData.labelSettings.companyName}<\/div>
+  <div class="label-content">
+    <div style="text-align: center;">${ln.name}<\/div>
+    <div>${pr.printerName}<\/div>
+    <div>${ln.matName}<\/div>
+    <div>${formatTimeForDisplay(ln.hours)}<\/div>
+    <div>${safeFixed(ln.weight)} г<\/div>
+    <div>${new Date().toLocaleDateString('ru-RU')}<\/div>
+  <\/div>
+  ${ln.thumbnail ? `<img class="thumb" src="data:image/png;base64,${ln.thumbnail}">` : ''}
+  <img class="qr-code" src="${qrDataUrl}" alt="QR-код">
+<\/div>`;
+      });
+    });
+    htmlContent+=`<\/body><\/html>`;
+    const blob=new Blob([htmlContent],{type:'text/html'});
+    downloadBlob(blob,`ThermoLabels_${Date.now()}.html`);
   });
 }
 
@@ -3770,6 +3820,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
   document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
   document.getElementById('downloadJsonFileBtn')?.addEventListener('click', downloadJsonFile);
+  document.getElementById('downloadAllLabelsBtn')?.addEventListener('click', downloadAllThermoLabelsHtml);
     document.getElementById('importJsonFile')?.addEventListener('change', importFromFile);
     const applyLinkBtn=document.getElementById("applyMaterialProfileLinkBtn");
     if(applyLinkBtn) applyLinkBtn.onclick = applyMaterialProfileLink;
