@@ -17,6 +17,33 @@ def gen_id():
     return ''.join(random.choices(alphabet, k=16))
 
 
+def select_item(prompt, options, multi=False):
+    if not options:
+        return [] if multi else None
+    for idx, opt in enumerate(options, 1):
+        print(f"{idx}) {opt}")
+    if multi:
+        raw = input(f"{prompt} (comma numbers, 0 to skip): ").strip()
+        if not raw or raw == '0':
+            return []
+        result = []
+        for part in raw.split(','):
+            part = part.strip()
+            if part.isdigit():
+                i = int(part)
+                if 1 <= i <= len(options):
+                    result.append(i - 1)
+        return result
+    else:
+        raw = input(f"{prompt} [0 skip]: ").strip()
+        if not raw or not raw.isdigit():
+            return None
+        i = int(raw)
+        if i == 0 or i > len(options):
+            return None
+        return i - 1
+
+
 
 def load_json(path):
     try:
@@ -65,8 +92,20 @@ def main():
     printer_profiles = data.get('printerProfiles', [])
     if not isinstance(printer_profiles, list):
         printer_profiles = []
+    pr_profile_keys = {}
+    pair_to_profile = {}
+    for pf in printer_profiles:
+        cfg = pf.get('config', {})
+        h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
+        ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
+        pair = (h, ps)
+        pair_to_profile[pair] = pf
+        pid = pf.get('printerId')
+        if pid:
+            pr_profile_keys.setdefault(pid, set()).add(pair)
 
     mat_map = {m.get('name', '').lower(): m for m in data.get('materials', [])}
+    materials_list = list(mat_map.values())
 
     # convert old format materials with embedded Orca config
     for m in list(mat_map.values()):
@@ -112,6 +151,7 @@ def main():
         name, orca = convert_filament(cfg)
         key = name.lower()
 
+        print(f"\nFound filament profile '{name}' from {os.path.basename(fp)}")
         prof = pf_map.get(key)
         if not prof:
             prof = {
@@ -122,8 +162,18 @@ def main():
             material_profiles.append(prof)
             pf_map[key] = prof
 
-        mat = mat_map.get(key)
-        if mat:
+        linked = [m for m in materials_list if prof['id'] in m.get('profileIds', [])]
+        if linked:
+            names = ', '.join(m.get('name', '') for m in linked)
+            ans = input(f"  already linked to {names or '?'}; change? [y/N]: ").strip().lower()
+            if ans not in ('y', 'yes'):
+                continue
+            for m in linked:
+                m['profileIds'] = [x for x in m.get('profileIds', []) if x != prof['id']]
+
+        sel = select_item('Assign to materials', [m.get('name', '') for m in materials_list], multi=True)
+        for idx in sel:
+            mat = materials_list[idx]
             if not isinstance(mat.get('profileIds'), list):
                 mat['profileIds'] = []
             if prof['id'] not in mat['profileIds']:
@@ -150,17 +200,21 @@ def main():
                 cfg = pf.get('config', {})
                 h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
                 ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
-                existing.add((h, ps))
+                pair = (h, ps)
+                existing.add(pair)
+                pair_to_profile[pair] = pf
         for pid in b.get('profileIds', []):
             pf = next((x for x in printer_profiles if x['id'] == pid), None)
             if pf:
                 cfg = pf.get('config', {})
                 h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
                 ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
-                if (h, ps) not in existing:
+                pair = (h, ps)
+                if pair not in existing:
                     a.setdefault('profileIds', []).append(pid)
                     pf['printerId'] = a.get('id')
-                    existing.add((h, ps))
+                    existing.add(pair)
+                pair_to_profile[pair] = pf
         b['_merged'] = True
         return a
 
@@ -178,6 +232,12 @@ def main():
             printer_profiles.append({'id': pid, 'config': op.get('config', {}), 'info': op.get('info', ''), 'printerId': p.get('id')})
             if pid not in p['profileIds']:
                 p['profileIds'].append(pid)
+            cfg = op.get('config', {})
+            h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
+            ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
+            pair = (h, ps)
+            pr_profile_keys.setdefault(p.get('id'), set()).add(pair)
+            pair_to_profile[pair] = printer_profiles[-1]
         p.pop('orcaProfiles', None)
         p.pop('orca', None)
         p.pop('orcaInfo', None)
@@ -195,6 +255,8 @@ def main():
         name_map[p.get('name', '').lower()] = p
 
     mach_dir = os.path.join(args.orca_path, 'machine')
+    printer_list = list(name_map.values())
+    pr_id_map = {p.get('id'): p for p in printer_list}
     for fp in glob.glob(os.path.join(mach_dir, '*.json')):
         cfg = load_json(fp)
         if not cfg:
@@ -208,19 +270,41 @@ def main():
             except Exception:
                 info_text = ''
         name, host_key, orca = convert_machine(cfg)
-        target = None
-        if host_key and host_key in pr_map:
-            target = pr_map[host_key]
-        elif name.lower() in name_map:
-            target = name_map[name.lower()]
-        if not target:
-            # skip machines that are not listed in input data
+        print(f"\nMachine profile '{name}' from {os.path.basename(fp)}")
+        pair = (host_key, name.lower())
+        existing = pair_to_profile.get(pair)
+        if existing:
+            old_p = pr_id_map.get(existing.get('printerId'))
+            msg = f"linked to {old_p.get('name', '')}" if old_p else 'already imported'
+            ans = input(f"  {msg}. Change? [y/N]: ").strip().lower()
+            if ans in ('y', 'yes'):
+                if old_p and existing['id'] in old_p.get('profileIds', []):
+                    old_p['profileIds'].remove(existing['id'])
+                sel = select_item('Select printer', [p.get('name', '') for p in printer_list], multi=False)
+                target = printer_list[sel] if sel is not None else None
+                if not target:
+                    continue
+                existing['printerId'] = target.get('id')
+                target.setdefault('profileIds', []).append(existing['id'])
+                pr_profile_keys.setdefault(target.get('id'), set()).add(pair)
+                if old_p:
+                    pr_profile_keys.get(old_p.get('id'), set()).discard(pair)
+                pr_id_map[target.get('id')] = target
+                if host_key:
+                    pr_map[host_key] = target
             continue
-        if not isinstance(target.get('profileIds'), list):
-            target['profileIds'] = []
+
+        sel = select_item('Select printer', [p.get('name', '') for p in printer_list], multi=False)
+        target = printer_list[sel] if sel is not None else None
+        if not target:
+            continue
         pid = gen_id()
-        printer_profiles.append({'id': pid, 'config': orca, 'info': info_text, 'printerId': target.get('id')})
-        target['profileIds'].append(pid)
+        profile_obj = {'id': pid, 'config': orca, 'info': info_text, 'printerId': target.get('id')}
+        printer_profiles.append(profile_obj)
+        target.setdefault('profileIds', []).append(pid)
+        pr_profile_keys.setdefault(target.get('id'), set()).add(pair)
+        pair_to_profile[pair] = profile_obj
+        pr_id_map[target.get('id')] = target
         if host_key:
             pr_map[host_key] = target
 
