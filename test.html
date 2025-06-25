@@ -8,7 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 	
   <style>
-    body { margin: 0; padding: 0; }
+    body { margin: 0; padding: 0; }totalWeight
     .container { margin-top: 20px; margin-bottom: 20px; }
     .nav-tabs .nav-link.active { font-weight: bold; }
     .small-text { font-size: 0.9rem; color: #555; }
@@ -2250,7 +2250,7 @@ if(discountPercent > 0){
     htmlRes += `<strong>Итого (с учетом наценки, доставки и налога): ${safeFixed(finalSum)} ₽<\/strong><br/>`;
   }
 
-  htmlRes += `Цена за 1 грамм: ${pricePerGram}<br/>`;
+  htmlRes += `Цена за 1 грамм: ${safeFixed(pricePerGram)}<br/>`;
 
   if (finDateStr) {
     htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
