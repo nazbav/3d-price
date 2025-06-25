@@ -771,14 +771,18 @@ function migrateOldData(obj){
   // Карта принтеров для поиска замены
   const idMap = {};
   obj.printers.forEach(pr=>{
-    idMap[String(pr.id)] = pr;
-    if(pr.print_host) idMap[pr.print_host] = pr;
+    idMap[String(pr.id).toLowerCase()] = pr;
+    if(pr.print_host) idMap[String(pr.print_host).toLowerCase()] = pr;
     if(pr.name) idMap[pr.name.toLowerCase()] = pr;
+    (pr.orcaProfiles||[]).forEach(op=>{
+      const cfg = op.config||{};
+      if(cfg.printer_settings_id) idMap[String(cfg.printer_settings_id).toLowerCase()] = pr;
+      if(cfg.name) idMap[String(cfg.name).toLowerCase()] = pr;
+    });
   });
   function ensurePrinter(ref){
-    if(idMap[String(ref)]) return idMap[String(ref)];
-    if(idMap[ref]) return idMap[ref];
-    return null;
+    if(!ref) return null;
+    return idMap[String(ref).toLowerCase()] || null;
   }
 
   // Обновление истории расчётов и calcData
@@ -789,7 +793,8 @@ function migrateOldData(obj){
       h.details.forEach(d=>{
         let pr = ensurePrinter(d.printerId) || ensurePrinter(d.printerName?.toLowerCase());
         if(!pr){
-          pr = {id: generateUUID(), name: d.printerName||'Temp', orcaProfiles:[], additional:[], materials:[], isTemp:true};
+          pr = {id: generateUUID(), name: d.printerName||'Temp', cost:0, hoursToRecoup:1000, power:0, maintCostHour:0,
+                 orcaProfiles:[], additional:[], materials:[], isTemp:true};
           obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
         }
         d.printerId = pr.id;
@@ -805,7 +810,8 @@ function migrateOldData(obj){
           pr = det? ensurePrinter(det.printerId) : null;
         }
         if(!pr){
-          pr = {id: generateUUID(), name: pid, orcaProfiles:[], additional:[], materials:[], isTemp:true};
+          pr = {id: generateUUID(), name: pid, cost:0, hoursToRecoup:1000, power:0, maintCostHour:0,
+                 orcaProfiles:[], additional:[], materials:[], isTemp:true};
           obj.printers.push(pr); idMap[String(pr.id)] = pr; if(pr.name) idMap[pr.name.toLowerCase()] = pr;
         }
         newCD[pr.id] = h.calcData[pid];
@@ -910,6 +916,23 @@ function showMultiPrompt(title, fields){
           sel.appendChild(o);
         });
         div.appendChild(lbl); div.appendChild(sel); body.appendChild(div);
+      } else if(f.type==='select'){
+        const div=document.createElement('div');
+        div.className='mb-2';
+        const lbl=document.createElement('label');
+        lbl.className='form-label';
+        lbl.textContent=f.label;
+        const sel=document.createElement('select');
+        sel.className='form-select';
+        sel.id='mp_'+f.id;
+        (f.options||[]).forEach(opt=>{
+          const o=document.createElement('option');
+          o.value=opt.value;
+          o.textContent=opt.label;
+          if(f.value==opt.value) o.selected=true;
+          sel.appendChild(o);
+        });
+        div.appendChild(lbl); div.appendChild(sel); body.appendChild(div);
       } else {
         const div=document.createElement('div');
         div.className='mb-2';
@@ -931,6 +954,7 @@ function showMultiPrompt(title, fields){
         const el=document.getElementById('mp_'+f.id);
         if(f.type==='checkbox') result[f.id] = el.checked;
         else if(f.type==='multiselect') result[f.id] = Array.from(el.selectedOptions).map(o=>o.value);
+        else if(f.type==='select') result[f.id] = el.value;
         else result[f.id] = el.value;
       });
       modal.hide();
@@ -1129,6 +1153,8 @@ function massDelete(type) {
         return !(chk && chk.checked);
       });
       renderPrintersTable();
+      renderCalcPrinters();
+      renderSummary();
       break;
     case 'globalMaterials':
       appData.materials = appData.materials.filter(m => {
@@ -1136,6 +1162,7 @@ function massDelete(type) {
         return !(chk && chk.checked);
       });
       renderGlobalMaterialsTable();
+      renderSummary();
       break;
     case 'globalAdditional':
       appData.additionalGlobal = appData.additionalGlobal.filter(a => {
@@ -1143,6 +1170,7 @@ function massDelete(type) {
         return !(chk && chk.checked);
       });
       renderGlobalAdditionalTable();
+      renderSummary();
       break;
   }
   saveToLocalStorage();
@@ -1167,6 +1195,8 @@ async function massEdit(type) {
           }
         });
         renderPrintersTable();
+        renderCalcPrinters();
+        renderSummary();
       }
       break;
     case 'globalMaterials':
@@ -1194,6 +1224,7 @@ async function massEdit(type) {
           }
         });
         renderGlobalMaterialsTable();
+        renderSummary();
       }
       break;
     case 'globalAdditional':
@@ -1215,6 +1246,7 @@ async function massEdit(type) {
           }
         });
         renderGlobalAdditionalTable();
+        renderSummary();
       }
       break;
   }
@@ -1231,6 +1263,8 @@ function copyElement(type, id) {
           copy.name += " (копия)";
           appData.printers.push(copy);
           renderPrintersTable();
+          renderCalcPrinters();
+          renderSummary();
         }
       }
       break;
@@ -1243,6 +1277,7 @@ function copyElement(type, id) {
           copy.name += " (копия)";
           appData.materials.push(copy);
           renderGlobalMaterialsTable();
+          renderSummary();
         }
       }
       break;
@@ -1255,6 +1290,7 @@ function copyElement(type, id) {
           copy.description += " (копия)";
           appData.additionalGlobal.push(copy);
           renderGlobalAdditionalTable();
+          renderSummary();
         }
       }
       break;
@@ -1306,6 +1342,8 @@ function onAddPrinter(){
   appData.printers.push(p);
   saveToLocalStorage();
   renderPrintersTable();
+  renderCalcPrinters();
+  renderSummary();
 }
 let currentPrinterEditId = null;
 function onEditPrinter(id){
@@ -1329,6 +1367,8 @@ function savePrinterFromModal(){
   p.maintCostHour = parseFloat(document.getElementById('printerMaintInput').value) || 0;
   saveToLocalStorage();
   renderPrintersTable();
+  renderCalcPrinters();
+  renderSummary();
   bootstrap.Modal.getInstance(document.getElementById('printerModal')).hide();
 }
 function onDeletePrinter(id){
@@ -1336,6 +1376,8 @@ function onDeletePrinter(id){
   appData.printers = appData.printers.filter(x => String(x.id) !== String(id));
   saveToLocalStorage();
   renderPrintersTable();
+  renderCalcPrinters();
+  renderSummary();
   document.getElementById("printerDetails").style.display = "none";
 }
 function onShowPrinterDetails(id){
@@ -1420,6 +1462,7 @@ function saveMaterialFromModal(){
   if(isNew) appData.materials.push(m);
   saveToLocalStorage();
   renderGlobalMaterialsTable();
+  renderSummary();
   bootstrap.Modal.getInstance(document.getElementById('materialModal')).hide();
 }
 function onDeleteGlobalMaterial(id){
@@ -1427,6 +1470,7 @@ function onDeleteGlobalMaterial(id){
   appData.materials = appData.materials.filter(x => String(x.id) !== String(id));
   saveToLocalStorage();
   renderGlobalMaterialsTable();
+  renderSummary();
 }
 
 /* Функции для глобальных доп. расходов */
@@ -1465,6 +1509,7 @@ function onAddGlobalAdditional(){
   });
   saveToLocalStorage();
   renderGlobalAdditionalTable();
+  renderSummary();
 }
 async function onEditGlobalAdditional(id){
   const x = appData.additionalGlobal.find(a => String(a.id) === String(id));
@@ -1484,12 +1529,14 @@ async function onEditGlobalAdditional(id){
   x.printers = vals.printers || [];
   saveToLocalStorage();
   renderGlobalAdditionalTable();
+  renderSummary();
 }
 function onDeleteGlobalAdditional(id){
   if(!confirm("Удалить статью?")) return;
   appData.additionalGlobal = appData.additionalGlobal.filter(a => String(a.id) !== String(id));
   saveToLocalStorage();
   renderGlobalAdditionalTable();
+  renderSummary();
 }
 
 /* Функции для клиентов */
