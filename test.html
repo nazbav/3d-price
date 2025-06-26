@@ -460,8 +460,8 @@
             <input type="text" id="chatLinkInput" class="form-control"/>
           </div>
           <div class="mb-3">
-            <label for="paymentInfoInput" class="form-label">Реквизиты для оплаты:</label>
-            <input type="text" id="paymentInfoInput" class="form-control"/>
+            <label for="bankDetailsInput" class="form-label">Банковские реквизиты (р/с):</label>
+            <input type="text" id="bankDetailsInput" class="form-control"/>
           </div>
           <div class="mb-3">
             <label for="paymentMethodSelect" class="form-label">Способ оплаты QR:</label>
@@ -541,12 +541,12 @@
             <input type="text" id="myNalogPhone" class="form-control" />
           </div>
           <div class="mb-3">
-            <button class="btn btn-secondary" id="requestSmsBtn" onclick="requestMyNalogSms()">Запросить SMS</button>
+            <button class="btn btn-secondary" id="requestSmsBtn">Запросить SMS</button>
           </div>
           <div class="mb-3">
             <label for="myNalogSms" class="form-label">Код из SMS:</label>
             <input type="text" id="myNalogSms" class="form-control" />
-            <button class="btn btn-primary mt-2" id="confirmSmsBtn" onclick="confirmMyNalogSms()">Получить токен</button>
+            <button class="btn btn-primary mt-2" id="confirmSmsBtn">Получить токен</button>
           </div>
           <div class="mb-3">
             <button class="btn btn-primary" onclick="saveMyNalogSettings()">Сохранить</button>
@@ -1271,7 +1271,7 @@ let appData = {
   labelSettings: {
   companyName: "Компания",
   chatLink: "https://t.me/dur",
-  paymentInfo: "",
+  bankDetails: "",
   paymentMethod: "account",
   sbpPhone: "",
   costPerLabel: 0,
@@ -1297,7 +1297,11 @@ function loadFromLocalStorage(){
       appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
       appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
       if(!appData.labelSettings) appData.labelSettings = {};
-      if(!('paymentInfo' in appData.labelSettings)) appData.labelSettings.paymentInfo = '';
+      if('paymentInfo' in appData.labelSettings && !('bankDetails' in appData.labelSettings)){
+        appData.labelSettings.bankDetails = appData.labelSettings.paymentInfo;
+        delete appData.labelSettings.paymentInfo;
+      }
+      if(!('bankDetails' in appData.labelSettings)) appData.labelSettings.bankDetails = '';
       if(!('paymentMethod' in appData.labelSettings)) appData.labelSettings.paymentMethod = 'account';
       if(!('sbpPhone' in appData.labelSettings)) appData.labelSettings.sbpPhone = '';
     }
@@ -1329,7 +1333,7 @@ function initAll(){
   toggleFinalFields(document.getElementById("calcOrderStatus").value);
   document.getElementById("companyNameInput").value = appData.labelSettings.companyName || "";
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
-  document.getElementById("paymentInfoInput").value = appData.labelSettings.paymentInfo || "";
+  document.getElementById("bankDetailsInput").value = appData.labelSettings.bankDetails || "";
   document.getElementById("paymentMethodSelect").value = appData.labelSettings.paymentMethod || "account";
   document.getElementById("sbpPhoneInput").value = appData.labelSettings.sbpPhone || "";
   updatePaymentFields();
@@ -2344,7 +2348,7 @@ if(discountPercent > 0){
       qr: qrDataUrl,
       paymentInfo: appData.labelSettings.paymentMethod === 'sbp' ?
         'СБП: ' + (appData.labelSettings.sbpPhone || '') :
-        appData.labelSettings.paymentInfo
+        appData.labelSettings.bankDetails
     });
   });
   if (warnings.length > 0) {
@@ -2492,6 +2496,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     realTotal: manualFinalCost > 0 ? manualFinalCost : null
   };
 
+  const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
+  const existing = existingIndex !== -1 ? appData.calcHistory[existingIndex] : null;
   if(existingIndex !== -1){
     const ex = appData.calcHistory[existingIndex];
     if(ex.nalogReceiptUuid){
@@ -2501,10 +2507,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   }
 
   lastCalcFullData.totalLabelsCost = totalLabelsCost;
-  
+
   const dtStr = new Date().toLocaleString("ru-RU");
-  const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
-  const existing = existingIndex !== -1 ? appData.calcHistory[existingIndex] : null;
   const newEntry = {
     id: orderId,
     timestamp: Date.now(),
@@ -2878,13 +2882,13 @@ function onImportJson(){
 function saveBrandingSettings(){
   const cn = document.getElementById("companyNameInput").value.trim();
   const cl = document.getElementById("chatLinkInput").value.trim();
-  const pay = document.getElementById("paymentInfoInput").value.trim();
+  const pay = document.getElementById("bankDetailsInput").value.trim();
   const method = document.getElementById("paymentMethodSelect").value;
   const phone = document.getElementById("sbpPhoneInput").value.trim();
   const hours = parseFloat(document.getElementById("calcWorkHoursDay").value) || 0;
   appData.labelSettings.companyName = cn || "Моя компания";
   appData.labelSettings.chatLink = cl || "https://t.me/example";
-  appData.labelSettings.paymentInfo = pay;
+  appData.labelSettings.bankDetails = pay;
   appData.labelSettings.paymentMethod = method;
   appData.labelSettings.sbpPhone = phone;
   appData.calcSettings.workHoursDay = hours;
@@ -3212,13 +3216,12 @@ function generateDeviceId(len=16){
 
 function buildPaymentQrString(amount, orderId){
   const method = appData.labelSettings.paymentMethod || 'account';
-  if(method === 'sbp'){
-    const phone = (appData.labelSettings.sbpPhone || '').replace(/[^0-9+]/g,'');
-    return `https://qr.nspk.ru/redirect?phone=${encodeURIComponent(phone)}&sum=${safeFixed(amount)}`;
-  }
-  const acc = appData.labelSettings.paymentInfo || '';
-  const name = appData.labelSettings.companyName || '';
   const sum = Math.round((amount || 0)*100);
+  if(method === 'sbp'){
+    return appData.labelSettings.chatLink || '';
+  }
+  const acc = appData.labelSettings.bankDetails || '';
+  const name = appData.labelSettings.companyName || '';
   return `ST00012|Name=${name}|PersonalAcc=${acc}|Sum=${sum}|Purpose=Order_${orderId}`;
 }
 
@@ -3270,6 +3273,12 @@ async function sendMyNalogRequest(method,url,body){
 
 async function sendMyNalogReceipt(){
   if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
+  if(lastCalcFullData.receiptUuid){
+    const inn = lastCalcFullData.receiptInn || localStorage.getItem('my_nalog_inn') || '';
+    const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${lastCalcFullData.receiptUuid}/print` : '';
+    alert('Чек уже сформирован' + (url ? '\n'+url : ''));
+    return;
+  }
   const payload = {
     operationTime: new Date().toISOString(),
     requestTime: new Date().toISOString(),
@@ -3298,6 +3307,8 @@ async function sendMyNalogReceipt(){
           saveToLocalStorage();
           renderHistoryTable();
         }
+        const btn = document.getElementById('sendMyNalogBtn');
+        if(btn) btn.disabled = true;
         alert('Чек отправлен.');
       }else{
         alert('Запрос отправлен в Мой Налог');
