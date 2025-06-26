@@ -338,6 +338,7 @@
         <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none">Скачать все этикетки</button>
         <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none">Скачать счёт</button>
         <button class="btn btn-primary ms-2" id="sendMyNalogBtn" style="display:none">Отправить чек</button>
+        <button class="btn btn-danger ms-2" id="cancelMyNalogBtn" style="display:none">Отменить чек</button>
       </div>
     </div>
 
@@ -2452,6 +2453,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   if(myNalogBtn) myNalogBtn.style.display='inline-block';
   const myNalogBillBtn=document.getElementById("sendMyNalogBillBtn");
   if(myNalogBillBtn) myNalogBillBtn.style.display='inline-block';
+  const myNalogCancelBtn=document.getElementById("cancelMyNalogBtn");
+  if(myNalogCancelBtn) myNalogCancelBtn.style.display='none';
 
   lastCalcFullData = {
     id: orderId,
@@ -2495,6 +2498,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
       lastCalcFullData.receiptUuid = last.uuid;
       lastCalcFullData.receiptInn = last.inn;
     }
+    const cancelBtn=document.getElementById('cancelMyNalogBtn');
+    if(cancelBtn) cancelBtn.style.display = lastCalcFullData.nalogReceipts.length ? 'inline-block' : 'none';
   }
 
   lastCalcFullData.totalLabelsCost = totalLabelsCost;
@@ -3302,6 +3307,8 @@ async function sendMyNalogReceipt(){
         }
         if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
         lastCalcFullData.nalogReceipts.push({uuid:data.approvedReceiptUuid,inn});
+        const cancelBtn=document.getElementById('cancelMyNalogBtn');
+        if(cancelBtn) cancelBtn.style.display='inline-block';
         if(btn) btn.disabled = false;
         alert('Чек отправлен.');
       }else{
@@ -3315,6 +3322,43 @@ async function sendMyNalogReceipt(){
     alert('Не удалось подключиться к сервису Мой Налог');
   }finally{
     if(btn) btn.disabled = false;
+  }
+}
+
+async function cancelMyNalogReceipt(){
+  if(!lastCalcFullData || !Array.isArray(lastCalcFullData.nalogReceipts) || !lastCalcFullData.nalogReceipts.length){
+    alert('Нет чека для отмены.');
+    return;
+  }
+  const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
+  const comment = prompt('Причина отмены чекa:','');
+  const btn=document.getElementById('cancelMyNalogBtn');
+  if(btn) btn.disabled=true;
+  const payload={
+    receiptUuid:last.uuid,
+    comment: comment || '',
+    partnerCode:null,
+    requestTime:new Date().toISOString()
+  };
+  try{
+    const resp=await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/cancel',payload);
+    if(resp.ok){
+      lastCalcFullData.orderStatus='canceled';
+      const idx=appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
+      if(idx!==-1){
+        appData.calcHistory[idx].orderStatus='canceled';
+        saveToLocalStorage();
+        renderHistoryTable();
+      }
+      alert('Чек отменён.');
+    }else{
+      const text=await resp.text().catch(()=>resp.status);
+      alert('Ошибка отмены: '+text);
+    }
+  }catch(e){
+    alert('Не удалось подключиться к сервису Мой Налог');
+  }finally{
+    if(btn) btn.disabled=false;
   }
 }
 
@@ -4386,6 +4430,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (myNalogBtn) myNalogBtn.addEventListener('click', sendMyNalogReceipt);
   const myNalogBillBtn = document.getElementById('sendMyNalogBillBtn');
   if (myNalogBillBtn) myNalogBillBtn.addEventListener('click', sendMyNalogBill);
+  const myNalogCancelBtn = document.getElementById('cancelMyNalogBtn');
+  if (myNalogCancelBtn) myNalogCancelBtn.addEventListener('click', cancelMyNalogReceipt);
   const phoneInput = document.getElementById('myNalogPhone');
   if (phoneInput) {
     phoneInput.addEventListener('change', e => {
