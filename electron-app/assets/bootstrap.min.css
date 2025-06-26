@@ -1,0 +1,25 @@
+/* Minimal Bootstrap-like styles */
+body{margin:0;font-family:Segoe UI,Tahoma,sans-serif;background:#fff;color:#000}
+.container{max-width:1200px;margin:0 auto;padding:0 15px}
+.nav-tabs{display:flex;border-bottom:1px solid #dee2e6}
+.nav-tabs .nav-link{padding:.5rem 1rem;border:1px solid transparent;cursor:pointer}
+.nav-tabs .nav-link.active{border-color:#dee2e6 #dee2e6 #fff;font-weight:700}
+.tab-pane{display:none;padding-top:1rem}
+.tab-pane.show{display:block}
+.btn{display:inline-block;font-weight:400;text-align:center;vertical-align:middle;user-select:none;border:1px solid transparent;padding:.375rem .75rem;font-size:1rem;border-radius:.25rem;cursor:pointer}
+.btn:disabled{opacity:.65}
+.btn-primary{color:#fff;background-color:#0d6efd;border-color:#0d6efd}
+.btn-secondary{color:#fff;background-color:#6c757d;border-color:#6c757d}
+.btn-success{color:#fff;background-color:#198754;border-color:#198754}
+.btn-danger{color:#fff;background-color:#dc3545;border-color:#dc3545}
+.btn-warning{color:#000;background-color:#ffc107;border-color:#ffc107}
+.btn-info{color:#000;background-color:#0dcaf0;border-color:#0dcaf0}
+.btn-outline-secondary{color:#6c757d;border-color:#6c757d;background-color:transparent}
+.table{width:100%;margin-bottom:1rem;color:#212529;border-collapse:collapse}
+.table th,.table td{padding:.5rem;border:1px solid #dee2e6}
+.table-hover tbody tr:hover{background-color:rgba(0,0,0,.075)}
+.form-control{display:block;width:100%;padding:.375rem .75rem;font-size:1rem;line-height:1.5;border:1px solid #ced4da;border-radius:.25rem}
+.form-select{display:block;width:100%;padding:.375rem 2.25rem .375rem .75rem;font-size:1rem;line-height:1.5;border:1px solid #ced4da;border-radius:.25rem}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:1050}
+.modal.show{display:flex}
+.modal-dialog{background:#fff;border-radius:.3rem;max-width:500px;width:100%;padding:1rem}

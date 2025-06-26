@@ -4,11 +4,41 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
   <title>Калькулятор 3D-печати (TEST)</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    const eStorage = {
+      cache: {},
+      async init(){
+        if(window.api){
+          const data = await window.api.getAll();
+          this.cache = Object.assign({}, data);
+        }
+      },
+      getItem(key){
+        return this.cache[key] || null;
+      },
+      setItem(key,val){
+        this.cache[key] = String(val);
+        if(window.api) return window.api.setData(key, String(val)).catch(console.error);
+        return Promise.resolve();
+      },
+      removeItem(key){
+        delete this.cache[key];
+        if(window.api) return window.api.removeData(key).catch(console.error);
+        return Promise.resolve();
+      },
+      clear(){
+        this.cache = {};
+        if(window.api && window.api.clearAll) return window.api.clearAll().catch(console.error);
+        return Promise.resolve();
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="electron-app/assets/bootstrap.min.css"/>
+  <link rel="stylesheet" href="electron-app/assets/icons.css"/>
+  <script src="electron-app/assets/qrcode.min.js"></script>
 	
   <style>
-    body { margin: 0; padding: 0; }totalWeight
+    body { margin: 0; padding: 0; }
     .container { margin-top: 20px; margin-bottom: 20px; }
     .nav-tabs .nav-link.active { font-weight: bold; }
     .small-text { font-size: 0.9rem; color: #555; }
@@ -424,6 +454,7 @@
     <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
     <button class="btn btn-info" id="downloadJsonFileBtn">Скачать JSON файл</button>
     <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
+    <button class="btn btn-dark" onclick="syncOrca()">Синхронизация Orca</button>
     <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
 
   <hr>
@@ -551,8 +582,8 @@
 </div>
   </div>
   <div class="footer" style="text-align:center">
-    <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
-    <p class="mb-0">Для сброса можно импортировать пустой JSON или очистить LocalStorage вручную.</p>
+    <p class="mb-1">Все данные сохраняются в базе SQLite приложения.</p>
+    <p class="mb-0">Для сброса можно импортировать пустой JSON или использовать функцию очистки.</p>
     <a href="index2.html"><h6>Простая версия калькулятора (тык)</h6></a>
     <p class="mt-3"><span style="text-decoration:line-through">©</span>2025. Ничьи права не защищены. Сделано при участии ИИ</p>
   </div>
@@ -778,7 +809,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="electron-app/assets/bootstrap.min.js"></script>
 <script>
 const _instrumentInitialKeys = new Set(Object.keys(window));
 
@@ -807,7 +838,7 @@ function instrumentFunctions(){
 const THEME_STORAGE_KEY = "themePreference";
 function setTheme(theme) {
   document.documentElement.setAttribute("data-bs-theme", theme);
-  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  eStorage.setItem(THEME_STORAGE_KEY, theme);
   const btn = document.getElementById("themeToggle");
   btn.innerText = theme==="dark" ? "☀️ Светлая тема" : "🌙 Темная тема";
 }
@@ -815,7 +846,7 @@ document.getElementById("themeToggle").addEventListener("click",()=>{
   const th = document.documentElement.getAttribute("data-bs-theme");
   setTheme(th==="dark"?"light":"dark");
 });
-const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)||"light";
+const savedTheme = eStorage.getItem(THEME_STORAGE_KEY)||"light";
 setTheme(savedTheme);
 
 function generateUUID(){
@@ -1199,7 +1230,7 @@ function showPrinterMapModal(list){
     modal.hide();
     renderHistoryTable();
     renderPrintersTable();
-    saveToLocalStorage();
+    saveToStorage();
   };
   modal.show();
 }
@@ -1270,10 +1301,10 @@ let appData = {
   calcHistory: []
 };
 
-function loadFromLocalStorage(){
-  try{
-    const s = localStorage.getItem(STORAGE_KEY);
-    if(s){
+  async function loadFromStorage(){
+    try{
+      const s = eStorage.getItem(STORAGE_KEY);
+      if(s){
       const p = JSON.parse(s);
       if(p) appData = migrateOldData(p);
       // ensure arrays exist
@@ -1294,11 +1325,11 @@ function loadFromLocalStorage(){
     }
   } catch(e){}
 }
-function saveToLocalStorage(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-}
-function initAll(){
-  loadFromLocalStorage();
+  function saveToStorage(){
+    eStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  }
+async function initAll(){
+  await loadFromStorage();
   renderPrintersTable();
   renderGlobalMaterialsTable();
   renderGlobalAdditionalTable();
@@ -1435,7 +1466,15 @@ function setupGcodeDrop(){
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => { instrumentFunctions(); initAll(); });
+document.addEventListener("DOMContentLoaded", async () => {
+  try{
+    await eStorage.init();
+  }catch(e){
+    console.error('storage init error', e);
+  }
+  instrumentFunctions();
+  await initAll();
+});
 
 /* Функции массовых действий */
 function selectAll(source, type) {
@@ -1503,7 +1542,7 @@ function massDelete(type) {
       renderSummary();
       break;
   }
-  saveToLocalStorage();
+  saveToStorage();
 }
 async function massEdit(type) {
   switch(type) {
@@ -1580,7 +1619,7 @@ async function massEdit(type) {
       }
       break;
   }
-  saveToLocalStorage();
+  saveToStorage();
 }
 function copyElement(type, id) {
   switch(type) {
@@ -1625,7 +1664,7 @@ function copyElement(type, id) {
       }
       break;
   }
-  saveToLocalStorage();
+  saveToStorage();
 }
 /* Функции для принтеров */
 function renderPrintersTable(){
@@ -1664,7 +1703,7 @@ function onAddPrinter(){
     profileIds: []
   };
   appData.printers.push(p);
-  saveToLocalStorage();
+  saveToStorage();
   renderPrintersTable();
   renderCalcPrinters();
   renderSummary();
@@ -1689,7 +1728,7 @@ function savePrinterFromModal(){
   p.hoursToRecoup = parseFloat(document.getElementById('printerHoursInput').value) || 1000;
   p.power = parseFloat(document.getElementById('printerPowerInput').value) || 0;
   p.maintCostHour = parseFloat(document.getElementById('printerMaintInput').value) || 0;
-  saveToLocalStorage();
+  saveToStorage();
   renderPrintersTable();
   renderCalcPrinters();
   renderSummary();
@@ -1698,7 +1737,7 @@ function savePrinterFromModal(){
 function onDeletePrinter(id){
   if(!confirm("Удалить принтер?")) return;
   appData.printers = appData.printers.filter(x => String(x.id) !== String(id));
-  saveToLocalStorage();
+  saveToStorage();
   renderPrintersTable();
   renderCalcPrinters();
   renderSummary();
@@ -1780,7 +1819,7 @@ function saveMaterialFromModal(){
   m.productionDate = document.getElementById('matProdDateInput').value;
   m.printers = Array.from(document.getElementById('matPrintersSelect').selectedOptions).map(o=>o.value);
   if(isNew) appData.materials.push(m);
-  saveToLocalStorage();
+  saveToStorage();
   renderGlobalMaterialsTable();
   renderSummary();
   bootstrap.Modal.getInstance(document.getElementById('materialModal')).hide();
@@ -1788,7 +1827,7 @@ function saveMaterialFromModal(){
 function onDeleteGlobalMaterial(id){
   if(!confirm("Удалить материал?")) return;
   appData.materials = appData.materials.filter(x => String(x.id) !== String(id));
-  saveToLocalStorage();
+  saveToStorage();
   renderGlobalMaterialsTable();
   renderSummary();
 }
@@ -1827,7 +1866,7 @@ function onAddGlobalAdditional(){
     useInCalc: true,
     printers: []
   });
-  saveToLocalStorage();
+  saveToStorage();
   renderGlobalAdditionalTable();
   renderSummary();
 }
@@ -1847,14 +1886,14 @@ async function onEditGlobalAdditional(id){
   x.hoursToRecoup = parseFloat(vals.hours)||1000;
   x.useInCalc = vals.use;
   x.printers = vals.printers || [];
-  saveToLocalStorage();
+  saveToStorage();
   renderGlobalAdditionalTable();
   renderSummary();
 }
 function onDeleteGlobalAdditional(id){
   if(!confirm("Удалить статью?")) return;
   appData.additionalGlobal = appData.additionalGlobal.filter(a => String(a.id) !== String(id));
-  saveToLocalStorage();
+  saveToStorage();
   renderGlobalAdditionalTable();
   renderSummary();
 }
@@ -1898,7 +1937,7 @@ async function onAddClient(){
   ]);
   if(!vals) return;
   appData.clients.push({id:generateUUID(),name:vals.name,phone:vals.phone,links:vals.links});
-  saveToLocalStorage();
+  saveToStorage();
   renderClientsTable();
 }
 
@@ -1910,14 +1949,14 @@ async function onEditClient(id){
   c.name=vals.name;
   c.phone=vals.phone;
   c.links=vals.links;
-  saveToLocalStorage();
+  saveToStorage();
   renderClientsTable();
 }
 
 function onDeleteClient(id){
   if(!confirm('Удалить клиента?')) return;
   appData.clients=appData.clients.filter(c=>c.id!=id);
-  saveToLocalStorage();
+  saveToStorage();
   renderClientsTable();
 }
 
@@ -1926,7 +1965,7 @@ function quickAddClient(){
   if(!name) return;
   if(!appData.clients.find(c=>c.name===name)){
     appData.clients.push({id:generateUUID(),name});
-    saveToLocalStorage();
+    saveToStorage();
     renderClientsTable();
   }
   renderClientOptions();
@@ -2049,7 +2088,7 @@ function onCalculateAll() {
       c = {id: generateUUID(), name: clientName};
       appData.clients.push(c);
       renderClientsTable();
-      saveToLocalStorage();
+      saveToStorage();
     }
     clientId = c.id;
   }
@@ -2080,7 +2119,7 @@ function onCalculateAll() {
   appData.calcSettings.markupPercent = markupPercent;
   appData.calcSettings.discountPercent = discountPercent;
   
-  saveToLocalStorage();
+  saveToStorage();
   
   // Сохраняем исходные данные моделей для каждого принтера
   let calcData = {};
@@ -2542,7 +2581,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   } else {
     appData.calcHistory.push(newEntry);
   }
-  saveToLocalStorage();
+  saveToStorage();
   renderHistoryTable();
   updateHistoryStats();
 }
@@ -2640,7 +2679,7 @@ function applyMaterialProfileLink(){
   if(!mat) return;
   const sel=document.getElementById('materialProfileLinkSelect');
   mat.profileIds=Array.from(sel.selectedOptions).map(o=>o.value);
-  saveToLocalStorage();
+  saveToStorage();
   bootstrap.Modal.getInstance(document.getElementById('materialProfileLinkModal')).hide();
 }
 function renderMaterialProfilesTable(){
@@ -2661,7 +2700,7 @@ function openMaterialProfilesManager(){
 function deleteMaterialProfileGlobal(pid){
   appData.materials.forEach(m=>{if(Array.isArray(m.profileIds)) m.profileIds=m.profileIds.filter(id=>String(id)!==String(pid));});
   appData.materialProfiles=appData.materialProfiles.filter(p=>String(p.id)!==String(pid));
-  saveToLocalStorage();
+  saveToStorage();
   renderMaterialProfilesTable();
 }
 
@@ -2694,13 +2733,13 @@ async function reassignPrinterProfile(pid){
   if(!Array.isArray(newPr.profileIds)) newPr.profileIds=[];
   if(!newPr.profileIds.includes(pid)) newPr.profileIds.push(pid);
   pf.printerId=newPr.id;
-  saveToLocalStorage();
+  saveToStorage();
   renderPrinterProfilesTable();
 }
 function deletePrinterProfileGlobal(pid){
   appData.printers.forEach(pr=>{ if(Array.isArray(pr.profileIds)) pr.profileIds=pr.profileIds.filter(id=>String(id)!==String(pid)); });
   appData.printerProfiles=appData.printerProfiles.filter(p=>String(p.id)!==String(pid));
-  saveToLocalStorage();
+  saveToStorage();
   renderPrinterProfilesTable();
 }
 function downloadProfileJson(pid){
@@ -2720,7 +2759,7 @@ function importProfileFile(file){
   if(!file) return;
   const reader=new FileReader();
   reader.onload=()=>{
-    try{ const data=JSON.parse(reader.result); appData.materialProfiles.push({id:generateUUID(),config:data,info:''}); saveToLocalStorage(); renderMaterialProfilesTable(); }
+    try{ const data=JSON.parse(reader.result); appData.materialProfiles.push({id:generateUUID(),config:data,info:''}); saveToStorage(); renderMaterialProfilesTable(); }
     catch(e){ alert('Ошибка: '+e); }
   };
   reader.readAsText(file);
@@ -2794,14 +2833,14 @@ function updateHistoryStats(){
 function onDeleteCalcHistoryEntry(timestamp) {
   if(!confirm("Удалить выбранный расчет из истории?")) return;
   appData.calcHistory = appData.calcHistory.filter(entry => entry.timestamp !== timestamp);
-  saveToLocalStorage();
+  saveToStorage();
   renderHistoryTable();
   updateHistoryStats();
 }
 function onClearCalcHistory(){
   if(!confirm("Очистить всю историю?")) return;
   appData.calcHistory = [];
-  saveToLocalStorage();
+  saveToStorage();
   renderHistoryTable();
   updateHistoryStats();
 }
@@ -2813,7 +2852,7 @@ function onImportHistory(){
   const s = document.getElementById("importArea").value.trim();
   if(!s) {
     if(confirm("Пустая строка. Очистить все данные?")){
-      localStorage.removeItem(STORAGE_KEY);
+      eStorage.clear();
       location.reload();
     }
     return;
@@ -2825,7 +2864,7 @@ function onImportHistory(){
       return;
     }
     appData.calcHistory = obj;
-    saveToLocalStorage();
+    saveToStorage();
     renderHistoryTable();
     updateHistoryStats();
     alert("Импорт истории завершён.");
@@ -2838,7 +2877,7 @@ function onChangeCalcHistoryStatus(timestamp, newStatus){
   const it = appData.calcHistory.find(x => x.timestamp === timestamp);
   if(!it) return;
   it.orderStatus = newStatus;
-  saveToLocalStorage();
+  saveToStorage();
 }
 
 /* Функции импорта/экспорта JSON */
@@ -2850,6 +2889,16 @@ function onExportJson(){
 function downloadJsonFile(){
   const blob = new Blob([JSON.stringify(appData,null,2)],{type:'application/json'});
   downloadBlob(blob,'calc_data.json');
+}
+
+async function syncOrca(){
+  if(!window.api || !window.api.syncOrca) return;
+  try{
+    const out = await window.api.syncOrca();
+    alert(out || 'Синхронизация завершена');
+  }catch(e){
+    alert('Ошибка синхронизации: ' + e);
+  }
 }
 
 function importFromFile(){
@@ -2867,7 +2916,7 @@ function onImportJson(){
   const s = document.getElementById("importArea").value.trim();
   if(!s){
     if(confirm("Пустая строка. Очистить все данные?")){
-      localStorage.removeItem(STORAGE_KEY);
+      eStorage.clear();
       location.reload();
     }
     return;
@@ -2875,7 +2924,7 @@ function onImportJson(){
   try{
     const obj = JSON.parse(s);
     appData = migrateOldData(obj);
-    saveToLocalStorage();
+    saveToStorage();
     initAll();
     alert("Импорт выполнен.");
   } catch(e){
@@ -2891,7 +2940,7 @@ function saveBrandingSettings(){
   appData.labelSettings.chatLink = cl || "https://t.me/example";
   appData.labelSettings.bankDetails = pay;
   appData.calcSettings.workHoursDay = hours;
-  saveToLocalStorage();
+  saveToStorage();
   alert("Сохранено");
 }
 
@@ -2901,7 +2950,7 @@ function saveCalcSettings(){
   appData.calcSettings.operatorRate = parseFloat(document.getElementById("calcOperatorRate").value) || 0;
   appData.calcSettings.costKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
   appData.calcSettings.taxPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
-  saveToLocalStorage();
+  saveToStorage();
   alert("Сохранено");
 }
 
@@ -2945,7 +2994,7 @@ function onModelThumbnailChange(e, code){
           imgEl.outerHTML = `<img id="thumb_${code}" src="${dataUrl}" style="height:40px;width:40px;object-fit:contain;border:1px solid #ccc;cursor:pointer" onclick=\"document.getElementById('thumbFile_${code}').click()\">`;
         }
       }
-      saveToLocalStorage();
+      saveToStorage();
     };
     img.src = reader.result;
   };
@@ -3154,7 +3203,7 @@ function buildSummaryCardHtml(data){
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Счёт на оплату</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="electron-app/assets/bootstrap.min.css"/>
   <style>
     body{background:var(--bs-body-bg);color:var(--bs-body-color);font-family:'Segoe UI',Tahoma,sans-serif;padding:2rem;background-image:radial-gradient(circle at 20% 20%,var(--bs-primary-bg-subtle),transparent 60%),radial-gradient(circle at 80% 0,var(--bs-success-bg-subtle),transparent 60%);} 
     .order-summary-card{max-width:1200px;margin:0 auto;background:var(--bs-light-bg-subtle);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;display:flex;flex-wrap:wrap;}
@@ -3218,8 +3267,8 @@ function buildPaymentQrString(){
 }
 
 async function refreshMyNalogToken(){
-  const refresh = localStorage.getItem('my_nalog_refresh');
-  const deviceId = localStorage.getItem('my_nalog_device_id');
+  const refresh = eStorage.getItem('my_nalog_refresh');
+  const deviceId = eStorage.getItem('my_nalog_device_id');
   if(!refresh || !deviceId) return false;
   const body={
     refreshToken: refresh,
@@ -3235,8 +3284,8 @@ async function refreshMyNalogToken(){
     if(resp.ok){
       const data = await resp.json();
       if(data.token){
-        localStorage.setItem('my_nalog_token', data.token);
-        if(data.refreshToken) localStorage.setItem('my_nalog_refresh', data.refreshToken);
+        eStorage.setItem('my_nalog_token', data.token);
+        if(data.refreshToken) eStorage.setItem('my_nalog_refresh', data.refreshToken);
         return true;
       }
     }
@@ -3247,7 +3296,7 @@ async function refreshMyNalogToken(){
 }
 
 async function sendMyNalogRequest(method,url,body){
-  let token = localStorage.getItem('my_nalog_token');
+  let token = eStorage.getItem('my_nalog_token');
   if(!token) throw new Error('no token');
   const opt={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
   if(body) opt.body=JSON.stringify(body);
@@ -3255,7 +3304,7 @@ async function sendMyNalogRequest(method,url,body){
   if(resp.status===401){
     const ok = await refreshMyNalogToken();
     if(ok){
-      token = localStorage.getItem('my_nalog_token');
+      token = eStorage.getItem('my_nalog_token');
       opt.headers['Authorization']='Bearer '+token;
       resp = await fetch(url,opt);
     }
@@ -3280,7 +3329,7 @@ async function cancelReceiptInternal(receipt, comment){
         const arr = appData.calcHistory[idx].nalogReceipts;
         const j = arr.findIndex(r=>r.uuid===receipt.uuid);
         if(j!==-1) arr[j].canceled = true;
-        saveToLocalStorage();
+        saveToStorage();
         renderHistoryTable();
       }
       return true;
@@ -3295,7 +3344,7 @@ async function sendMyNalogReceipt(){
   if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
   if(lastCalcFullData.nalogReceipts.length){
     const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
-    const inn = last.inn || localStorage.getItem('my_nalog_inn') || '';
+    const inn = last.inn || eStorage.getItem('my_nalog_inn') || '';
     const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${last.uuid}/print` : '';
     const force = confirm('Чек уже сформирован' + (url ? '\n'+url : '') + '\nПерегенерировать?');
     if(!force) return;
@@ -3317,7 +3366,7 @@ async function sendMyNalogReceipt(){
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
       if(data?.approvedReceiptUuid){
-        const inn = localStorage.getItem('my_nalog_inn') || '';
+        const inn = eStorage.getItem('my_nalog_inn') || '';
         lastCalcFullData.receiptUuid = data.approvedReceiptUuid;
         lastCalcFullData.receiptInn = inn;
         lastCalcFullData.orderStatus = 'paid';
@@ -3331,7 +3380,7 @@ async function sendMyNalogReceipt(){
           appData.calcHistory[idx].nalogReceiptUuid = data.approvedReceiptUuid;
           appData.calcHistory[idx].nalogInn = inn;
           appData.calcHistory[idx].orderStatus = 'paid';
-          saveToLocalStorage();
+          saveToStorage();
           renderHistoryTable();
         }
         if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
@@ -3369,7 +3418,7 @@ async function cancelMyNalogReceipt(){
     const idx=appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
     if(idx!==-1){
       appData.calcHistory[idx].orderStatus='canceled';
-      saveToLocalStorage();
+      saveToStorage();
       renderHistoryTable();
     }
     const cancelBtn=document.getElementById('cancelMyNalogBtn');
@@ -3384,14 +3433,14 @@ async function cancelMyNalogReceipt(){
 
 function saveMyNalogSettings(){
   const token = document.getElementById('myNalogToken').value.trim();
-  localStorage.setItem('my_nalog_token', token);
+  eStorage.setItem('my_nalog_token', token);
   const phoneEl = document.getElementById('myNalogPhone');
-  if(phoneEl) localStorage.setItem('my_nalog_phone', phoneEl.value.trim());
+  if(phoneEl) eStorage.setItem('my_nalog_phone', phoneEl.value.trim());
   alert('Сохранено');
 }
 
 async function checkMyNalogStatus(){
-  const token = localStorage.getItem('my_nalog_token');
+  const token = eStorage.getItem('my_nalog_token');
   const statusEl = document.getElementById('myNalogStatus');
   if(!token){
     statusEl.textContent = 'Токен не задан';
@@ -3404,7 +3453,7 @@ async function checkMyNalogStatus(){
       const data = await resp.json();
       const name = data?.displayName  || 'неизвестно';
       const inn = data?.inn || data?.individual?.inn || '';
-      if(inn) localStorage.setItem('my_nalog_inn', inn);
+      if(inn) eStorage.setItem('my_nalog_inn', inn);
       statusEl.textContent = `Подключено: ${name} ${inn ? '(ИНН '+inn+')' : ''}`;
          console.log(data);
     } else {
@@ -3454,8 +3503,8 @@ async function confirmMyNalogSms(){
   statusEl.textContent = 'Подтверждение...';
   try{
     const challenge = myNalogChallengeToken || '';
-    const deviceId = localStorage.getItem('my_nalog_device_id') || generateDeviceId();
-    localStorage.setItem('my_nalog_device_id', deviceId);
+    const deviceId = eStorage.getItem('my_nalog_device_id') || generateDeviceId();
+    eStorage.setItem('my_nalog_device_id', deviceId);
     const body = {
       phone: phoneNum,
       code,
@@ -3475,8 +3524,8 @@ async function confirmMyNalogSms(){
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
       if(data?.token){
-        localStorage.setItem('my_nalog_token', data.token);
-        localStorage.setItem('my_nalog_refresh', data.refreshToken || '');
+        eStorage.setItem('my_nalog_token', data.token);
+        eStorage.setItem('my_nalog_refresh', data.refreshToken || '');
         document.getElementById('myNalogToken').value = data.token;
         statusEl.textContent = 'Токен получен';
       }else{
@@ -3492,10 +3541,10 @@ async function confirmMyNalogSms(){
 }
 
 function loadMyNalogSettings(){
-  const token = localStorage.getItem('my_nalog_token') || '';
+  const token = eStorage.getItem('my_nalog_token') || '';
   const inp = document.getElementById('myNalogToken');
   if(inp) inp.value = token;
-  const savedPhone = localStorage.getItem('my_nalog_phone') || '';
+  const savedPhone = eStorage.getItem('my_nalog_phone') || '';
   const phoneInp = document.getElementById('myNalogPhone');
   if(phoneInp) phoneInp.value = savedPhone;
   if(token) checkMyNalogStatus();
@@ -3724,13 +3773,7 @@ function onEditCalcHistory(timestamp){
   tab.show();
 }
 
-function ensureIconsLoaded() {
-  if (!document.querySelector('link[href*="bootstrap-icons"]')) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
-    document.head.appendChild(link);
-  }
+function ensureIconsLoaded() {}
 }
 
 	
@@ -4326,8 +4369,8 @@ async function applyIncomingData(){
 </script>
 
 <!-- Supabase & QR -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="electron-app/assets/supabase.min.js"></script>
+<script src="electron-app/assets/qrcode.min.js"></script>
 
 <script>
 const SUPABASE_URL = "https://kvvxfytrlgihewmsvwkj.supabase.co";
@@ -4335,10 +4378,10 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // ✅ исправлено
 
-let syncId = localStorage.getItem("sync_id") || crypto.randomUUID();
-let encryptionKey = localStorage.getItem("encryption_key") || crypto.randomUUID() + crypto.randomUUID();
-localStorage.setItem("sync_id", syncId);
-localStorage.setItem("encryption_key", encryptionKey);
+let syncId = eStorage.getItem("sync_id") || crypto.randomUUID();
+let encryptionKey = eStorage.getItem("encryption_key") || crypto.randomUUID() + crypto.randomUUID();
+eStorage.setItem("sync_id", syncId);
+eStorage.setItem("encryption_key", encryptionKey);
 
 async function encryptData(data, key) {
   const text = JSON.stringify(data);
@@ -4396,7 +4439,7 @@ async function loadSettingsFromCloud() {
   try {
     const decrypted = await decryptData(data.encrypted_data, encryptionKey);
     appData = decrypted;
-    saveToLocalStorage();
+    saveToStorage();
     initAll();
     alert("✅ Настройки загружены.");
   } catch (e) {
@@ -4427,8 +4470,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const incomingKey = params.get("key");
 
   if (incomingId && incomingKey) {
-    localStorage.setItem("sync_id", incomingId);
-    localStorage.setItem("encryption_key", incomingKey);
+    eStorage.setItem("sync_id", incomingId);
+    eStorage.setItem("encryption_key", incomingKey);
     syncId = incomingId;
     encryptionKey = incomingKey;
     await loadSettingsFromCloud();
@@ -4455,7 +4498,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const phoneInput = document.getElementById('myNalogPhone');
   if (phoneInput) {
     phoneInput.addEventListener('change', e => {
-      localStorage.setItem('my_nalog_phone', e.target.value.trim());
+      eStorage.setItem('my_nalog_phone', e.target.value.trim());
     });
   }
   const requestSmsBtn = document.getElementById('requestSmsBtn');
