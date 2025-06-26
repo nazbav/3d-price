@@ -3249,8 +3249,19 @@ async function sendMyNalogReceipt(){
   if(lastCalcFullData.receiptUuid){
     const inn = lastCalcFullData.receiptInn || localStorage.getItem('my_nalog_inn') || '';
     const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${lastCalcFullData.receiptUuid}/print` : '';
-    alert('Чек уже сформирован' + (url ? '\n'+url : ''));
-    return;
+    const force = confirm('Чек уже сформирован' + (url ? '\n'+url : '') + '\nПерегенерировать?');
+    if(!force) return;
+    lastCalcFullData.receiptUuid = null;
+    lastCalcFullData.receiptInn = null;
+    const idx = appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
+    if(idx!==-1){
+      appData.calcHistory[idx].nalogReceiptUuid = null;
+      appData.calcHistory[idx].nalogInn = null;
+      saveToLocalStorage();
+      renderHistoryTable();
+    }
+    const btn = document.getElementById('sendMyNalogBtn');
+    if(btn) btn.disabled = false;
   }
   const payload = {
     operationTime: new Date().toISOString(),
