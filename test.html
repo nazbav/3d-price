@@ -2429,10 +2429,13 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     htmlRes += `Глобальные расходы: ${safeFixed(sumGlobalAdd)} ₽<br/>`;
   }
 
-  if(lastCalcFullData && lastCalcFullData.receiptUuid){
-    const inn = lastCalcFullData.receiptInn || '';
-    const rUrl = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${lastCalcFullData.receiptUuid}/print` : '';
-    if(rUrl) htmlRes += `<br/><a href="${rUrl}" target="_blank">Ссылка на чек<\/a>`;
+  if(lastCalcFullData && Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length){
+    const links = lastCalcFullData.nalogReceipts.map((r,i)=>{
+      const url = `https://lknpd.nalog.ru/api/v1/receipt/${r.inn||''}/${r.uuid}/print`;
+      const cls = i < lastCalcFullData.nalogReceipts.length-1 ? 'class="text-danger"' : '';
+      return `<a href="${url}" target="_blank" ${cls}>Чек${lastCalcFullData.nalogReceipts.length>1?' '+(i+1):''}<\/a>`;
+    }).join('<br/>');
+    htmlRes += '<br/>'+links;
   }
   
   document.getElementById("calcResult").style.display = "block";
@@ -2474,16 +2477,23 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     markupPercent,
     discountPercent,
     priceBeforeDiscount: totalBeforeDiscount,
-    realTotal: manualFinalCost > 0 ? manualFinalCost : null
+    realTotal: manualFinalCost > 0 ? manualFinalCost : null,
+    nalogReceipts: []
   };
 
   const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
   const existing = existingIndex !== -1 ? appData.calcHistory[existingIndex] : null;
   if(existingIndex !== -1){
     const ex = appData.calcHistory[existingIndex];
-    if(ex.nalogReceiptUuid){
-      lastCalcFullData.receiptUuid = ex.nalogReceiptUuid;
-      lastCalcFullData.receiptInn = ex.nalogInn || '';
+    if(Array.isArray(ex.nalogReceipts)){
+      lastCalcFullData.nalogReceipts = ex.nalogReceipts.slice();
+    }else if(ex.nalogReceiptUuid){
+      lastCalcFullData.nalogReceipts = [{uuid: ex.nalogReceiptUuid, inn: ex.nalogInn || ''}];
+    }
+    if(lastCalcFullData.nalogReceipts.length){
+      const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
+      lastCalcFullData.receiptUuid = last.uuid;
+      lastCalcFullData.receiptInn = last.inn;
     }
   }
 
@@ -2517,8 +2527,9 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     discountPercent,
     priceBeforeDiscount: totalBeforeDiscount,
     realTotal: manualFinalCost > 0 ? manualFinalCost : null,
-    nalogReceiptUuid: existing ? existing.nalogReceiptUuid || null : null,
-    nalogInn: existing ? existing.nalogInn || null : null
+    nalogReceipts: lastCalcFullData.nalogReceipts.slice(),
+    nalogReceiptUuid: lastCalcFullData.receiptUuid || null,
+    nalogInn: lastCalcFullData.receiptInn || null
   };
   if (existingIndex !== -1) {
     appData.calcHistory[existingIndex] = newEntry;
@@ -2740,7 +2751,9 @@ function renderHistoryTable(){
       <\/td>
       <td>${safeFixed(h.total)}<\/td>
       <td>
-        ${h.nalogReceiptUuid ? `<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${h.nalogInn || ''}/${h.nalogReceiptUuid}/print\" target=\"_blank\">Чек<\/a>` : ''}
+        ${Array.isArray(h.nalogReceipts) && h.nalogReceipts.length ?
+          h.nalogReceipts.map((r,i)=>`<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${r.inn || ''}/${r.uuid}/print\" target=\"_blank\" ${i < h.nalogReceipts.length-1 ? 'class="text-danger"' : ''}>Чек${h.nalogReceipts.length>1 ? ' '+(i+1) : ''}<\/a>`).join('<br/>') :
+          (h.nalogReceiptUuid ? `<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${h.nalogInn || ''}/${h.nalogReceiptUuid}/print\" target=\"_blank\">Чек<\/a>` : '')}
       <\/td>
       <td>
         <button class="btn btn-sm btn-warning" onclick="onEditCalcHistory(${h.timestamp})">Редакт.<\/button>
@@ -3246,23 +3259,16 @@ async function sendMyNalogRequest(method,url,body){
 
 async function sendMyNalogReceipt(){
   if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
-  if(lastCalcFullData.receiptUuid){
-    const inn = lastCalcFullData.receiptInn || localStorage.getItem('my_nalog_inn') || '';
-    const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${lastCalcFullData.receiptUuid}/print` : '';
+  if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
+  if(lastCalcFullData.nalogReceipts.length){
+    const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
+    const inn = last.inn || localStorage.getItem('my_nalog_inn') || '';
+    const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${last.uuid}/print` : '';
     const force = confirm('Чек уже сформирован' + (url ? '\n'+url : '') + '\nПерегенерировать?');
     if(!force) return;
-    lastCalcFullData.receiptUuid = null;
-    lastCalcFullData.receiptInn = null;
-    const idx = appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
-    if(idx!==-1){
-      appData.calcHistory[idx].nalogReceiptUuid = null;
-      appData.calcHistory[idx].nalogInn = null;
-      saveToLocalStorage();
-      renderHistoryTable();
-    }
-    const btn = document.getElementById('sendMyNalogBtn');
-    if(btn) btn.disabled = false;
   }
+  const btn = document.getElementById('sendMyNalogBtn');
+  if(btn) btn.disabled = true;
   const payload = {
     operationTime: new Date().toISOString(),
     requestTime: new Date().toISOString(),
@@ -3285,14 +3291,18 @@ async function sendMyNalogReceipt(){
         toggleFinalFields('paid');
         const idx = appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
         if(idx!==-1){
+          const recList = Array.isArray(appData.calcHistory[idx].nalogReceipts) ? appData.calcHistory[idx].nalogReceipts : [];
+          recList.push({uuid:data.approvedReceiptUuid,inn});
+          appData.calcHistory[idx].nalogReceipts = recList;
           appData.calcHistory[idx].nalogReceiptUuid = data.approvedReceiptUuid;
           appData.calcHistory[idx].nalogInn = inn;
           appData.calcHistory[idx].orderStatus = 'paid';
           saveToLocalStorage();
           renderHistoryTable();
         }
-        const btn = document.getElementById('sendMyNalogBtn');
-        if(btn) btn.disabled = true;
+        if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
+        lastCalcFullData.nalogReceipts.push({uuid:data.approvedReceiptUuid,inn});
+        if(btn) btn.disabled = false;
         alert('Чек отправлен.');
       }else{
         alert('Запрос отправлен в Мой Налог');
@@ -3303,6 +3313,8 @@ async function sendMyNalogReceipt(){
     }
   }catch(e){
     alert('Не удалось подключиться к сервису Мой Налог');
+  }finally{
+    if(btn) btn.disabled = false;
   }
 }
 
