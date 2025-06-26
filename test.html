@@ -2498,7 +2498,6 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
 
   const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
   const existing = existingIndex !== -1 ? appData.calcHistory[existingIndex] : null;
-
   if(existingIndex !== -1){
     const ex = appData.calcHistory[existingIndex];
     if(ex.nalogReceiptUuid){
