@@ -369,6 +369,7 @@
                 <th onclick="sortTable('historyTable',3)">Клиент</th>
                 <th onclick="sortTable('historyTable',4)">Статус</th>
                 <th onclick="sortTable('historyTable',5)">Итог (₽)</th>
+                <th>Чек</th>
                 <th>Подробнее</th>
               </tr>
             </thead>
@@ -2739,6 +2740,9 @@ function renderHistoryTable(){
       <\/td>
       <td>${safeFixed(h.total)}<\/td>
       <td>
+        ${h.nalogReceiptUuid ? `<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${h.nalogInn || ''}/${h.nalogReceiptUuid}/print\" target=\"_blank\">Чек<\/a>` : ''}
+      <\/td>
+      <td>
         <button class="btn btn-sm btn-warning" onclick="onEditCalcHistory(${h.timestamp})">Редакт.<\/button>
         <button class="btn btn-sm btn-danger" onclick="onDeleteCalcHistoryEntry(${h.timestamp})">Удалить<\/button>
       <\/td>
@@ -3674,7 +3678,9 @@ ensureIconsLoaded();
 
   // 2. Анализ завершенных заказов
   const analyzeCompletedOrders = () => {
-    const completedOrders = appData.calcHistory.filter(o => o.orderStatus === "done");
+    const completedOrders = appData.calcHistory.filter(
+      o => o.orderStatus === "done" || o.orderStatus === "paid"
+    );
     const results = {
       totalRevenue: 0,
       totalTax: 0,
