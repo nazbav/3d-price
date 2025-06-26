@@ -284,6 +284,7 @@
             <option value="new">Новый</option>
             <option value="inprogress">В работе</option>
             <option value="done">Завершён</option>
+            <option value="paid">Оплачен</option>
             <option value="canceled">Отменён</option>
           </select>
         </div>
@@ -334,9 +335,9 @@
       </div>
       <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
       <div class="mt-2">
-        <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none" onclick="downloadAllThermoLabelsHtml()">Скачать все этикетки</button>
-        <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none" onclick="downloadSummaryCardHtml()">Скачать итоговую карточку</button>
-        <button class="btn btn-primary ms-2" id="sendMyNalogBtn" style="display:none" onclick="sendMyNalogReceipt()">Отправить чек</button>
+        <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none">Скачать все этикетки</button>
+        <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none">Скачать счёт</button>
+        <button class="btn btn-primary ms-2" id="sendMyNalogBtn" style="display:none">Отправить чек</button>
       </div>
     </div>
 
@@ -459,6 +460,21 @@
             <input type="text" id="chatLinkInput" class="form-control"/>
           </div>
           <div class="mb-3">
+            <label for="bankDetailsInput" class="form-label">Банковские реквизиты (р/с):</label>
+            <input type="text" id="bankDetailsInput" class="form-control"/>
+          </div>
+          <div class="mb-3">
+            <label for="paymentMethodSelect" class="form-label">Способ оплаты QR:</label>
+            <select id="paymentMethodSelect" class="form-select">
+              <option value="account">По реквизитам</option>
+              <option value="sbp">СБП по телефону</option>
+            </select>
+          </div>
+          <div class="mb-3" id="sbpPhoneGroup" style="display:none;">
+            <label for="sbpPhoneInput" class="form-label">Телефон для СБП:</label>
+            <input type="text" id="sbpPhoneInput" class="form-control"/>
+          </div>
+          <div class="mb-3">
             <label for="calcWorkHoursDay" class="form-label">Раб. часов в день:</label>
             <input type="number" id="calcWorkHoursDay" class="form-control" />
           </div>
@@ -525,12 +541,12 @@
             <input type="text" id="myNalogPhone" class="form-control" />
           </div>
           <div class="mb-3">
-            <button class="btn btn-secondary" id="requestSmsBtn" onclick="requestMyNalogSms()">Запросить SMS</button>
+            <button class="btn btn-secondary" id="requestSmsBtn">Запросить SMS</button>
           </div>
           <div class="mb-3">
             <label for="myNalogSms" class="form-label">Код из SMS:</label>
             <input type="text" id="myNalogSms" class="form-control" />
-            <button class="btn btn-primary mt-2" id="confirmSmsBtn" onclick="confirmMyNalogSms()">Получить токен</button>
+            <button class="btn btn-primary mt-2" id="confirmSmsBtn">Получить токен</button>
           </div>
           <div class="mb-3">
             <button class="btn btn-primary" onclick="saveMyNalogSettings()">Сохранить</button>
@@ -1255,6 +1271,9 @@ let appData = {
   labelSettings: {
   companyName: "Компания",
   chatLink: "https://t.me/dur",
+  bankDetails: "",
+  paymentMethod: "account",
+  sbpPhone: "",
   costPerLabel: 0,
   printLabels: false
 },
@@ -1278,6 +1297,13 @@ function loadFromLocalStorage(){
       appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
       appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
       if(!appData.labelSettings) appData.labelSettings = {};
+      if('paymentInfo' in appData.labelSettings && !('bankDetails' in appData.labelSettings)){
+        appData.labelSettings.bankDetails = appData.labelSettings.paymentInfo;
+        delete appData.labelSettings.paymentInfo;
+      }
+      if(!('bankDetails' in appData.labelSettings)) appData.labelSettings.bankDetails = '';
+      if(!('paymentMethod' in appData.labelSettings)) appData.labelSettings.paymentMethod = 'account';
+      if(!('sbpPhone' in appData.labelSettings)) appData.labelSettings.sbpPhone = '';
     }
   } catch(e){}
 }
@@ -1307,6 +1333,10 @@ function initAll(){
   toggleFinalFields(document.getElementById("calcOrderStatus").value);
   document.getElementById("companyNameInput").value = appData.labelSettings.companyName || "";
   document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
+  document.getElementById("bankDetailsInput").value = appData.labelSettings.bankDetails || "";
+  document.getElementById("paymentMethodSelect").value = appData.labelSettings.paymentMethod || "account";
+  document.getElementById("sbpPhoneInput").value = appData.labelSettings.sbpPhone || "";
+  updatePaymentFields();
   document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
   document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
 }
@@ -2298,7 +2328,8 @@ if(discountPercent > 0){
       `</div>`;
     });
   });
-  generateQRCodeCanvas(appData.labelSettings.chatLink, 120, function(qrCanvas){
+  const qrText = buildPaymentQrString(finalSum, orderId);
+  generateQRCodeCanvas(qrText, 120, function(qrCanvas){
     const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : '';
     lastSummaryCardHtml = buildSummaryCardHtml({
       company: appData.labelSettings.companyName,
@@ -2314,7 +2345,10 @@ if(discountPercent > 0){
       pricePerGram: safeFixed(pricePerGram),
       finDate: finDateStr,
       modelsHtml: summaryModels,
-      qr: qrDataUrl
+      qr: qrDataUrl,
+      paymentInfo: appData.labelSettings.paymentMethod === 'sbp' ?
+        'СБП: ' + (appData.labelSettings.sbpPhone || '') :
+        appData.labelSettings.bankDetails
     });
   });
   if (warnings.length > 0) {
@@ -2413,6 +2447,12 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     htmlRes += `<\/tbody><\/table>`;
     htmlRes += `Глобальные расходы: ${safeFixed(sumGlobalAdd)} ₽<br/>`;
   }
+
+  if(lastCalcFullData && lastCalcFullData.receiptUuid){
+    const inn = lastCalcFullData.receiptInn || '';
+    const rUrl = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${lastCalcFullData.receiptUuid}/print` : '';
+    if(rUrl) htmlRes += `<br/><a href="${rUrl}" target="_blank">Ссылка на чек<\/a>`;
+  }
   
   document.getElementById("calcResult").style.display = "block";
   document.getElementById("calcResult").innerHTML = htmlRes;
@@ -2455,11 +2495,21 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     priceBeforeDiscount: totalBeforeDiscount,
     realTotal: manualFinalCost > 0 ? manualFinalCost : null
   };
-  
-  lastCalcFullData.totalLabelsCost = totalLabelsCost;
-  
-  const dtStr = new Date().toLocaleString("ru-RU");
+
   const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
+  const existing = existingIndex !== -1 ? appData.calcHistory[existingIndex] : null;
+
+  if(existingIndex !== -1){
+    const ex = appData.calcHistory[existingIndex];
+    if(ex.nalogReceiptUuid){
+      lastCalcFullData.receiptUuid = ex.nalogReceiptUuid;
+      lastCalcFullData.receiptInn = ex.nalogInn || '';
+    }
+  }
+
+  lastCalcFullData.totalLabelsCost = totalLabelsCost;
+
+  const dtStr = new Date().toLocaleString("ru-RU");
   const newEntry = {
     id: orderId,
     timestamp: Date.now(),
@@ -2486,7 +2536,9 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     markupPercent,
     discountPercent,
     priceBeforeDiscount: totalBeforeDiscount,
-    realTotal: manualFinalCost > 0 ? manualFinalCost : null
+    realTotal: manualFinalCost > 0 ? manualFinalCost : null,
+    nalogReceiptUuid: existing ? existing.nalogReceiptUuid || null : null,
+    nalogInn: existing ? existing.nalogInn || null : null
   };
   if (existingIndex !== -1) {
     appData.calcHistory[existingIndex] = newEntry;
@@ -2702,6 +2754,7 @@ function renderHistoryTable(){
           <option value="new" ${h.orderStatus==="new"?"selected":""}>Новый<\/option>
           <option value="inprogress" ${h.orderStatus==="inprogress"?"selected":""}>В работе<\/option>
           <option value="done" ${h.orderStatus==="done"?"selected":""}>Завершён<\/option>
+          <option value="paid" ${h.orderStatus==="paid"?"selected":""}>Оплачен<\/option>
           <option value="canceled" ${h.orderStatus==="canceled"?"selected":""}>Отменён<\/option>
         <\/select>
       <\/td>
@@ -2830,9 +2883,15 @@ function onImportJson(){
 function saveBrandingSettings(){
   const cn = document.getElementById("companyNameInput").value.trim();
   const cl = document.getElementById("chatLinkInput").value.trim();
+  const pay = document.getElementById("bankDetailsInput").value.trim();
+  const method = document.getElementById("paymentMethodSelect").value;
+  const phone = document.getElementById("sbpPhoneInput").value.trim();
   const hours = parseFloat(document.getElementById("calcWorkHoursDay").value) || 0;
   appData.labelSettings.companyName = cn || "Моя компания";
   appData.labelSettings.chatLink = cl || "https://t.me/example";
+  appData.labelSettings.bankDetails = pay;
+  appData.labelSettings.paymentMethod = method;
+  appData.labelSettings.sbpPhone = phone;
   appData.calcSettings.workHoursDay = hours;
   saveToLocalStorage();
   alert("Сохранено");
@@ -3096,7 +3155,7 @@ function buildSummaryCardHtml(data){
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Сводка заказа</title>
+  <title>Счёт на оплату</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <style>
     body{background:var(--bs-body-bg);color:var(--bs-body-color);font-family:'Segoe UI',Tahoma,sans-serif;padding:2rem;background-image:radial-gradient(circle at 20% 20%,var(--bs-primary-bg-subtle),transparent 60%),radial-gradient(circle at 80% 0,var(--bs-success-bg-subtle),transparent 60%);} 
@@ -3132,6 +3191,7 @@ function buildSummaryCardHtml(data){
     <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
     <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
     <div class="info-item"><span class="label">Цена за 1 грамм:<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
+    ${data.paymentInfo ? `<div class="info-item"><span class="label">Оплата:<\/span><span class="value">${data.paymentInfo}<\/span></div>` : ''}
     ${data.finDate ? `<div class="info-item"><span class="label">Дата завершения:<\/span><span class="value">${data.finDate}<\/span></div>` : ''}
   <\/div>
   <div class="models">
@@ -3145,7 +3205,7 @@ function buildSummaryCardHtml(data){
 function downloadSummaryCardHtml(){
   if(!lastSummaryCardHtml){alert('Нет данных.');return;}
   const blob=new Blob([lastSummaryCardHtml],{type:'text/html'});
-  downloadBlob(blob,`OrderSummary_${Date.now()}.html`);
+  downloadBlob(blob,`Invoice_${Date.now()}.html`);
 }
 
 function generateDeviceId(len=16){
@@ -3153,6 +3213,17 @@ function generateDeviceId(len=16){
   let out='';
   for(let i=0;i<len;i++) out+=chars[Math.floor(Math.random()*chars.length)];
   return out;
+}
+
+function buildPaymentQrString(amount, orderId){
+  const method = appData.labelSettings.paymentMethod || 'account';
+  const sum = Math.round((amount || 0)*100);
+  if(method === 'sbp'){
+    return appData.labelSettings.chatLink || '';
+  }
+  const acc = appData.labelSettings.bankDetails || '';
+  const name = appData.labelSettings.companyName || '';
+  return `ST00012|Name=${name}|PersonalAcc=${acc}|Sum=${sum}|Purpose=Order_${orderId}`;
 }
 
 async function refreshMyNalogToken(){
@@ -3201,8 +3272,14 @@ async function sendMyNalogRequest(method,url,body){
   return resp;
 }
 
-function sendMyNalogReceipt(){
+async function sendMyNalogReceipt(){
   if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
+  if(lastCalcFullData.receiptUuid){
+    const inn = lastCalcFullData.receiptInn || localStorage.getItem('my_nalog_inn') || '';
+    const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${lastCalcFullData.receiptUuid}/print` : '';
+    alert('Чек уже сформирован' + (url ? '\n'+url : ''));
+    return;
+  }
   const payload = {
     operationTime: new Date().toISOString(),
     requestTime: new Date().toISOString(),
@@ -3213,13 +3290,32 @@ function sendMyNalogReceipt(){
     client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
   };
   try {
-    const resp =  sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
+    const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
     if(resp.ok){
-      const data =  resp.json().catch(()=>null);
-      if(data?.approvedReceiptUuid) alert('Чек отправлен.');
-      else alert('Запрос отправлен в Мой Налог');
+      const data = await resp.json().catch(()=>null);
+      if(data?.approvedReceiptUuid){
+        const inn = localStorage.getItem('my_nalog_inn') || '';
+        lastCalcFullData.receiptUuid = data.approvedReceiptUuid;
+        lastCalcFullData.receiptInn = inn;
+        lastCalcFullData.orderStatus = 'paid';
+        document.getElementById('calcOrderStatus').value = 'paid';
+        toggleFinalFields('paid');
+        const idx = appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
+        if(idx!==-1){
+          appData.calcHistory[idx].nalogReceiptUuid = data.approvedReceiptUuid;
+          appData.calcHistory[idx].nalogInn = inn;
+          appData.calcHistory[idx].orderStatus = 'paid';
+          saveToLocalStorage();
+          renderHistoryTable();
+        }
+        const btn = document.getElementById('sendMyNalogBtn');
+        if(btn) btn.disabled = true;
+        alert('Чек отправлен.');
+      }else{
+        alert('Запрос отправлен в Мой Налог');
+      }
     }else{
-      const text =  resp.text().catch(()=>resp.status);
+      const text = await resp.text().catch(()=>resp.status);
       alert('Ошибка отправки: '+text);
     }
   }catch(e){
@@ -3249,8 +3345,9 @@ async function checkMyNalogStatus(){
       const data = await resp.json();
       const name = data?.displayName  || 'неизвестно';
       const inn = data?.inn || data?.individual?.inn || '';
+      if(inn) localStorage.setItem('my_nalog_inn', inn);
       statusEl.textContent = `Подключено: ${name} ${inn ? '(ИНН '+inn+')' : ''}`;
-  	 console.log(data);
+         console.log(data);
     } else {
       const text = await resp.text().catch(()=>resp.status);
       statusEl.textContent = 'Ошибка: ' + text;
@@ -3364,6 +3461,7 @@ function startNewCalculation(){
   toggleFinalFields('new');
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("calcStartDate").value=today;
+  lastCalcFullData = null;
   appData.printers.forEach(pr=>{
     const table=document.getElementById(`calcModelsTable_${pr.id}`);
     if(table) table.querySelector("tbody").innerHTML="";
@@ -3373,7 +3471,15 @@ function startNewCalculation(){
 function toggleFinalFields(val){
   const group=document.getElementById('finalCostGroup');
   if(group){
-    group.classList.toggle('d-none', val !== 'done');
+    group.classList.toggle('d-none', val !== 'done' && val !== 'paid');
+  }
+}
+
+function updatePaymentFields(){
+  const method = document.getElementById('paymentMethodSelect').value;
+  const group = document.getElementById('sbpPhoneGroup');
+  if(group){
+    group.style.display = method === 'sbp' ? 'block' : 'none';
   }
 }
 
@@ -4297,6 +4403,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       localStorage.setItem('my_nalog_phone', e.target.value.trim());
     });
   }
+  const payMethodSel = document.getElementById('paymentMethodSelect');
+  if (payMethodSel) payMethodSel.addEventListener('change', updatePaymentFields);
   const requestSmsBtn = document.getElementById('requestSmsBtn');
   if (requestSmsBtn) requestSmsBtn.addEventListener('click', requestMyNalogSms);
   const confirmSmsBtn = document.getElementById('confirmSmsBtn');
@@ -4310,6 +4418,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
   if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
   loadMyNalogSettings();
+  updatePaymentFields();
 
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
   //   importPrinterJson(e.target.files[0]);
