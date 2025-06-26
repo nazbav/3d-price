@@ -1,0 +1,40 @@
+{
+  "name": "3d-price-electron",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder -w"
+  },
+  "dependencies": {
+    "electron": "^30.1.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.14.0"
+  },
+  "build": {
+    "appId": "com.example.3dprice",
+    "productName": "3DPrice",
+    "files": [
+      "**/*",
+      "../test.html",
+      "../sync_orca.py"
+    ],
+    "extraResources": [
+      {
+        "from": "../test.html",
+        "to": "test.html"
+      },
+      {
+        "from": "../sync_orca.py",
+        "to": "sync_orca.py"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis",
+      "artifactName": "3d-price-setup.exe"
+    }
+  }
+}
