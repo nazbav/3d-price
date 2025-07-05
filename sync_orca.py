@@ -11,11 +11,9 @@ ORCA_MACHINE_DIR = os.path.join(os.environ.get('APPDATA', ''), 'OrcaSlicer', 'us
 DEFAULT_INPUT = 'calc_data.json'
 DEFAULT_OUTPUT = "calc_data_synced.json"
 
-
 def gen_id():
     alphabet = string.ascii_lowercase + string.digits
     return ''.join(random.choices(alphabet, k=16))
-
 
 def select_item(prompt, options, multi=False):
     if not options:
@@ -42,8 +40,6 @@ def select_item(prompt, options, multi=False):
         if i == 0 or i > len(options):
             return None
         return i - 1
-
-
 
 def load_json(path):
     try:
@@ -92,8 +88,10 @@ def main():
     printer_profiles = data.get('printerProfiles', [])
     if not isinstance(printer_profiles, list):
         printer_profiles = []
+
     pr_profile_keys = {}
     pair_to_profile = {}
+
     for pf in printer_profiles:
         cfg = pf.get('config', {})
         h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
@@ -107,7 +105,6 @@ def main():
     mat_map = {m.get('name', '').lower(): m for m in data.get('materials', [])}
     materials_list = list(mat_map.values())
 
-    # convert old format materials with embedded Orca config
     for m in list(mat_map.values()):
         if 'orca' in m or 'orcaInfo' in m:
             prof = {
@@ -117,10 +114,8 @@ def main():
             }
             material_profiles.append(prof)
             m['profileIds'] = [prof['id']]
-            if 'orca' in m:
-                del m['orca']
-            if 'orcaInfo' in m:
-                del m['orcaInfo']
+            m.pop('orca', None)
+            m.pop('orcaInfo', None)
         else:
             if not isinstance(m.get('profileIds'), list):
                 m['profileIds'] = []
@@ -292,6 +287,14 @@ def main():
                 if host_key:
                     pr_map[host_key] = target
             continue
+
+        # ✅ Исправление: выбор принтера, если профиля ещё нет
+        sel = select_item('Select printer', [p.get('name', '') for p in printer_list], multi=False)
+        if sel is None:
+            print("  Пропущено, не выбран принтер.")
+            continue
+        target = printer_list[sel]
+
         pid = gen_id()
         profile_obj = {'id': pid, 'config': orca, 'info': info_text, 'printerId': target.get('id')}
         printer_profiles.append(profile_obj)
@@ -302,14 +305,7 @@ def main():
         if host_key:
             pr_map[host_key] = target
 
-
-    # keep all printers from the input even if they were "merged" with
-    # additional profiles. previously the code removed entries marked as
-    # `_merged`, which could unexpectedly drop user defined printers when
-    # a matching machine file existed.  Instead of filtering them out we
-    # keep every printer and simply clean the helper flag.
     printers = list(name_map.values())
-
     for p in printers:
         if not isinstance(p.get('profileIds'), list):
             p['profileIds'] = []
