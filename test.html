@@ -818,8 +818,10 @@ document.getElementById("themeToggle").addEventListener("click",()=>{
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)||"light";
 setTheme(savedTheme);
 
-function generateUUID(){
-  return Math.random().toString(36).substr(2,8)+Math.random().toString(36).substr(2,8);
+function getNextId(type) {
+  if (!appData.counters) appData.counters = {};
+  if (!appData.counters[type]) appData.counters[type] = 0;
+  return ++appData.counters[type];
 }
 
 /* Перенос данных из старого формата */
@@ -829,6 +831,15 @@ function migrateOldData(obj){
   if(!Array.isArray(obj.additionalGlobal)) obj.additionalGlobal = [];
   if(!Array.isArray(obj.clients)) obj.clients = [];
   if(!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
+
+  if (!obj.counters) {
+    obj.counters = {
+      printers: obj.printers.length,
+      clients: obj.clients.length,
+      materials: obj.materials.length,
+      additionalGlobal: obj.additionalGlobal.length
+    };
+  }
 
   const unresolved = [];
 
@@ -864,12 +875,12 @@ function migrateOldData(obj){
     if(!Array.isArray(pr.profileIds)) pr.profileIds=[];
     if(Array.isArray(pr.orcaProfiles)){
       pr.orcaProfiles.forEach(op=>{
-        const pid=op.id||generateUUID();
+        const pid=op.id||getNextId('printerProfiles');
         obj.printerProfiles.push({id:pid,config:op.config||{},info:op.info||'',printerId:String(pr.id)});
         if(!pr.profileIds.includes(pid)) pr.profileIds.push(pid);
       });
     } else if(pr.orca || pr.orcaInfo){
-      const pid=generateUUID();
+      const pid=getNextId('printerProfiles');
       obj.printerProfiles.push({id:pid,config:pr.orca||{},info:pr.orcaInfo||'',printerId:String(pr.id)});
       pr.profileIds.push(pid);
     }
@@ -977,7 +988,7 @@ function migrateOldData(obj){
       if(nameMap[nm]){
         c = nameMap[nm];
       }else{
-        c = {id: generateUUID(), name: nm};
+        c = {id: getNextId('clients'), name: nm};
         obj.clients.push(c);
         nameMap[nm] = c;
       }
@@ -990,7 +1001,7 @@ function migrateOldData(obj){
   obj.materials.forEach(m=>{
     if(!Array.isArray(m.profileIds)) m.profileIds=[];
     if(m.orca || m.orcaInfo){
-      const pf={id:generateUUID(),config:m.orca||{},info:m.orcaInfo||''};
+      const pf={id:getNextId('materialProfiles'),config:m.orca||{},info:m.orcaInfo||''};
       obj.materialProfiles.push(pf);
       m.profileIds.push(pf.id);
     }
@@ -1400,7 +1411,7 @@ async function parseGcodeText(text){
       }
     }
   }
-  if(!code) code=generateUUID();
+  if(!code) code=getNextId('gcodeModels');
   return {code,timeStr,weight,printer,matProfile,thumb};
 }
 
@@ -1422,15 +1433,50 @@ async function addModelFromGcode(parsed){
   });
 }
 
-function setupGcodeDrop(){
-  window.addEventListener('dragover',e=>{e.preventDefault();});
-  window.addEventListener('drop',async e=>{
+function setupGcodeDrop() {
+  window.addEventListener('dragover', e => {
+    e.preventDefault(); // Allow drop
+  });
+
+  window.addEventListener('drop', async e => {
     e.preventDefault();
-    const files=Array.from(e.dataTransfer.files).filter(f=>f.name.toLowerCase().endsWith('.gcode'));
-    for(const f of files){
-      const txt=await f.text();
-      const parsed=await parseGcodeText(txt);
-      await addModelFromGcode(parsed);
+
+    // Find the target printer table
+    let printerId = null;
+    let target = e.target;
+
+    // Traverse up the DOM tree to find a table with ID like "calcModelsTable_123"
+    while (target && !printerId) {
+      if (target.id && target.id.startsWith('calcModelsTable_')) {
+        printerId = target.id.split('_')[1];
+        break;
+      }
+      target = target.parentElement;
+    }
+
+    if (!printerId) {
+      alert('Please drop the G-code file over a printer\'s table.');
+      return;
+    }
+
+    // Process G-code files
+    const files = Array.from(e.dataTransfer.files).filter(f => 
+      f.name.toLowerCase().endsWith('.gcode')
+    );
+
+    for (const f of files) {
+      const txt = await f.text();
+      const parsed = await parseGcodeText(txt);
+      const mid = await resolveMaterialIdByProfile(parsed.matProfile);
+      addModelRow(printerId, {
+        id: parsed.code,
+        name: parsed.code,
+        thumbnail: parsed.thumb,
+        status: 'new',
+        hours: parseTimeFromLink(parsed.timeStr),
+        weight: parseFloat(parsed.weight) || 0,
+        materialId: mid
+      });
     }
   });
 }
@@ -1589,7 +1635,7 @@ function copyElement(type, id) {
         const orig = appData.printers.find(p => String(p.id) === String(id));
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
-          copy.id = generateUUID();
+          copy.id = getNextId('printers');
           copy.name += " (копия)";
           appData.printers.push(copy);
           renderPrintersTable();
@@ -1603,7 +1649,7 @@ function copyElement(type, id) {
         const orig = appData.materials.find(m => String(m.id) === String(id));
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
-          copy.id = generateUUID();
+          copy.id = getNextId('materials');
           copy.name += " (копия)";
           appData.materials.push(copy);
           renderGlobalMaterialsTable();
@@ -1616,7 +1662,7 @@ function copyElement(type, id) {
         const orig = appData.additionalGlobal.find(a => String(a.id) === String(id));
         if(orig){
           const copy = JSON.parse(JSON.stringify(orig));
-          copy.id = generateUUID();
+          copy.id = getNextId('additionalGlobal');
           copy.description += " (копия)";
           appData.additionalGlobal.push(copy);
           renderGlobalAdditionalTable();
@@ -1653,7 +1699,7 @@ function renderPrintersTable(){
   });
 }
 function onAddPrinter(){
-  const newId = generateUUID();
+const newId = getNextId('printers');
   const p = {
     id: newId,
     name: "Новый принтер",
@@ -1768,7 +1814,7 @@ function onEditGlobalMaterial(id){
 }
 function saveMaterialFromModal(){
   const isNew = currentMaterialEditId === null;
-  let m = isNew ? {id: generateUUID(), profileIds: [], printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
+  let m = isNew ? {id: getNextId('materials'), profileIds: [], printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
   if(!m) return;
   m.name = document.getElementById('matNameInput').value;
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
@@ -1818,7 +1864,7 @@ function renderGlobalAdditionalTable(){
   });
 }
 function onAddGlobalAdditional(){
-  const nid = generateUUID();
+const nid = getNextId('additionalGlobal');
   appData.additionalGlobal.push({
     id: nid,
     description: "Новая статья",
@@ -1897,7 +1943,7 @@ async function onAddClient(){
     {id:'links',label:'Ссылки'}
   ]);
   if(!vals) return;
-  appData.clients.push({id:generateUUID(),name:vals.name,phone:vals.phone,links:vals.links});
+  appData.clients.push({id:getNextId('clients'),name:vals.name,phone:vals.phone,links:vals.links});
   saveToLocalStorage();
   renderClientsTable();
 }
@@ -1925,7 +1971,7 @@ function quickAddClient(){
   const name=document.getElementById('calcClientName').value.trim();
   if(!name) return;
   if(!appData.clients.find(c=>c.name===name)){
-    appData.clients.push({id:generateUUID(),name});
+    appData.clients.push({id:getNextId('clients'),name});
     saveToLocalStorage();
     renderClientsTable();
   }
@@ -1983,7 +2029,7 @@ function addModelRow(printerId, modelData) {
   const optsMat = mats.map(m =>
     `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name}<\/option>`
   ).join("");
-  const uniqueId = generateUUID();
+  const uniqueId = getNextId('clients');
   const nameId = `modelName_${printerId}_${uniqueId}`;
   const statusId = `modelStatus_${printerId}_${uniqueId}`;
   const hoursId = `modelHours_${printerId}_${uniqueId}`;
@@ -2046,7 +2092,7 @@ function onCalculateAll() {
   if(clientName){
     let c = appData.clients.find(x=>x.name===clientName);
     if(!c){
-      c = {id: generateUUID(), name: clientName};
+      c = {id: getNextId('clients'), name: clientName};
       appData.clients.push(c);
       renderClientsTable();
       saveToLocalStorage();
@@ -2099,7 +2145,7 @@ function onCalculateAll() {
       const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
       const w = parseFloat(inpW.value) || 0;
       modelsData.push({
-        id: row.dataset.modelId || generateUUID(),
+        id: row.dataset.modelId || getNextId('models'),
         thumbnail: row.dataset.thumbnail || '',
         name: inpName.value.trim() || "Модель",
         status: selStatus.value || "new",
@@ -2162,7 +2208,7 @@ function onCalculateAll() {
       prCostNoTax += subTotalModel;
       
       lines.push({
-        id: row.dataset.modelId || generateUUID(),
+        id: row.dataset.modelId || getNextId('models'),
         thumbnail: row.dataset.thumbnail || '',
         name: inpName.value.trim() || "Модель",
         status: selStatus.value || "new",
@@ -2264,7 +2310,7 @@ function onCalculateAll() {
 
   let finDateStr = calcFinishDate(sDate, Math.ceil(finalTimeOperator / (whDay || 8)));
 
-  if(!orderId) orderId = generateUUID();
+  if(!orderId) orderId = getNextId('orders');
   document.getElementById("calcOrderId").value = orderId;
 
   htmlRes = `<strong>Общий результат:<\/strong><br/>`;
@@ -2720,7 +2766,7 @@ function importProfileFile(file){
   if(!file) return;
   const reader=new FileReader();
   reader.onload=()=>{
-    try{ const data=JSON.parse(reader.result); appData.materialProfiles.push({id:generateUUID(),config:data,info:''}); saveToLocalStorage(); renderMaterialProfilesTable(); }
+    try{ const data=JSON.parse(reader.result); appData.materialProfiles.push({id:getNextId('materialProfiles'),config:data,info:''}); saveToLocalStorage(); renderMaterialProfilesTable(); }
     catch(e){ alert('Ошибка: '+e); }
   };
   reader.readAsText(file);
@@ -3569,7 +3615,7 @@ function openPrinterOrca(id){
   currentOrcaPrinterId=String(id);
   if(!Array.isArray(pr.profileIds)) pr.profileIds=[];
   if(pr.profileIds.length===0){
-    const pf={id:generateUUID(),config:{},info:'',printerId:String(pr.id)};
+    const pf={id:getNextId('printerProfiles'),config:{},info:'',printerId:String(pr.id)};
     appData.printerProfiles.push(pf);
     pr.profileIds.push(pf.id);
   }
@@ -4235,7 +4281,7 @@ function parseIncomingLinkParams(params){
   const models = [];
   for(let i=0;i<names.length;i++){
     models.push({
-      id: ids[i] || generateUUID(),
+      id: ids[i] || getNextId('models'),
       name: names[i] || '',
       thumbnail: thumbs[i] || '',
       status: statuses[i] || 'new',
