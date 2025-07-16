@@ -3436,29 +3436,29 @@ function saveMyNalogSettings(){
   alert('Сохранено');
 }
 
-async function checkMyNalogStatus(){
+async function checkMyNalogStatus() {
   const token = localStorage.getItem('my_nalog_token');
   const statusEl = document.getElementById('myNalogStatus');
-  if(!token){
+  if (!token) {
     statusEl.textContent = 'Токен не задан';
     return;
   }
   statusEl.textContent = 'Проверка...';
   try {
-    const resp = await sendMyNalogRequest('GET',MY_NALOG_API+'/api/v1/user');
-    if(resp.ok){
+    const resp = await sendMyNalogRequest('GET', MY_NALOG_API + '/api/v1/user');
+    if (resp.ok) {
       const data = await resp.json();
-      const name = data?.displayName  || 'неизвестно';
-      const inn = data?.inn || data?.individual?.inn || '';
-      if(inn) localStorage.setItem('my_nalog_inn', inn);
-      statusEl.textContent = `Подключено: ${name} ${inn ? '(ИНН '+inn+')' : ''}`;
-         console.log(data);
+      if (data.health === "false") {
+        // Display technical work message from the API
+        statusEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${data.message}`;
+      } else {
+        statusEl.textContent = 'Сервис доступен';
+      }
     } else {
-      const text = await resp.text().catch(()=>resp.status);
-      statusEl.textContent = 'Ошибка: ' + text;
+      statusEl.textContent = 'Ошибка: Невозможно проверить статус';
     }
-  }catch(e){
-    statusEl.textContent = 'Нет соединения';
+  } catch (e) {
+    statusEl.textContent = 'Ошибка: Нет соединения с сервером';
   }
 }
 
