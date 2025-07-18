@@ -3452,7 +3452,7 @@ async function checkMyNalogStatus() {
         // Display technical work message from the API
         statusEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${data.message}`;
       } else if(data.displayName) {
-        statusEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>ИНН ${data.inn} ${data.displayName}`;
+        statusEl.innerHTML = `<i class="bi bi-check-square me-2"></i>ИНН ${data.inn} ${data.displayName}`;
       } else {
         statusEl.textContent = 'Сервис доступен';
       }
