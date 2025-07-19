@@ -84,7 +84,7 @@
 </head>
 <body>
 
-<div class="container">
+<div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center">
     <h1 class="my-4">Калькулятор 3D-печати (расширенный)</h1>
     <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
@@ -210,6 +210,7 @@
               <tr>
                 <th><input type="checkbox" id="selectAll_globalMaterials" onchange="selectAll(this, 'globalMaterials')"></th>
                 <th onclick="sortTable('materialsTable',1)">Название</th>
+                <th onclick="sortTable('materialsTable',1)">Тип</th>
                 <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
                 <th onclick="sortTable('materialsTable',3)">Остаток (кг)</th>
                 <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
@@ -651,6 +652,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+
+        <div class="mb-2">
+          <label class="form-label">Тип материала (PLA, PETG и т.д.)</label>
+          <input type="text" class="form-control" id="matMaterialTypeInput">
+        </div>
+
         <div class="mb-2">
           <label class="form-label">Название</label>
           <input type="text" class="form-control" id="matNameInput">
@@ -1577,6 +1584,7 @@ async function massEdit(type) {
     case 'globalMaterials':
       {
         const vals = await showMultiPrompt('Массовое редактирование материалов',[
+          {id: 'materialType', label: 'Тип материала'},
           {id:'cost',label:'Стоимость за кг',type:'number'},
           {id:'balance',label:'Остаток (кг)',type:'number'},
           {id:'declared',label:'Заявленный вес (кг)',type:'number'},
@@ -1589,6 +1597,7 @@ async function massEdit(type) {
         appData.materials.forEach(m=>{
           const chk=document.getElementById('chk_globalMaterials_'+m.id);
           if(chk&&chk.checked){
+            if(vals.materialType) m.materialType=vals.materialType;
             if(vals.cost) m.costPerKg=parseFloat(vals.cost)||m.costPerKg;
             if(vals.balance) m.balance=parseFloat(vals.balance)||m.balance;
             if(vals.declared) m.declaredWeight=parseFloat(vals.declared)||m.declaredWeight;
@@ -1761,6 +1770,7 @@ function renderGlobalMaterialsTable(){
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
       <td style="background-color:${col};color:${tc};">${m.name}<\/td>
+      <td>${m.materialType}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
       <td>${m.declaredWeight || "-"}<\/td>
@@ -1786,6 +1796,7 @@ let currentMaterialEditId = null;
 function onAddGlobalMaterial(){
   currentMaterialEditId = null;
   document.getElementById('matNameInput').value = '';
+  document.getElementById('matMaterialTypeInput').value = '';
   document.getElementById('matCostInput').value = '0';
   document.getElementById('matBalanceInput').value = '0';
   document.getElementById('matDeclaredInput').value = '0';
@@ -1801,6 +1812,7 @@ function onEditGlobalMaterial(id){
   if(!m) return;
   currentMaterialEditId = id;
   document.getElementById('matNameInput').value = m.name;
+  document.getElementById('matMaterialTypeInput').value = m.materialType;
   document.getElementById('matCostInput').value = m.costPerKg;
   document.getElementById('matBalanceInput').value = m.balance;
   document.getElementById('matDeclaredInput').value = m.declaredWeight;
@@ -1816,6 +1828,7 @@ function saveMaterialFromModal(){
   let m = isNew ? {id: getNextId('materials'), profileIds: [], printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
   if(!m) return;
   m.name = document.getElementById('matNameInput').value;
+  m.materialType = document.getElementById('matMaterialTypeInput').value || '';
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
   m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
   m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
@@ -4674,20 +4687,9 @@ async function fetchSpoolmanSpools() {
 // This helps group similar materials under the same filament type
 function getFilamentSignature(material) {
   const manufacturer = (material.manufacturer || '').toLowerCase().trim();
-  const nameParts = (material.name || '').toLowerCase().trim().split(' ');
-  // Try to extract the base material type (PLA, PETG, etc.)
-  let materialType = nameParts[0];
 
-  // Common material types detection
-  const materialTypes = ['pla', 'petg', 'abs', 'asa', 'tpu', 'pa', 'pc', 'pva', 'peek', 'pei', 'hips', 'flex'];
-  for (const type of materialTypes) {
-    if (material.name && material.name.toLowerCase().includes(type)) {
-      materialType = type;
-      break;
-    }
-  }
+  const materialType = (material.materialType || '').toLowerCase().trim();
 
-  // Generate a signature that can group similar materials
   return `${manufacturer}_${materialType}`;
 }
 
@@ -4698,7 +4700,9 @@ function mapMaterialToFilament(material) {
           : null;
 
   const config = profile ? profile.config || {} : {};
-  const materialType = material.name && material.name.split(' ')[0] || 'PLA'; // Default to PLA if we can't determine
+  // Новое поле materialType
+  const materialType = material.materialType ||
+          (material.name && material.name.split(' ')[0]) || 'PLA';
 
   return {
     name: material.name || materialType,
@@ -4935,6 +4939,7 @@ function mapSpoolmanToMaterial(spool, filament) {
 
   return {
     id: getNextId('materials'),
+    materialType: filament.material || '', // Новое поле
     name: spool.comment || filament.name || `${filament.material || 'Unknown'} (${spool.id})`,
     costPerKg: spool.price || 0,
     balance: spool.remaining_weight ? spool.remaining_weight / 1000 : 0, // Convert g to kg
@@ -5321,14 +5326,11 @@ function createSpoolmanSettingsUI() {
       <button class="btn btn-success" id="syncToSpoolmanBtn">Экспорт катушек в Spoolman</button>
       <button class="btn btn-info" id="importFromSpoolmanBtn">Импорт катушек из Spoolman</button>
       <button class="btn btn-danger" id="clearSpoolmanDuplicatesBtn">Очистить дубликаты</button>
-      <!-- Кнопка вызова модального окна инструкции -->
       <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#instructionModal">
         Инструкция по установке
       </button>
     </div>
   </div>
-
-  <!-- Модальное окно с инструкцией -->
   <div class="modal fade" id="instructionModal" tabindex="-1" aria-labelledby="instructionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
@@ -5637,6 +5639,9 @@ document.addEventListener('DOMContentLoaded', () => {
       setupSpoolmanUI();
     }, 500);
   }, 1000);
+
+
+  console.log(appData);
 });
 
 </script>
