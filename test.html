@@ -218,6 +218,7 @@
                  <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
                  <th>Принтеры</th>
                  <th>Профили</th>
+                 <th>Spoolman</th>
                  <th>Действия</th>
               </tr>
             </thead>
@@ -445,6 +446,7 @@
         <button class="nav-link active" id="brand-set-tab" data-bs-toggle="pill" data-bs-target="#brandSet" type="button" role="tab">Брендинг</button>
         <button class="nav-link" id="calc-set-tab" data-bs-toggle="pill" data-bs-target="#calcSet" type="button" role="tab">Калькуляция</button>
         <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Импорт/Экспорт</button>
+        <button class="nav-link" id="spoolman-set-tab" data-bs-toggle="pill" data-bs-target="#spoolmanSet" type="button" role="tab">Spoolman</button>
         <button class="nav-link" id="nalog-set-tab" data-bs-toggle="pill" data-bs-target="#nalogSet" type="button" role="tab">Мой Налог</button>
       </div>
     </div>
@@ -519,6 +521,76 @@
     <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
 </div>
 
+        </div>
+        <div class="tab-pane fade" id="spoolmanSet" role="tabpanel">
+          <h3>Spoolman интеграция</h3>
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            Настройка синхронизации материалов с системой управления филаментом Spoolman
+          </div>
+          
+          <div class="mb-3">
+            <label for="spoolmanApiUrl" class="form-label">URL API Spoolman:</label>
+            <input type="text" id="spoolmanApiUrl" class="form-control" placeholder="http://localhost:7912" />
+            <div class="form-text">Адрес сервера Spoolman (обычно http://localhost:7912)</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="spoolmanApiKey" class="form-label">API ключ (опционально):</label>
+            <input type="text" id="spoolmanApiKey" class="form-control" placeholder="Введите API ключ если требуется" />
+          </div>
+          
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="spoolmanAutoSync">
+            <label class="form-check-label" for="spoolmanAutoSync">Автоматическая синхронизация</label>
+            <div class="form-text">Включить автоматическую двустороннюю синхронизацию материалов</div>
+          </div>
+          
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="spoolmanSyncOrcaData">
+            <label class="form-check-label" for="spoolmanSyncOrcaData">Синхронизировать данные Orca</label>
+            <div class="form-text">Использовать плотность и другие параметры из профилей Orca при синхронизации</div>
+          </div>
+          
+          <div class="mb-3">
+            <button class="btn btn-secondary" onclick="testSpoolmanConnection()">🔗 Проверить подключение</button>
+            <button class="btn btn-primary ms-2" onclick="syncWithSpoolman()">🔄 Синхронизировать сейчас</button>
+            <button class="btn btn-info ms-2" onclick="saveSpoolmanSettings()">💾 Сохранить настройки</button>
+          </div>
+          
+          <div id="spoolmanStatus" class="mt-3"></div>
+          
+          <div class="mt-4">
+            <h5>Статус синхронизации</h5>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">Материалы в калькуляторе</h6>
+                    <p class="card-text">Количество: <span id="calcMaterialsCount">0</span></p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">Филаменты в Spoolman</h6>
+                    <p class="card-text">Количество: <span id="spoolmanFilamentsCount">0</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-2">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">Последняя синхронизация</h6>
+                    <p class="card-text" id="lastSyncTime">Синхронизация не выполнялась</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="tab-pane fade" id="nalogSet" role="tabpanel">
           <h3>Мой Налог</h3>
@@ -1769,6 +1841,7 @@ function renderGlobalMaterialsTable(){
       <td>${m.productionDate || "-"}<\/td>
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
       <td>${(m.profileIds && m.profileIds.length) ? m.profileIds.map(profileNameById).join(', ') : '-'}<\/td>
+      <td>${getSpoolmanSyncStatus(m)}<\/td>
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditGlobalMaterial('${m.id}')">Ред.<\/button>
@@ -4370,6 +4443,474 @@ async function applyIncomingData(){
   incomingLinkData = null;
 }
 
+// ============================================================================
+// SPOOLMAN INTEGRATION
+// ============================================================================
+
+// Spoolman API client and sync functions
+class SpoolmanAPI {
+  constructor(baseUrl, apiKey = null) {
+    this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    this.apiKey = apiKey;
+  }
+
+  async request(endpoint, method = 'GET', data = null) {
+    const url = `${this.baseUrl}/api/v1${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (this.apiKey) {
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+    }
+
+    const config = {
+      method,
+      headers,
+    };
+
+    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+      config.body = JSON.stringify(data);
+    }
+
+    const response = await fetch(url, config);
+    
+    if (!response.ok) {
+      throw new Error(`Spoolman API error: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // Get all filaments from Spoolman
+  async getFilaments() {
+    return this.request('/filament');
+  }
+
+  // Get all vendors from Spoolman
+  async getVendors() {
+    return this.request('/vendor');
+  }
+
+  // Create new filament in Spoolman
+  async createFilament(filamentData) {
+    return this.request('/filament', 'POST', filamentData);
+  }
+
+  // Update existing filament in Spoolman
+  async updateFilament(id, filamentData) {
+    return this.request(`/filament/${id}`, 'PUT', filamentData);
+  }
+
+  // Get spools for a filament
+  async getSpools(filamentId = null) {
+    const endpoint = filamentId ? `/spool?filament_id=${filamentId}` : '/spool';
+    return this.request(endpoint);
+  }
+
+  // Test connection to Spoolman
+  async testConnection() {
+    try {
+      await this.request('/info');
+      return { success: true, message: 'Соединение успешно установлено' };
+    } catch (error) {
+      return { success: false, message: error.message };
+    }
+  }
+}
+
+// Material mapping and sync functions
+function mapCalculatorMaterialToSpoolman(material, orcaData = null) {
+  const spoolmanFilament = {
+    name: material.name || 'Неизвестный материал',
+    vendor: null, // Will be resolved from vendor name
+    material: extractMaterialType(material.name) || 'PLA',
+    color_hex: material.color || '#FFFFFF',
+    price: material.costPerKg || 0,
+    weight: (material.declaredWeight || 1) * 1000, // Convert kg to grams
+    spool_weight: 200, // Default spool weight in grams
+    article_number: material.id,
+    comment: `Синхронизировано из калькулятора 3D-печати. Производитель: ${material.manufacturer || 'Не указан'}`,
+  };
+
+  // Add Orca data if available and sync option enabled
+  if (orcaData && getSpoolmanSetting('syncOrcaData')) {
+    spoolmanFilament.density = orcaData.density || 1.24;
+    spoolmanFilament.diameter = orcaData.diameter || 1.75;
+    
+    if (orcaData.bed_temperature) {
+      spoolmanFilament.settings_bed_temp = orcaData.bed_temperature;
+    }
+    if (orcaData.nozzle_temperature) {
+      spoolmanFilament.settings_extruder_temp = orcaData.nozzle_temperature;
+    }
+  }
+
+  return spoolmanFilament;
+}
+
+function mapSpoolmanFilamentToCalculator(filament, vendor = null) {
+  return {
+    id: `spoolman_${filament.id}`,
+    name: filament.name || 'Импорт из Spoolman',
+    costPerKg: filament.price || 0,
+    balance: calculateRemainingWeight(filament),
+    declaredWeight: (filament.weight || 1000) / 1000, // Convert grams to kg
+    wastePercent: 5, // Default waste percentage
+    color: filament.color_hex || '#FFFFFF',
+    manufacturer: vendor ? vendor.name : 'Spoolman',
+    productionDate: '',
+    printers: [], // Will be set based on user selection
+    profileIds: [],
+    spoolmanId: filament.id,
+    spoolmanSync: true
+  };
+}
+
+function calculateRemainingWeight(filament) {
+  // Calculate remaining weight from spools
+  const totalWeight = filament.weight || 1000;
+  const usedWeight = filament.used_weight || 0;
+  return Math.max(0, (totalWeight - usedWeight) / 1000); // Convert to kg
+}
+
+function extractMaterialType(name) {
+  const materialTypes = ['PLA', 'ABS', 'PETG', 'TPU', 'ASA', 'PC', 'NYLON', 'PVA', 'HIPS'];
+  const upperName = name.toUpperCase();
+  
+  for (const type of materialTypes) {
+    if (upperName.includes(type)) {
+      return type;
+    }
+  }
+  return 'PLA'; // Default
+}
+
+function getOrcaDataForMaterial(material) {
+  // Get Orca profile data for material if available
+  if (!material.profileIds || material.profileIds.length === 0) {
+    return null;
+  }
+
+  const profile = appData.materialProfiles?.find(p => 
+    material.profileIds.includes(p.id)
+  );
+
+  return profile ? profile.config : null;
+}
+
+async function resolveOrCreateVendor(api, vendorName) {
+  if (!vendorName) return null;
+
+  try {
+    const vendors = await api.getVendors();
+    const existing = vendors.find(v => 
+      v.name.toLowerCase() === vendorName.toLowerCase()
+    );
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // Create new vendor
+    const newVendor = await api.request('/vendor', 'POST', {
+      name: vendorName,
+      comment: 'Создано автоматически при синхронизации'
+    });
+
+    return newVendor.id;
+  } catch (error) {
+    console.warn('Failed to resolve vendor:', error);
+    return null;
+  }
+}
+
+// Settings management
+function getSpoolmanSettings() {
+  const settings = localStorage.getItem('spoolman_settings');
+  return settings ? JSON.parse(settings) : {
+    apiUrl: 'http://localhost:7912',
+    apiKey: '',
+    autoSync: false,
+    syncOrcaData: true
+  };
+}
+
+function saveSpoolmanSettingsData(settings) {
+  localStorage.setItem('spoolman_settings', JSON.stringify(settings));
+  localStorage.setItem('spoolman_last_sync', Date.now().toString());
+}
+
+function getSpoolmanSetting(key) {
+  const settings = getSpoolmanSettings();
+  return settings[key];
+}
+
+// Main sync functions
+async function syncWithSpoolman() {
+  const statusEl = document.getElementById('spoolmanStatus');
+  statusEl.innerHTML = '<div class="alert alert-info">Выполняется синхронизация...</div>';
+
+  try {
+    const settings = getSpoolmanSettings();
+    const api = new SpoolmanAPI(settings.apiUrl, settings.apiKey);
+
+    // Test connection first
+    const connectionTest = await api.testConnection();
+    if (!connectionTest.success) {
+      throw new Error(connectionTest.message);
+    }
+
+    // Get data from both systems
+    const [spoolmanFilaments, spoolmanVendors] = await Promise.all([
+      api.getFilaments(),
+      api.getVendors()
+    ]);
+
+    const calculatorMaterials = appData.materials || [];
+
+    // Create vendor map for lookup
+    const vendorMap = new Map();
+    spoolmanVendors.forEach(vendor => {
+      vendorMap.set(vendor.id, vendor);
+    });
+
+    // Sync calculator materials to Spoolman
+    const syncResults = {
+      toSpoolman: 0,
+      fromSpoolman: 0,
+      updated: 0,
+      errors: []
+    };
+
+    // First, sync calculator materials to Spoolman
+    for (const material of calculatorMaterials) {
+      if (material.spoolmanSync === false) continue; // Skip if explicitly disabled
+
+      try {
+        const orcaData = getOrcaDataForMaterial(material);
+        const spoolmanData = mapCalculatorMaterialToSpoolman(material, orcaData);
+
+        // Resolve vendor ID
+        if (material.manufacturer) {
+          spoolmanData.vendor = await resolveOrCreateVendor(api, material.manufacturer);
+        }
+
+        // Check if material already exists in Spoolman
+        const existing = spoolmanFilaments.find(f => 
+          f.article_number === material.id || 
+          (f.name === material.name && vendorMap.get(f.vendor)?.name === material.manufacturer)
+        );
+
+        if (existing) {
+          await api.updateFilament(existing.id, spoolmanData);
+          material.spoolmanId = existing.id;
+          syncResults.updated++;
+        } else {
+          const created = await api.createFilament(spoolmanData);
+          material.spoolmanId = created.id;
+          syncResults.toSpoolman++;
+        }
+
+        material.spoolmanSync = true;
+      } catch (error) {
+        syncResults.errors.push(`Материал "${material.name}": ${error.message}`);
+      }
+    }
+
+    // Then, sync Spoolman filaments to calculator
+    for (const filament of spoolmanFilaments) {
+      const existing = calculatorMaterials.find(m => 
+        m.spoolmanId === filament.id || 
+        m.id === filament.article_number
+      );
+
+      if (!existing) {
+        const vendor = vendorMap.get(filament.vendor);
+        const newMaterial = mapSpoolmanFilamentToCalculator(filament, vendor);
+        
+        // Assign to all printers by default (user can modify later)
+        newMaterial.printers = appData.printers.map(p => String(p.id));
+        
+        appData.materials.push(newMaterial);
+        syncResults.fromSpoolman++;
+      } else if (existing.spoolmanSync !== false) {
+        // Update existing material with Spoolman data
+        const vendor = vendorMap.get(filament.vendor);
+        existing.balance = calculateRemainingWeight(filament);
+        existing.costPerKg = filament.price || existing.costPerKg;
+        existing.color = filament.color_hex || existing.color;
+        if (vendor) {
+          existing.manufacturer = vendor.name;
+        }
+        existing.spoolmanId = filament.id;
+        existing.spoolmanSync = true;
+        syncResults.updated++;
+      }
+    }
+
+    // Save changes
+    saveToLocalStorage();
+    renderGlobalMaterialsTable();
+    updateSpoolmanStatus();
+
+    // Show results
+    let message = `Синхронизация завершена успешно:<br>`;
+    message += `• В Spoolman: ${syncResults.toSpoolman} новых<br>`;
+    message += `• Из Spoolman: ${syncResults.fromSpoolman} новых<br>`;
+    message += `• Обновлено: ${syncResults.updated}<br>`;
+    
+    if (syncResults.errors.length > 0) {
+      message += `<br>Ошибки:<br>• ${syncResults.errors.join('<br>• ')}`;
+    }
+
+    statusEl.innerHTML = `<div class="alert alert-success">${message}</div>`;
+
+  } catch (error) {
+    statusEl.innerHTML = `<div class="alert alert-danger">Ошибка синхронизации: ${error.message}</div>`;
+  }
+}
+
+async function testSpoolmanConnection() {
+  const statusEl = document.getElementById('spoolmanStatus');
+  const settings = getSpoolmanSettings();
+
+  try {
+    const api = new SpoolmanAPI(settings.apiUrl, settings.apiKey);
+    const result = await api.testConnection();
+
+    if (result.success) {
+      statusEl.innerHTML = '<div class="alert alert-success">✅ Соединение с Spoolman установлено успешно</div>';
+      updateSpoolmanStatus();
+    } else {
+      statusEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
+    }
+  } catch (error) {
+    statusEl.innerHTML = `<div class="alert alert-danger">❌ Ошибка подключения: ${error.message}</div>`;
+  }
+}
+
+function saveSpoolmanSettings() {
+  const settings = {
+    apiUrl: document.getElementById('spoolmanApiUrl').value.trim() || 'http://localhost:7912',
+    apiKey: document.getElementById('spoolmanApiKey').value.trim(),
+    autoSync: document.getElementById('spoolmanAutoSync').checked,
+    syncOrcaData: document.getElementById('spoolmanSyncOrcaData').checked
+  };
+
+  saveSpoolmanSettingsData(settings);
+  
+  const statusEl = document.getElementById('spoolmanStatus');
+  statusEl.innerHTML = '<div class="alert alert-success">Настройки сохранены</div>';
+  
+  // Update auto-sync if enabled
+  if (settings.autoSync) {
+    setupAutoSync();
+  }
+}
+
+function loadSpoolmanSettings() {
+  const settings = getSpoolmanSettings();
+  
+  document.getElementById('spoolmanApiUrl').value = settings.apiUrl;
+  document.getElementById('spoolmanApiKey').value = settings.apiKey;
+  document.getElementById('spoolmanAutoSync').checked = settings.autoSync;
+  document.getElementById('spoolmanSyncOrcaData').checked = settings.syncOrcaData;
+
+  updateSpoolmanStatus();
+  
+  if (settings.autoSync) {
+    setupAutoSync();
+  }
+}
+
+function updateSpoolmanStatus() {
+  // Update counters
+  const calcCount = appData.materials ? appData.materials.length : 0;
+  document.getElementById('calcMaterialsCount').textContent = calcCount;
+
+  // Get last sync time
+  const lastSync = localStorage.getItem('spoolman_last_sync');
+  const lastSyncEl = document.getElementById('lastSyncTime');
+  
+  if (lastSync) {
+    const date = new Date(parseInt(lastSync));
+    lastSyncEl.textContent = date.toLocaleString('ru-RU');
+  } else {
+    lastSyncEl.textContent = 'Синхронизация не выполнялась';
+  }
+
+  // Try to get Spoolman filaments count
+  tryGetSpoolmanCount();
+}
+
+async function tryGetSpoolmanCount() {
+  try {
+    const settings = getSpoolmanSettings();
+    const api = new SpoolmanAPI(settings.apiUrl, settings.apiKey);
+    const filaments = await api.getFilaments();
+    document.getElementById('spoolmanFilamentsCount').textContent = filaments.length;
+  } catch (error) {
+    document.getElementById('spoolmanFilamentsCount').textContent = 'Недоступно';
+  }
+}
+
+// Auto-sync functionality
+let autoSyncInterval = null;
+
+function setupAutoSync() {
+  // Clear existing interval
+  if (autoSyncInterval) {
+    clearInterval(autoSyncInterval);
+  }
+
+  const settings = getSpoolmanSettings();
+  if (!settings.autoSync) return;
+
+  // Sync every 5 minutes
+  autoSyncInterval = setInterval(async () => {
+    try {
+      await syncWithSpoolman();
+    } catch (error) {
+      console.warn('Auto-sync failed:', error);
+    }
+  }, 5 * 60 * 1000);
+}
+
+// Initialize Spoolman integration when page loads
+function initSpoolmanIntegration() {
+  loadSpoolmanSettings();
+  
+  // Add sync button to materials table if not exists
+  addSpoolmanSyncButton();
+}
+
+function addSpoolmanSyncButton() {
+  // Add sync button to global materials section
+  const materialsSection = document.querySelector('#globalMaterialsPane .mb-2');
+  if (materialsSection && !document.getElementById('spoolmanSyncBtn')) {
+    const syncBtn = document.createElement('button');
+    syncBtn.id = 'spoolmanSyncBtn';
+    syncBtn.className = 'btn btn-success btn-sm ms-2';
+    syncBtn.innerHTML = '🔄 Sync Spoolman';
+    syncBtn.onclick = syncWithSpoolman;
+    materialsSection.appendChild(syncBtn);
+  }
+}
+
+// Helper function to get Spoolman sync status for a material
+function getSpoolmanSyncStatus(material) {
+  if (material.spoolmanSync === false) {
+    return '<span class="badge bg-secondary">Отключен</span>';
+  } else if (material.spoolmanId) {
+    return '<span class="badge bg-success">Синхронизирован</span>';
+  } else if (material.id && material.id.toString().startsWith('spoolman_')) {
+    return '<span class="badge bg-info">Из Spoolman</span>';
+  } else {
+    return '<span class="badge bg-warning">Не синхронизирован</span>';
+  }
+}
+
 </script>
 
 <!-- Supabase & QR -->
@@ -4518,6 +5059,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
   if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
   loadMyNalogSettings();
+
+  // Initialize Spoolman integration
+  initSpoolmanIntegration();
 
   // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
   //   importPrinterJson(e.target.files[0]);
