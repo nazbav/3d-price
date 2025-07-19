@@ -5303,7 +5303,7 @@ function createSpoolmanSettingsUI() {
       <button class="btn btn-danger" id="clearSpoolmanDuplicatesBtn">Очистить дубликаты</button>
       <!-- Кнопка вызова модального окна инструкции -->
       <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#instructionModal">
-        Показать инструкцию
+        Инструкция по установке
       </button>
     </div>
   </div>
@@ -5313,11 +5313,14 @@ function createSpoolmanSettingsUI() {
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="instructionModalLabel">Инструкция по настройке HTTPS для Spoolman</h5>
+          <h5 class="modal-title" id="instructionModalLabel">Инструкция по настройке HTTPS для Spoolman (локальная сеть)</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
         </div>
         <div class="modal-body">
           <ol>
+
+           <li>Установить Spoolman на внешнее устройство с Ubuntu в локальной сети <a href="https://github.com/Donkie/Spoolman/wiki/Installation">https://github.com/Donkie/Spoolman/wiki/Installation</a></li>
+   
             <li>
               <strong>Генерация самоподписанного сертификата</strong><br>
               <pre><code>sudo mkdir -p /etc/ssl/spoolman
