@@ -4540,12 +4540,33 @@ function getSpoolmanConfig() {
   try {
     return JSON.parse(configStr);
   } catch (e) {
+    console.error("Ошибка парсинга настроек Spoolman из localStorage:", e);
     return { enabled: false, url: '', autoSync: false, lastSync: null };
   }
 }
 
 function saveSpoolmanConfig(config) {
   localStorage.setItem(SPOOLMAN_CONFIG_KEY, JSON.stringify(config));
+  // Немедленно обновляем UI после сохранения
+  populateSpoolmanUIFromConfig();
+}
+
+// Функция для обновления элементов UI из конфигурации
+function populateSpoolmanUIFromConfig() {
+  const cfg = getSpoolmanConfig();
+  const cbEnabled = document.getElementById("spoolmanEnabledCheckbox");
+  const inpUrl = document.getElementById("spoolmanUrlInput");
+  const cbAuto = document.getElementById("spoolmanAutoSyncCheckbox");
+  const lastSync = document.getElementById("spoolmanLastSync");
+
+  if (cbEnabled) cbEnabled.checked = !!cfg.enabled;
+  if (inpUrl) inpUrl.value = cfg.url || "";
+  if (cbAuto) cbAuto.checked = !!cfg.autoSync;
+  if (lastSync) {
+    lastSync.textContent = cfg.lastSync
+      ? new Date(cfg.lastSync).toLocaleString()
+      : "Никогда";
+  }
 }
 
 // API interaction
@@ -4868,7 +4889,6 @@ async function syncSpoolToSpoolman(material, filamentId) {
   }
 }
 
-// Map Spoolman data to our material format - FIXED waste_percent issue
 // Map Spoolman data to our material format - FIXED waste_percent issue
 function mapSpoolmanToMaterial(spool, filament) {
   // Parse extra fields properly
@@ -5277,13 +5297,13 @@ function createSpoolmanSettingsUI() {
     </div>
 
     <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="spoolmanEnabledCheckbox" checked>
+      <input type="checkbox" class="form-check-input" id="spoolmanEnabledCheckbox">
       <label class="form-check-label" for="spoolmanEnabledCheckbox">Включить интеграцию с Spoolman</label>
     </div>
     <div class="mb-3">
       <label for="spoolmanUrlInput" class="form-label">URL сервера Spoolman:</label>
       <div class="input-group">
-        <input type="text" id="spoolmanUrlInput" class="form-control" placeholder="http://localhost:7912" value="https://127.0.0.1/">
+        <input type="text" id="spoolmanUrlInput" class="form-control" placeholder="http://localhost:7912">
         <button class="btn btn-outline-secondary" type="button" id="testSpoolmanConnectionBtn">Проверить</button>
       </div>
       <div class="form-text">Примеры: http://localhost:7912 или https://127.0.0.1:7912</div>
@@ -5293,9 +5313,9 @@ function createSpoolmanSettingsUI() {
       <label class="form-check-label" for="spoolmanAutoSyncCheckbox">Автоматически обновлять использование материалов</label>
     </div>
     <div class="mb-3">
-      <p>Последняя синхронизация: Никогда</p>
+      <p>Последняя синхронизация: <span id="spoolmanLastSync">Никогда</span></p>
     </div>
-    <div id="spoolmanSyncStatus" class="alert alert-success" style="display: none; opacity: 1;">Connected to Spoolman 0.22.1</div>
+    <div id="spoolmanSyncStatus" class="alert alert-success" style="display: none; opacity: 1;"></div>
     <div class="mb-3">
       <button class="btn btn-primary" id="saveSpoolmanSettingsBtn">Сохранить настройки</button>
       <button class="btn btn-success" id="syncToSpoolmanBtn">Экспорт катушек в Spoolman</button>
@@ -5402,7 +5422,7 @@ curl -vk -X OPTIONS https://127.0.0.1/api/v1/info \
   -H "Access-Control-Request-Private-Network: true"</code></pre>
               При успешном ответе будет:
               <ul>
-                <li><code>HTTP/1.1 204 No Content</code></li>
+                <li><code>HTTP/1.1 204 No Content</code></li>
                 <li><code>Access-Control-Allow-Private-Network: true</code></li>
               </ul>
             </li>
@@ -5538,6 +5558,8 @@ function clearSpoolmanDuplicates() {
 
 function showSpoolmanStatus(type, message) {
   const statusEl = document.getElementById('spoolmanSyncStatus');
+  if (!statusEl) return;
+  
   statusEl.className = `alert alert-${type}`;
   statusEl.style.display = 'block';
   statusEl.textContent = message;
@@ -5598,6 +5620,11 @@ function initSpoolmanIntegration() {
 
   // Hook into material usage tracking
   hookMaterialUsage();
+  
+  // Заполняем форму существующими значениями из localStorage
+  setTimeout(() => {
+    populateSpoolmanUIFromConfig();
+  }, 200);
 }
 
 // Set up event listeners when document is ready
