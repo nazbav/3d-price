@@ -1253,7 +1253,7 @@ let appData = {
   // Глобальные материалы: добавлены новые поля: balance (остаток), declaredWeight, manufacturer, productionDate
   materials: [
     // Пример материала
-    // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, wastePercent: 5, manufacturer: "XYZ", productionDate: "01.01.2025", printers: [] }
+    // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, waste_percent: 5, manufacturer: "XYZ", productionDate: "01.01.2025", printers: [] }
   ],
   materialProfiles: [],
   printerProfiles: [],
@@ -1592,7 +1592,7 @@ async function massEdit(type) {
             if(vals.cost) m.costPerKg=parseFloat(vals.cost)||m.costPerKg;
             if(vals.balance) m.balance=parseFloat(vals.balance)||m.balance;
             if(vals.declared) m.declaredWeight=parseFloat(vals.declared)||m.declaredWeight;
-            if(vals.waste) m.wastePercent=parseFloat(vals.waste)||m.wastePercent;
+            if(vals.waste) m.waste_percent=parseFloat(vals.waste)||m.waste_percent;
             if(vals.manuf) m.manufacturer=vals.manuf;
             if(vals.prodDate) m.productionDate=vals.prodDate;
             if(vals.printers && vals.printers.length) m.printers=vals.printers;
@@ -1764,7 +1764,7 @@ function renderGlobalMaterialsTable(){
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
       <td>${m.declaredWeight || "-"}<\/td>
-      <td>${m.wastePercent}<\/td>
+      <td>${m.waste_percent}<\/td>
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
@@ -1804,7 +1804,7 @@ function onEditGlobalMaterial(id){
   document.getElementById('matCostInput').value = m.costPerKg;
   document.getElementById('matBalanceInput').value = m.balance;
   document.getElementById('matDeclaredInput').value = m.declaredWeight;
-  document.getElementById('matWasteInput').value = m.wastePercent;
+  document.getElementById('matWasteInput').value = m.waste_percent;
   document.getElementById('matColorInput').value = m.color || '#ffffff';
   document.getElementById('matManufInput').value = m.manufacturer || '';
   document.getElementById('matProdDateInput').value = m.productionDate || '';
@@ -1819,7 +1819,7 @@ function saveMaterialFromModal(){
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
   m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
   m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
-  m.wastePercent = parseFloat(document.getElementById('matWasteInput').value) || 0;
+  m.waste_percent = parseFloat(document.getElementById('matWasteInput').value) || 0;
   m.color = document.getElementById('matColorInput').value;
   m.manufacturer = document.getElementById('matManufInput').value;
   m.productionDate = document.getElementById('matProdDateInput').value;
@@ -2193,7 +2193,7 @@ function onCalculateAll() {
       const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
       const costPrinterPart = h * costPH;
       // Фактический расход пластика с учётом отходов (в граммах)
-      const realW = w * (1 + (mat.wastePercent / 100));
+      const realW = w * (1 + (mat.waste_percent / 100));
       // Агрегируем потребление для данного материала
       materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
       
@@ -4529,6 +4529,976 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   setupGcodeDrop();
 });
+
+
+const SPOOLMAN_CONFIG_KEY = "spoolman_config";
+
+// Configuration management
+function getSpoolmanConfig() {
+  const configStr = localStorage.getItem(SPOOLMAN_CONFIG_KEY);
+  if (!configStr) return { enabled: false, url: '', autoSync: false, lastSync: null };
+  try {
+    return JSON.parse(configStr);
+  } catch (e) {
+    return { enabled: false, url: '', autoSync: false, lastSync: null };
+  }
+}
+
+function saveSpoolmanConfig(config) {
+  localStorage.setItem(SPOOLMAN_CONFIG_KEY, JSON.stringify(config));
+}
+
+// API interaction
+async function spoolmanApiRequest(endpoint, method = 'GET', body = null) {
+  const config = getSpoolmanConfig();
+  if (!config.enabled || !config.url) {
+    throw new Error('Spoolman is not configured');
+  }
+
+  const baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
+  const url = `${baseUrl}/api/v1/${endpoint}`;
+
+  const options = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+
+  try {
+    console.log(`Sending ${method} request to ${url}`, body || '');
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API error response:`, errorText);
+      throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+
+    if (response.status === 204) return null; // No content
+
+    const responseData = await response.json();
+    console.log(`Response from ${endpoint}:`, responseData);
+    return responseData;
+  } catch (error) {
+    console.error('Spoolman API error:', error);
+    throw error;
+  }
+}
+
+// Register custom fields in Spoolman before using them
+async function registerCustomFields() {
+  try {
+    console.log('Registering custom fields in Spoolman...');
+
+    // Define custom fields for spools
+    const spoolFields = [
+      {
+        key: 'external_id',
+        name: 'External ID',
+        field_type: 'text',
+        order: 10
+      },
+      {
+        key: 'manufacturer',
+        name: 'Manufacturer',
+        field_type: 'text',
+        order: 20
+      },
+      {
+        key: 'waste_percent',
+        name: 'Waste Percent',
+        field_type: 'float',
+        order: 30,
+        unit: '%'
+      }
+    ];
+
+    // Register each field
+    for (const field of spoolFields) {
+      try {
+        await spoolmanApiRequest(`field/spool/${field.key}`, 'POST', field);
+        console.log(`Registered field ${field.key} for spools`);
+      } catch (error) {
+        // If the field already exists, it will return a 400 error
+        // We can ignore this error and continue
+        console.log(`Field ${field.key} might already exist:`, error.message);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Failed to register custom fields:', error);
+    return false;
+  }
+}
+
+// Get all vendors from Spoolman
+async function fetchSpoolmanVendors() {
+  return await spoolmanApiRequest('vendor');
+}
+
+// Get all filaments from Spoolman
+async function fetchSpoolmanFilaments() {
+  return await spoolmanApiRequest('filament');
+}
+
+// Get all spools from Spoolman
+async function fetchSpoolmanSpools() {
+  return await spoolmanApiRequest('spool');
+}
+
+// Determine a filament ID for a material based on its properties
+// This helps group similar materials under the same filament type
+function getFilamentSignature(material) {
+  const manufacturer = (material.manufacturer || '').toLowerCase().trim();
+  const nameParts = (material.name || '').toLowerCase().trim().split(' ');
+  // Try to extract the base material type (PLA, PETG, etc.)
+  let materialType = nameParts[0];
+
+  // Common material types detection
+  const materialTypes = ['pla', 'petg', 'abs', 'asa', 'tpu', 'pa', 'pc', 'pva', 'peek', 'pei', 'hips', 'flex'];
+  for (const type of materialTypes) {
+    if (material.name && material.name.toLowerCase().includes(type)) {
+      materialType = type;
+      break;
+    }
+  }
+
+  // Generate a signature that can group similar materials
+  return `${manufacturer}_${materialType}`;
+}
+
+// Map our material to Spoolman's filament format
+function mapMaterialToFilament(material) {
+  const profile = material.profileIds && material.profileIds.length > 0
+          ? appData.materialProfiles.find(p => String(p.id) === String(material.profileIds[0]))
+          : null;
+
+  const config = profile ? profile.config || {} : {};
+  const materialType = material.name && material.name.split(' ')[0] || 'PLA'; // Default to PLA if we can't determine
+
+  return {
+    name: material.name || materialType,
+    material: materialType,
+    vendor_id: null, // Will be resolved later if vendor exists
+    density: config.filament_density ? parseFloat(config.filament_density[0]) : 1.24,
+    diameter: config.filament_diameter ? parseFloat(config.filament_diameter[0]) : 1.75,
+    weight: material.declaredWeight ? material.declaredWeight * 1000 : 1000, // Convert kg to g
+    spool_weight: null, // Not tracked in our system
+    price: material.costPerKg || null,
+    article_number: null,
+    comment: `Imported from 3D Price Calculator.`,
+    settings_extruder_temp: config.nozzle_temperature ? parseInt(config.nozzle_temperature[0]) : null,
+    settings_bed_temp: config.hot_plate_temp ? parseInt(config.hot_plate_temp[0]) : null,
+    color_hex: material.color || null,
+    external_id: `3dprice_filament_${getFilamentSignature(material)}`
+  };
+}
+
+function prepareExtraForSpoolman(extra) {
+  const prepared = {};
+  for (const [key, value] of Object.entries(extra)) {
+    // Convert value to JSON string
+    prepared[key] = JSON.stringify(value);
+  }
+  return prepared;
+}
+
+// Map our material to Spoolman's spool format
+function mapMaterialToSpool(material, filamentId) {
+  // Convert values to proper types
+  const remaining = material.balance ? parseFloat(material.balance) * 1000 : 0;
+  const initial = material.declaredWeight ? parseFloat(material.declaredWeight) * 1000 : 1000;
+  const waste_percent = parseFloat(material.waste_percent) || 0; // Default to 0 if not set
+
+  return {
+    filament_id: parseInt(filamentId),
+    remaining_weight: remaining, // in grams
+    initial_weight: initial,
+    lot_nr: material.productionDate || null,
+    price: material.costPerKg || null,
+    comment: material.name || "Катушка из 3D Price Calculator",
+    location: "3D Price Calculator",
+    archived: remaining <= 0,
+    extra: prepareExtraForSpoolman({
+      external_id: `3dprice_spool_${material.id}`,
+      manufacturer: material.manufacturer || '',
+      waste_percent: waste_percent || 0  // Ensure it's a number
+    })
+  };
+}
+
+// Create or update vendor in Spoolman
+async function syncVendorToSpoolman(vendorName) {
+  if (!vendorName) return null;
+
+  try {
+    // Try to find vendor by name
+    const vendors = await fetchSpoolmanVendors();
+    const existingVendor = vendors.find(v => v.name.toLowerCase() === vendorName.toLowerCase());
+
+    if (existingVendor) {
+      console.log(`Found existing vendor: ${existingVendor.name} (ID: ${existingVendor.id})`);
+      return existingVendor.id;
+    }
+
+    // Create new vendor
+    const newVendor = {
+      name: vendorName,
+      comment: 'Imported from 3D Price Calculator'
+    };
+
+    console.log(`Creating new vendor: ${vendorName}`);
+    const result = await spoolmanApiRequest('vendor', 'POST', newVendor);
+    console.log(`Created new vendor with ID: ${result.id}`);
+    return result.id;
+  } catch (error) {
+    console.error(`Error in syncVendorToSpoolman: ${error.message}`);
+    throw error;
+  }
+}
+
+// Create or update filament in Spoolman
+async function syncFilamentToSpoolman(material) {
+  try {
+    const externalId = `3dprice_filament_${getFilamentSignature(material)}`;
+
+    // Try to find existing filament by external_id
+    console.log(`Looking for filament with external_id: ${externalId}`);
+    const filaments = await fetchSpoolmanFilaments();
+    const existingFilament = filaments.find(f => f.external_id === externalId);
+
+    // Prepare filament data
+    const filamentData = mapMaterialToFilament(material);
+    console.log(`Prepared filament data:`, filamentData);
+
+    // If material has manufacturer, create/find vendor and set vendor_id
+    if (material.manufacturer) {
+      try {
+        console.log(`Syncing vendor: ${material.manufacturer}`);
+        const vendorId = await syncVendorToSpoolman(material.manufacturer);
+        if (vendorId) {
+          filamentData.vendor_id = vendorId;
+          console.log(`Set vendor_id to ${vendorId}`);
+        }
+      } catch (e) {
+        console.error(`Failed to sync vendor ${material.manufacturer}:`, e);
+      }
+    }
+
+    let filamentId;
+    if (existingFilament) {
+      // Update existing filament
+      console.log(`Updating existing filament with ID: ${existingFilament.id}`);
+      await spoolmanApiRequest(`filament/${existingFilament.id}`, 'PATCH', filamentData);
+      filamentId = existingFilament.id;
+    } else {
+      // Create new filament
+      console.log(`Creating new filament`);
+      const result = await spoolmanApiRequest('filament', 'POST', filamentData);
+      filamentId = result.id;
+      console.log(`Created new filament with ID: ${filamentId}`);
+    }
+    return filamentId;
+  } catch (error) {
+    console.error(`Error in syncFilamentToSpoolman: ${error.message}`);
+    throw error;
+  }
+}
+
+// Create or update spool in Spoolman - FIXED to prevent duplicates
+async function syncSpoolToSpoolman(material, filamentId) {
+  try {
+    // Generate external ID for this material
+    const externalId = `3dprice_spool_${material.id}`;
+    console.log(`Looking for spool with external_id: ${externalId}`);
+
+    // Fetch all spools first to check for existing ones with our external ID
+    const allSpools = await fetchSpoolmanSpools();
+
+    // Find existing spool by checking the external_id in the extra field
+    let existingSpool = null;
+    for (const spool of allSpools) {
+      if (spool.extra && spool.extra.external_id) {
+        try {
+          // Try to parse if it's a JSON string
+          const extIdValue = typeof spool.extra.external_id === 'string' &&
+          spool.extra.external_id.startsWith('"') ?
+                  JSON.parse(spool.extra.external_id) :
+                  spool.extra.external_id;
+
+          if (extIdValue === externalId) {
+            existingSpool = spool;
+            console.log(`Found existing spool with ID: ${spool.id} for external_id: ${externalId}`);
+            break;
+          }
+        } catch (e) {
+          // If parsing fails, compare as is
+          if (spool.extra.external_id === externalId) {
+            existingSpool = spool;
+            console.log(`Found existing spool with ID: ${spool.id} for external_id: ${externalId}`);
+            break;
+          }
+        }
+      }
+    }
+
+    const spoolData = mapMaterialToSpool(material, filamentId);
+    console.log(`Prepared spool data:`, spoolData);
+
+    let spoolId;
+    if (existingSpool) {
+      // Update existing spool
+      console.log(`Updating existing spool with ID: ${existingSpool.id}`);
+      await spoolmanApiRequest(`spool/${existingSpool.id}`, 'PATCH', spoolData);
+      spoolId = existingSpool.id;
+    } else {
+      // Create new spool only if one doesn't exist
+      console.log(`Creating new spool for material ${material.name}`);
+      const result = await spoolmanApiRequest('spool', 'POST', spoolData);
+      spoolId = result.id;
+      console.log(`Created new spool with ID: ${spoolId}`);
+    }
+    return spoolId;
+  } catch (error) {
+    console.error(`Error in syncSpoolToSpoolman: ${error.message}`, error);
+    throw error;
+  }
+}
+
+// Map Spoolman data to our material format - FIXED waste_percent issue
+// Map Spoolman data to our material format - FIXED waste_percent issue
+function mapSpoolmanToMaterial(spool, filament) {
+  // Parse extra fields properly
+  let extraFields = {};
+  if (spool.extra) {
+    for (const [key, value] of Object.entries(spool.extra)) {
+      try {
+        // First, try to parse the value as JSON
+        if (typeof value === 'string') {
+          // Handle double-quoted strings like "\"value\""
+          if (value.startsWith('"') && value.endsWith('"')) {
+            // Remove the outer quotes and parse
+            extraFields[key] = JSON.parse(value);
+          } else {
+            // Direct value or already parsed JSON
+            extraFields[key] = value;
+          }
+        } else {
+          extraFields[key] = value;
+        }
+      } catch (e) {
+        console.log(`Error parsing extra field ${key}:`, e);
+        extraFields[key] = value; // Keep as is if parsing fails
+      }
+    }
+  }
+
+  // Fix: Properly extract and convert waste_percent to a number
+  let waste_percent = 0; // Default value
+
+  if (extraFields.waste_percent !== undefined) {
+    // If it's a string (which it likely is from Spoolman), convert to number
+    if (typeof extraFields.waste_percent === 'string') {
+      waste_percent = parseFloat(extraFields.waste_percent) || 0;
+    } else {
+      waste_percent = parseFloat(extraFields.waste_percent) || 0;
+    }
+  }
+
+  // Ensure waste_percent is a number and not NaN
+  waste_percent = isNaN(waste_percent) ? 0 : waste_percent;
+
+  console.log(`Parsed waste_percent for spool ${spool.id}: ${waste_percent} (original: ${spool.extra?.waste_percent})`);
+
+  return {
+    id: getNextId('materials'),
+    name: spool.comment || filament.name || `${filament.material || 'Unknown'} (${spool.id})`,
+    costPerKg: spool.price || 0,
+    balance: spool.remaining_weight ? spool.remaining_weight / 1000 : 0, // Convert g to kg
+    declaredWeight: spool.initial_weight ? spool.initial_weight / 1000 :
+            (filament.weight ? filament.weight / 1000 : 1), // Convert g to kg
+    waste_percent: waste_percent, // Properly parsed number
+    manufacturer: filament.vendor?.name || extraFields.manufacturer || '',
+    productionDate: spool.lot_nr || '',
+    printers: [],
+    profileIds: [],
+    color: filament.color_hex || '#ffffff',
+    spoolmanId: filament.id,
+    spoolmanSpoolId: spool.id
+  };
+}
+
+// Cache to track spools that have been imported from Spoolman
+// This stays in memory during the session to avoid duplicates from multiple imports
+const importedSpoolTracker = {
+  spoolIds: new Set(),
+  externalIds: new Set(),
+
+  // Add a spool to the tracker
+  add(spoolId, externalId) {
+    this.spoolIds.add(spoolId);
+    if (externalId) {
+      this.externalIds.add(externalId);
+    }
+  },
+
+  // Check if a spool has already been imported in this session
+  hasBeenImported(spoolId, externalId) {
+    return this.spoolIds.has(spoolId) ||
+            (externalId && this.externalIds.has(externalId));
+  },
+
+  // Reset the tracker (e.g., for a fresh import)
+  reset() {
+    this.spoolIds.clear();
+    this.externalIds.clear();
+  }
+};
+
+// Import all materials from Spoolman - FIXED to prevent duplicates
+async function importAllMaterialsFromSpoolman(statusCallback) {
+  const config = getSpoolmanConfig();
+  if (!config.enabled || !config.url) {
+    return { success: false, message: 'Spoolman is not configured' };
+  }
+
+  try {
+    statusCallback('Connecting to Spoolman...');
+    // Test connection
+    await spoolmanApiRequest('info');
+
+    statusCallback('Fetching data from Spoolman...');
+    const filaments = await fetchSpoolmanFilaments();
+    const spools = await fetchSpoolmanSpools();
+
+    // Create mapping of filament IDs to filaments
+    const filamentMap = {};
+    filaments.forEach(filament => {
+      filamentMap[filament.id] = filament;
+    });
+
+    // Map to our material format and add to app data
+    const importedMaterials = [];
+    const errors = [];
+
+    // Only import non-archived spools
+    const activeSpools = spools.filter(spool => !spool.archived);
+
+    statusCallback(`Processing ${activeSpools.length} spools...`);
+
+    // Track spools already in our system to avoid duplicates
+    // Includes those in the app AND those we've already imported in this session
+    const existingExternalIds = new Set();
+
+    // Add existing material IDs from our app
+    appData.materials
+            .filter(m => m.id && m.spoolmanSpoolId) // Only track materials with Spoolman connection
+            .forEach(m => {
+              if (m.spoolmanSpoolId) {
+                importedSpoolTracker.add(m.spoolmanSpoolId, `3dprice_spool_${m.id}`);
+              }
+              existingExternalIds.add(`3dprice_spool_${m.id}`);
+            });
+
+    for (const spool of activeSpools) {
+      try {
+        // Skip if we've already imported this spool in a previous session
+        if (importedSpoolTracker.hasBeenImported(spool.id)) {
+          console.log(`Skipping spool ${spool.id} as it was already imported in this session`);
+          continue;
+        }
+
+        // Extract external ID for duplicate checking
+        const externalId = spool.extra?.external_id || '';
+        let parsedExternalId = externalId;
+
+        // Try to parse if it's a JSON string
+        if (typeof externalId === 'string' && externalId.startsWith('"')) {
+          try {
+            parsedExternalId = JSON.parse(externalId);
+          } catch (e) {
+            // Keep as is if parsing fails
+          }
+        }
+
+        // Skip if we already have this spool in our data
+        if (parsedExternalId &&
+                parsedExternalId.startsWith('3dprice_spool_') &&
+                existingExternalIds.has(parsedExternalId)) {
+          console.log(`Skipping spool ${spool.id} as it's already in our system: ${parsedExternalId}`);
+          continue;
+        }
+
+        // Make sure we have a valid filament
+        if (!spool.filament) {
+          errors.push(`Spool ${spool.id} has no valid filament reference`);
+          continue;
+        }
+
+        const filament = filamentMap[spool.filament.id];
+        if (!filament) {
+          errors.push(`Spool ${spool.id} references unknown filament ID ${spool.filament.id}`);
+          continue;
+        }
+
+        const material = mapSpoolmanToMaterial(spool, filament);
+
+        // Add to our data
+        appData.materials.push(material);
+        importedMaterials.push(material);
+
+        // Track this spool as imported to prevent duplicates within this session
+        importedSpoolTracker.add(spool.id, parsedExternalId);
+        existingExternalIds.add(`3dprice_spool_${material.id}`);
+      } catch (error) {
+        console.error(`Error importing spool ${spool.id}:`, error);
+        errors.push(`Spool ${spool.id}: ${error.message}`);
+      }
+    }
+
+    saveToLocalStorage();
+    renderGlobalMaterialsTable();
+
+    config.lastSync = new Date().toISOString();
+    saveSpoolmanConfig(config);
+
+    return {
+      success: true,
+      message: `Импортировано ${importedMaterials.length} катушек из Spoolman`,
+      materials: importedMaterials,
+      errors: errors.length ? errors : null
+    };
+  } catch (error) {
+    console.error('Import error:', error);
+    return { success: false, message: `Ошибка импорта: ${error.message}` };
+  }
+}
+
+// Sync all materials to Spoolman
+async function syncAllMaterialsToSpoolman(statusCallback) {
+  const config = getSpoolmanConfig();
+  if (!config.enabled || !config.url) {
+    return { success: false, message: 'Spoolman is not configured' };
+  }
+
+  try {
+    statusCallback('Connecting to Spoolman...');
+    // Test connection
+    await spoolmanApiRequest('info');
+
+    // Register custom fields first to ensure they exist
+    statusCallback('Registering custom fields...');
+    await registerCustomFields();
+
+    statusCallback('Starting export to Spoolman...');
+
+    // Get materials to sync
+    const materialsToSync = appData.materials;
+
+    statusCallback(`Processing ${materialsToSync.length} materials...`);
+
+    const results = {
+      success: true,
+      created: 0,
+      updated: 0,
+      errors: [],
+      skipped: 0
+    };
+
+    // Process each material
+    for (let i = 0; i < materialsToSync.length; i++) {
+      const material = materialsToSync[i];
+
+      try {
+        statusCallback(`Processing ${i+1}/${materialsToSync.length}: ${material.name || 'Unnamed'}`);
+
+        // Skip if no manufacturer or material name - these are essential
+        if (!material.name) {
+          results.errors.push(`Skipped material ${material.id}: Missing name`);
+          results.skipped++;
+          continue;
+        }
+
+        // Step 1: Create or update filament
+        const filamentId = await syncFilamentToSpoolman(material);
+
+        // Step 2: Create or update spool
+        const spoolId = await syncSpoolToSpoolman(material, filamentId);
+
+        // Track if this was created or updated
+        if (material.spoolmanSpoolId) {
+          results.updated++;
+        } else {
+          results.created++;
+          // Update local material with new Spoolman IDs
+          material.spoolmanId = filamentId;
+          material.spoolmanSpoolId = spoolId;
+        }
+
+      } catch (error) {
+        console.error(`Error syncing material ${material.id}:`, error);
+        results.errors.push(`Material ${material.id}: ${error.message}`);
+      }
+    }
+
+    // Save changes to local storage
+    saveToLocalStorage();
+
+    // Update last sync time
+    config.lastSync = new Date().toISOString();
+    saveSpoolmanConfig(config);
+
+    // Prepare status message
+    let message = `Экспорт завершен: ${results.created} создано, ${results.updated} обновлено`;
+    if (results.errors.length > 0) {
+      message += `, ${results.errors.length} ошибок`;
+    }
+    if (results.skipped > 0) {
+      message += `, ${results.skipped} пропущено`;
+    }
+
+    return {
+      success: true,
+      message: message,
+      details: results.errors.length > 0 ? results.errors.join('\n') : null
+    };
+
+  } catch (error) {
+    console.error('Export error:', error);
+    return {
+      success: false,
+      message: `Ошибка экспорта: ${error.message}`
+    };
+  }
+}
+
+// Update spool usage in Spoolman when material is used in the calculator
+async function updateSpoolUsageInSpoolman(materialId, usedWeight) {
+  const material = appData.materials.find(m => String(m.id) === String(materialId));
+  if (!material || !material.spoolmanSpoolId) return;
+
+  try {
+    await spoolmanApiRequest(`spool/${material.spoolmanSpoolId}/use`, 'PUT', {
+      use_weight: usedWeight * 1000 // Convert kg to g for Spoolman API
+    });
+
+    // Update local material balance
+    material.balance -= usedWeight;
+    if (material.balance < 0) material.balance = 0;
+
+    saveToLocalStorage();
+  } catch (error) {
+    console.error('Failed to update spool usage in Spoolman:', error);
+    // Continue without stopping execution - we've already updated local data
+  }
+}
+
+// Test Spoolman connection
+async function testSpoolmanConnection(url) {
+  try {
+    const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+    const response = await fetch(`${baseUrl}/api/v1/info`);
+
+    if (!response.ok) {
+      throw new Error(`Server returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      version: data.version || 'Unknown',
+      message: `Connected to Spoolman ${data.version || 'Unknown'}`
+    };
+  } catch (error) {
+    return { success: false, message: `Connection failed: ${error.message}` };
+  }
+}
+
+// Hook into material usage tracking
+function hookMaterialUsage() {
+  const originalCalculateAll = window.onCalculateAll;
+  window.onCalculateAll = function() {
+    // Call original function
+    const result = originalCalculateAll.apply(this, arguments);
+
+    // Track material usage if Spoolman integration is enabled
+    const config = getSpoolmanConfig();
+    if (config.enabled && config.autoSync && lastCalcFullData) {
+      // Look through all printer details and find material usage
+      const materialUsage = {};
+
+      lastCalcFullData.detailsByPrinter.forEach(printer => {
+        printer.linesDetail.forEach(model => {
+          if (model.materialData && model.materialData.id) {
+            const materialId = model.materialData.id;
+            const usedWeight = (model.realWeight || 0) / 1000; // Convert g to kg
+
+            if (!materialUsage[materialId]) materialUsage[materialId] = 0;
+            materialUsage[materialId] += usedWeight;
+          }
+        });
+      });
+
+      // Update Spoolman for each material
+      Object.keys(materialUsage).forEach(materialId => {
+        updateSpoolUsageInSpoolman(materialId, materialUsage[materialId]);
+      });
+    }
+
+    return result;
+  };
+}
+
+// UI Functions
+function createSpoolmanSettingsUI() {
+  const config = getSpoolmanConfig();
+
+  return `
+    <h3>Интеграция со Spoolman</h3>
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i>
+      Интеграция с Spoolman позволяет синхронизировать данные о катушках между калькулятором и системой управления филаментом Spoolman.
+    </div>
+
+    <div class="alert alert-warning">
+      <h5><i class="bi bi-exclamation-triangle-fill"></i> Важно: Обход CORS для локального Spoolman</h5>
+      <p>Для работы с локально установленным Spoolman вам может потребоваться обойти ограничения CORS. Выполните следующие шаги:</p>
+      <ol>
+        <li>Установите расширение <a href="https://chromewebstore.google.com/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank">CORS Unblock</a> для Chrome</li>
+        <li>+ Access-Control-Request-Headers</li>
+        <li>+ Overwrite 4xx status codes with 200.</li>
+        <li>Жмем Start</li>
+      </ol>
+      <p><strong>Примечание:</strong> Необходимо использовать именно это расширение, так как оно добавляет нужные заголовки для работы с API Spoolman.</p>
+    </div>
+
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="spoolmanEnabledCheckbox" ${config.enabled ? 'checked' : ''}>
+      <label class="form-check-label" for="spoolmanEnabledCheckbox">Включить интеграцию с Spoolman</label>
+    </div>
+    <div class="mb-3">
+      <label for="spoolmanUrlInput" class="form-label">URL сервера Spoolman:</label>
+      <div class="input-group">
+        <input type="text" id="spoolmanUrlInput" class="form-control" placeholder="http://localhost:7912" value="${config.url}"/>
+        <button class="btn btn-outline-secondary" type="button" id="testSpoolmanConnectionBtn">Проверить</button>
+      </div>
+      <div class="form-text">Примеры: http://localhost:7912 или http://192.168.0.123:7912</div>
+    </div>
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="spoolmanAutoSyncCheckbox" ${config.autoSync ? 'checked' : ''}>
+      <label class="form-check-label" for="spoolmanAutoSyncCheckbox">Автоматически обновлять использование материалов</label>
+    </div>
+    <div class="mb-3">
+      <p>Последняя синхронизация: ${config.lastSync ? new Date(config.lastSync).toLocaleString() : 'Никогда'}</p>
+    </div>
+    <div id="spoolmanSyncStatus" class="alert alert-light" style="display: none;"></div>
+    <div class="mb-3">
+      <button class="btn btn-primary" id="saveSpoolmanSettingsBtn">Сохранить настройки</button>
+      <button class="btn btn-success" id="syncToSpoolmanBtn">Экспорт катушек в Spoolman</button>
+      <button class="btn btn-info" id="importFromSpoolmanBtn">Импорт катушек из Spoolman</button>
+      <button class="btn btn-danger" id="clearSpoolmanDuplicatesBtn">Очистить дубликаты</button>
+    </div>
+  `;
+}
+
+// Set up event handlers
+function setupSpoolmanUI() {
+  document.getElementById('saveSpoolmanSettingsBtn').addEventListener('click', function() {
+    const config = {
+      enabled: document.getElementById('spoolmanEnabledCheckbox').checked,
+      url: document.getElementById('spoolmanUrlInput').value.trim(),
+      autoSync: document.getElementById('spoolmanAutoSyncCheckbox').checked,
+      lastSync: getSpoolmanConfig().lastSync
+    };
+
+    saveSpoolmanConfig(config);
+    showSpoolmanStatus('success', 'Настройки сохранены');
+  });
+
+  document.getElementById('testSpoolmanConnectionBtn').addEventListener('click', async function() {
+    const url = document.getElementById('spoolmanUrlInput').value.trim();
+    if (!url) {
+      showSpoolmanStatus('danger', 'Необходимо указать URL');
+      return;
+    }
+
+    showSpoolmanStatus('info', 'Проверка подключения...');
+    const result = await testSpoolmanConnection(url);
+    if (result.success) {
+      showSpoolmanStatus('success', result.message);
+    } else {
+      showSpoolmanStatus('danger', `${result.message}. Возможно нужно установить и активировать CORS Unblock.`);
+    }
+  });
+
+  document.getElementById('syncToSpoolmanBtn').addEventListener('click', async function() {
+    showSpoolmanStatus('info', 'Синхронизация с Spoolman...');
+    this.disabled = true;
+
+    const result = await syncAllMaterialsToSpoolman(msg => showSpoolmanStatus('info', msg));
+
+    this.disabled = false;
+    if (result.success) {
+      showSpoolmanStatus('success', result.message);
+    } else {
+      showSpoolmanStatus('danger', result.message);
+    }
+  });
+
+  document.getElementById('importFromSpoolmanBtn').addEventListener('click', async function() {
+    showSpoolmanStatus('info', 'Импорт из Spoolman...');
+    this.disabled = true;
+
+    const result = await importAllMaterialsFromSpoolman(msg => showSpoolmanStatus('info', msg));
+
+    this.disabled = false;
+    if (result.success) {
+      showSpoolmanStatus('success', result.message);
+    } else {
+      showSpoolmanStatus('danger', result.message);
+    }
+  });
+
+  // Add button to clean up duplicates
+  if (document.getElementById('clearSpoolmanDuplicatesBtn')) {
+    document.getElementById('clearSpoolmanDuplicatesBtn').addEventListener('click', function() {
+      clearSpoolmanDuplicates();
+    });
+  }
+}
+
+// Add new function to clean up duplicates
+function clearSpoolmanDuplicates() {
+  showSpoolmanStatus('info', 'Поиск и удаление дубликатов...');
+
+  try {
+    // Track materials by their external ID
+    const materialsByExternalId = {};
+    const duplicates = [];
+
+    // Group materials by external ID
+    appData.materials.forEach(material => {
+      if (material.spoolmanSpoolId) {
+        const externalId = `3dprice_spool_${material.id}`;
+
+        if (!materialsByExternalId[externalId]) {
+          materialsByExternalId[externalId] = [];
+        }
+
+        materialsByExternalId[externalId].push(material);
+      }
+    });
+
+    // Find duplicates (where multiple materials have the same external ID)
+    for (const [externalId, materials] of Object.entries(materialsByExternalId)) {
+      if (materials.length > 1) {
+        // Keep the first one, mark the rest for deletion
+        for (let i = 1; i < materials.length; i++) {
+          duplicates.push(materials[i]);
+        }
+      }
+    }
+
+    // Remove duplicates from appData.materials
+    if (duplicates.length > 0) {
+      // Create a set of duplicate IDs for faster lookup
+      const duplicateIds = new Set(duplicates.map(m => m.id));
+
+      // Filter out duplicates
+      appData.materials = appData.materials.filter(m => !duplicateIds.has(m.id));
+
+      saveToLocalStorage();
+      renderGlobalMaterialsTable();
+
+      showSpoolmanStatus('success', `Удалено ${duplicates.length} дубликатов. Обновите страницу для применения изменений.`);
+    } else {
+      showSpoolmanStatus('info', 'Дубликатов не найдено.');
+    }
+  } catch (error) {
+    console.error('Error cleaning up duplicates:', error);
+    showSpoolmanStatus('danger', `Ошибка очистки дубликатов: ${error.message}`);
+  }
+}
+
+function showSpoolmanStatus(type, message) {
+  const statusEl = document.getElementById('spoolmanSyncStatus');
+  statusEl.className = `alert alert-${type}`;
+  statusEl.style.display = 'block';
+  statusEl.textContent = message;
+
+  if (type === 'success' || type === 'info') {
+    setTimeout(() => {
+      statusEl.style.opacity = '0';
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+        statusEl.style.opacity = '1';
+      }, 500);
+    }, 5000);
+  }
+}
+
+// Initialize Spoolman integration
+function initSpoolmanIntegration() {
+  // Create settings tab content for Spoolman
+  const spoolmanTab = document.createElement('div');
+  spoolmanTab.className = 'tab-pane fade';
+  spoolmanTab.id = 'spoolmanPane';
+  spoolmanTab.setAttribute('role', 'tabpanel');
+  spoolmanTab.setAttribute('aria-labelledby', 'spoolman-tab');
+  spoolmanTab.innerHTML = `
+    <div class="mt-4">
+      ${createSpoolmanSettingsUI()}
+    </div>
+  `;
+
+  // Add tab content to main tab container
+  const tabContent = document.getElementById('mainTabContent');
+  if (tabContent) {
+    tabContent.appendChild(spoolmanTab);
+  }
+
+  // Add tab navigation item
+  const tabNav = document.getElementById('mainTab');
+  if (tabNav) {
+    const tabItem = document.createElement('li');
+    tabItem.className = 'nav-item';
+    tabItem.innerHTML = `
+      <button class="nav-link" id="spoolman-tab" data-bs-toggle="tab"
+              data-bs-target="#spoolmanPane" type="button" role="tab"
+              aria-controls="spoolmanPane" aria-selected="false">
+        Spoolman
+      </button>
+    `;
+    tabNav.appendChild(tabItem);
+  }
+
+  // Fix existing materials that have undefined waste_percent
+  appData.materials.forEach(material => {
+    if (material.waste_percent === undefined) {
+      material.waste_percent = 0;
+    }
+  });
+  saveToLocalStorage();
+
+  // Hook into material usage tracking
+  hookMaterialUsage();
+}
+
+// Set up event listeners when document is ready
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    initSpoolmanIntegration();
+
+    // Set up event handlers once the DOM is fully loaded with our new elements
+    setTimeout(() => {
+      setupSpoolmanUI();
+    }, 500);
+  }, 1000);
+});
+
 </script>
 
 </body>
