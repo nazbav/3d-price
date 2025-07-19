@@ -5257,6 +5257,7 @@ function createSpoolmanSettingsUI() {
   const config = getSpoolmanConfig();
 
   return `
+    <div class="mt-4">
     <h3>Интеграция со Spoolman</h3>
     <div class="alert alert-info">
       <i class="bi bi-info-circle"></i>
@@ -5268,39 +5269,147 @@ function createSpoolmanSettingsUI() {
       <p>Для работы с локально установленным Spoolman вам может потребоваться обойти ограничения CORS. Выполните следующие шаги:</p>
       <ol>
         <li>Установите расширение <a href="https://chromewebstore.google.com/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank">CORS Unblock</a> для Chrome</li>
-        <li>+ Access-Control-Request-Headers</li>
-        <li>+ Overwrite 4xx status codes with 200.</li>
-        <li>Жмем Start</li>
+        <li>В настройках расширения включите <em>Access-Control-Request-Headers</em></li>
+        <li>Включите опцию <em>Overwrite 4xx status codes with 200</em></li>
+        <li>Нажмите «Start»</li>
       </ol>
       <p><strong>Примечание:</strong> Необходимо использовать именно это расширение, так как оно добавляет нужные заголовки для работы с API Spoolman.</p>
     </div>
 
     <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="spoolmanEnabledCheckbox" ${config.enabled ? 'checked' : ''}>
+      <input type="checkbox" class="form-check-input" id="spoolmanEnabledCheckbox" checked>
       <label class="form-check-label" for="spoolmanEnabledCheckbox">Включить интеграцию с Spoolman</label>
     </div>
     <div class="mb-3">
       <label for="spoolmanUrlInput" class="form-label">URL сервера Spoolman:</label>
       <div class="input-group">
-        <input type="text" id="spoolmanUrlInput" class="form-control" placeholder="http://localhost:7912" value="${config.url}"/>
+        <input type="text" id="spoolmanUrlInput" class="form-control" placeholder="http://localhost:7912" value="https://127.0.0.1/">
         <button class="btn btn-outline-secondary" type="button" id="testSpoolmanConnectionBtn">Проверить</button>
       </div>
-      <div class="form-text">Примеры: http://localhost:7912 или http://192.168.0.123:7912</div>
+      <div class="form-text">Примеры: http://localhost:7912 или https://127.0.0.1:7912</div>
     </div>
     <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="spoolmanAutoSyncCheckbox" ${config.autoSync ? 'checked' : ''}>
+      <input type="checkbox" class="form-check-input" id="spoolmanAutoSyncCheckbox">
       <label class="form-check-label" for="spoolmanAutoSyncCheckbox">Автоматически обновлять использование материалов</label>
     </div>
     <div class="mb-3">
-      <p>Последняя синхронизация: ${config.lastSync ? new Date(config.lastSync).toLocaleString() : 'Никогда'}</p>
+      <p>Последняя синхронизация: Никогда</p>
     </div>
-    <div id="spoolmanSyncStatus" class="alert alert-light" style="display: none;"></div>
+    <div id="spoolmanSyncStatus" class="alert alert-success" style="display: none; opacity: 1;">Connected to Spoolman 0.22.1</div>
     <div class="mb-3">
       <button class="btn btn-primary" id="saveSpoolmanSettingsBtn">Сохранить настройки</button>
       <button class="btn btn-success" id="syncToSpoolmanBtn">Экспорт катушек в Spoolman</button>
       <button class="btn btn-info" id="importFromSpoolmanBtn">Импорт катушек из Spoolman</button>
       <button class="btn btn-danger" id="clearSpoolmanDuplicatesBtn">Очистить дубликаты</button>
+      <!-- Кнопка вызова модального окна инструкции -->
+      <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#instructionModal">
+        Показать инструкцию
+      </button>
     </div>
+  </div>
+
+  <!-- Модальное окно с инструкцией -->
+  <div class="modal fade" id="instructionModal" tabindex="-1" aria-labelledby="instructionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="instructionModalLabel">Инструкция по настройке HTTPS для Spoolman</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">
+          <ol>
+            <li>
+              <strong>Генерация самоподписанного сертификата</strong><br>
+              <pre><code>sudo mkdir -p /etc/ssl/spoolman
+sudo openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout /etc/ssl/spoolman/spoolman.key \
+  -out /etc/ssl/spoolman/spoolman.crt \
+  -subj "/CN=127.0.0.1" \
+  -addext "subjectAltName=IP:127.0.0.1"
+
+sudo chmod 600 /etc/ssl/spoolman/spoolman.key
+sudo chmod 644 /etc/ssl/spoolman/spoolman.crt</code></pre>
+            </li>
+            <li>
+              <strong>Установка и базовая настройка Nginx</strong><br>
+              <pre><code>sudo apt update
+sudo apt install -y nginx
+sudo rm /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/spoolman /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx</code></pre>
+            </li>
+            <li>
+              <strong>Конфигурация Nginx (HTTPS + CORS + PNA + proxy_pass)</strong><br>
+              Создайте или отредактируйте файл <code>/etc/nginx/sites-available/spoolman</code>:
+              <pre><code>server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name 127.0.0.1;
+
+    ssl_certificate     /etc/ssl/spoolman/spoolman.crt;
+    ssl_certificate_key /etc/ssl/spoolman/spoolman.key;
+
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_session_tickets off;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    add_header Access-Control-Allow-Origin        "https://nazbav.github.io"    always;
+    add_header Access-Control-Allow-Methods       "GET, POST, OPTIONS, PUT, DELETE" always;
+    add_header Access-Control-Allow-Headers       "Origin, X-Requested-With, Content-Type, Accept" always;
+    add_header Access-Control-Allow-Credentials   "true"                        always;
+    add_header Access-Control-Allow-Private-Network "true"                      always;
+
+    if ($request_method = OPTIONS) {
+      return 204;
+    }
+
+    location / {
+      proxy_pass         http://127.0.0.1:7912;
+      proxy_http_version 1.1;
+      proxy_set_header   Host            $host;
+      proxy_set_header   X-Real-IP       $remote_addr;
+      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}</code></pre>
+            </li>
+            <li>
+              <strong>Настройка файрвола (UFW)</strong><br>
+              <pre><code>sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload</code></pre>
+            </li>
+            <li>
+              <strong>Перезапуск и проверка</strong><br>
+              <pre><code>sudo systemctl restart Spoolman
+sudo systemctl status Spoolman
+
+# Проверить HTTPS:
+curl -vk https://127.0.0.1/
+
+# Проверить preflight CORS/PNA:
+curl -vk -X OPTIONS https://127.0.0.1/api/v1/info \
+  -H "Origin: https://nazbav.github.io" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: Content-Type" \
+  -H "Access-Control-Request-Private-Network: true"</code></pre>
+              При успешном ответе будет:
+              <ul>
+                <li><code>HTTP/1.1 204 No Content</code></li>
+                <li><code>Access-Control-Allow-Private-Network: true</code></li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </div>
   `;
 }
 
