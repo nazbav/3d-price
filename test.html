@@ -214,7 +214,6 @@
                 <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
                 <th onclick="sortTable('materialsTable',3)">Остаток (кг)</th>
                 <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
-                <th onclick="sortTable('materialsTable',5)">Отход (%)</th>
                 <th onclick="sortTable('materialsTable',6)">Производитель</th>
                  <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
                  <th>Принтеры</th>
@@ -2195,7 +2194,6 @@ function onCalculateAll() {
       
       const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
       const costPrinterPart = h * costPH;
-      // Фактический расход пластика с учётом отходов (в граммах)
       const realW = w;
       // Агрегируем потребление для данного материала
       materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
@@ -2355,7 +2353,7 @@ if(discountPercent > 0){
         (ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" alt="icon">` : '') +
         `<h3>${ln.name}<\/h3>` +
         `<p><strong>Требуется:<\/strong> ${formatTimeForDisplay(ln.hours)}<\/p>` +
-        `<p><strong>Вес + отход:<\/strong> ${safeFixed(ln.realWeight)} г<\/p>` +
+        `<p><strong>Вес:<\/strong> ${safeFixed(ln.realWeight)} г<\/p>` +
         `<p><strong>Материал:<\/strong> ${ln.matName}<\/p>` +
       `</div>`;
     });
@@ -2405,7 +2403,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
         <th>Часы<\/th>
         <th>Вес (г)<\/th>
         <th>Материал<\/th>
-        <th>Вес+отход<\/th>
+        <th>Вес<\/th>
         <th>Амортизация принтера (₽)<\/th>
         <th>Стоимость материала (₽)<\/th>
         <th>Электричество (₽)<\/th>
