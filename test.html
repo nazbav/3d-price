@@ -1763,16 +1763,19 @@ function renderGlobalMaterialsTable(){
   tb.innerHTML = "";
   appData.materials.forEach(m => {
     const tr = document.createElement("tr");
-    const col = m.color || '#ffffff';
+    let col = m.color || '#ffffff';
 	  console.log(m.color);
 	if (!col.startsWith('#')) {
  	 col = '#' + col;
 	}
 
+	      const spoolmanText = m.spoolman_id ? ` | SM: ${m.spoolman_id}` : '';
+    
+
     const tc = textColorForBg(col);
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
-      <td style="background-color:${col};color:${tc};">${m.name} (ID: ${m.id})<\/td>
+      <td style="background-color:${col};color:${tc};">${m.name} (ID: ${m.id}${spoolmanText})<\/td>
       <td>${m.materialType}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
@@ -2037,9 +2040,12 @@ function addModelRow(printerId, modelData) {
     `<option value="${s.val}" ${(modelData.status === s.val) ? "selected" : ""}>${s.text}<\/option>`
   ).join("");
   const mats = getAllMaterialsForPrinter(printerId, true);
-  const optsMat = mats.map(m =>
-    `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name} (ID: ${m.id})<\/option>`
-  ).join("");
+const optsMat = mats.map(m => {
+  const spoolmanText = m.spoolman_id ? ` | SM: ${m.spoolman_id}` : '';
+  return `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>
+    ${m.name} (ID: ${m.id}${spoolmanText})
+  </option>`;
+}).join("");
   const uniqueId = getNextId('clients');
   const nameId = `modelName_${printerId}_${uniqueId}`;
   const statusId = `modelStatus_${printerId}_${uniqueId}`;
