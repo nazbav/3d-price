@@ -675,10 +675,6 @@
           <input type="number" class="form-control" id="matDeclaredInput">
         </div>
         <div class="mb-2">
-          <label class="form-label">Отход (%)</label>
-          <input type="number" class="form-control" id="matWasteInput">
-        </div>
-        <div class="mb-2">
           <label class="form-label">Цвет</label>
           <input type="color" class="form-control form-control-color" id="matColorInput" value="#ffffff">
         </div>
@@ -1260,7 +1256,7 @@ let appData = {
   // Глобальные материалы: добавлены новые поля: balance (остаток), declaredWeight, manufacturer, productionDate
   materials: [
     // Пример материала
-    // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, waste_percent: 5, manufacturer: "XYZ", productionDate: "01.01.2025", printers: [] }
+    // { id: 1001, name: "PLA", costPerKg: 150, balance: 10, declaredWeight: 1, manufacturer: "XYZ", productionDate: "01.01.2025", printers: [] }
   ],
   materialProfiles: [],
   printerProfiles: [],
@@ -1588,7 +1584,6 @@ async function massEdit(type) {
           {id:'cost',label:'Стоимость за кг',type:'number'},
           {id:'balance',label:'Остаток (кг)',type:'number'},
           {id:'declared',label:'Заявленный вес (кг)',type:'number'},
-          {id:'waste',label:'Отход (%)',type:'number'},
           {id:'manuf',label:'Производитель'},
           {id:'prodDate',label:'Дата производства'},
           {id:'printers',label:'Принтеры',type:'multiselect',options:appData.printers.map(p=>({value:String(p.id),label:p.name}))}
@@ -1601,7 +1596,6 @@ async function massEdit(type) {
             if(vals.cost) m.costPerKg=parseFloat(vals.cost)||m.costPerKg;
             if(vals.balance) m.balance=parseFloat(vals.balance)||m.balance;
             if(vals.declared) m.declaredWeight=parseFloat(vals.declared)||m.declaredWeight;
-            if(vals.waste) m.waste_percent=parseFloat(vals.waste)||m.waste_percent;
             if(vals.manuf) m.manufacturer=vals.manuf;
             if(vals.prodDate) m.productionDate=vals.prodDate;
             if(vals.printers && vals.printers.length) m.printers=vals.printers;
@@ -1774,7 +1768,6 @@ function renderGlobalMaterialsTable(){
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
       <td>${m.declaredWeight || "-"}<\/td>
-      <td>${m.waste_percent}<\/td>
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
@@ -1800,7 +1793,6 @@ function onAddGlobalMaterial(){
   document.getElementById('matCostInput').value = '0';
   document.getElementById('matBalanceInput').value = '0';
   document.getElementById('matDeclaredInput').value = '0';
-  document.getElementById('matWasteInput').value = '0';
   document.getElementById('matColorInput').value = '#ffffff';
   document.getElementById('matManufInput').value = '';
   document.getElementById('matProdDateInput').value = '';
@@ -1816,7 +1808,6 @@ function onEditGlobalMaterial(id){
   document.getElementById('matCostInput').value = m.costPerKg;
   document.getElementById('matBalanceInput').value = m.balance;
   document.getElementById('matDeclaredInput').value = m.declaredWeight;
-  document.getElementById('matWasteInput').value = m.waste_percent;
   document.getElementById('matColorInput').value = m.color || '#ffffff';
   document.getElementById('matManufInput').value = m.manufacturer || '';
   document.getElementById('matProdDateInput').value = m.productionDate || '';
@@ -1832,7 +1823,6 @@ function saveMaterialFromModal(){
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
   m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
   m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
-  m.waste_percent = parseFloat(document.getElementById('matWasteInput').value) || 0;
   m.color = document.getElementById('matColorInput').value;
   m.manufacturer = document.getElementById('matManufInput').value;
   m.productionDate = document.getElementById('matProdDateInput').value;
@@ -2206,7 +2196,7 @@ function onCalculateAll() {
       const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
       const costPrinterPart = h * costPH;
       // Фактический расход пластика с учётом отходов (в граммах)
-      const realW = w * (1 + (mat.waste_percent / 100));
+      const realW = w;
       // Агрегируем потребление для данного материала
       materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
       
@@ -4589,6 +4579,7 @@ async function spoolmanApiRequest(endpoint, method = 'GET', body = null) {
     throw new Error('Spoolman is not configured');
   }
 
+
   const baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
   const url = `${baseUrl}/api/v1/${endpoint}`;
 
@@ -4633,19 +4624,6 @@ async function registerCustomFields() {
         name: 'External ID',
         field_type: 'text',
         order: 10
-      },
-      {
-        key: 'manufacturer',
-        name: 'Manufacturer',
-        field_type: 'text',
-        order: 20
-      },
-      {
-        key: 'waste_percent',
-        name: 'Waste Percent',
-        field_type: 'float',
-        order: 30,
-        unit: '%'
       }
     ];
 
@@ -4736,7 +4714,6 @@ function mapMaterialToSpool(material, filamentId) {
   // Convert values to proper types
   const remaining = material.balance ? parseFloat(material.balance) * 1000 : 0;
   const initial = material.declaredWeight ? parseFloat(material.declaredWeight) * 1000 : 1000;
-  const waste_percent = parseFloat(material.waste_percent) || 0; // Default to 0 if not set
 
   return {
     filament_id: parseInt(filamentId),
@@ -4745,12 +4722,10 @@ function mapMaterialToSpool(material, filamentId) {
     lot_nr: material.productionDate || null,
     price: material.costPerKg || null,
     comment: material.name || "Катушка из 3D Price Calculator",
-    location: "3D Price Calculator",
+    //location: "3D Price Calculator",
     archived: remaining <= 0,
     extra: prepareExtraForSpoolman({
       external_id: `3dprice_spool_${material.id}`,
-      manufacturer: material.manufacturer || '',
-      waste_percent: waste_percent || 0  // Ensure it's a number
     })
   };
 }
@@ -4893,7 +4868,6 @@ async function syncSpoolToSpoolman(material, filamentId) {
   }
 }
 
-// Map Spoolman data to our material format - FIXED waste_percent issue
 function mapSpoolmanToMaterial(spool, filament) {
   // Parse extra fields properly
   let extraFields = {};
@@ -4920,23 +4894,6 @@ function mapSpoolmanToMaterial(spool, filament) {
     }
   }
 
-  // Fix: Properly extract and convert waste_percent to a number
-  let waste_percent = 0; // Default value
-
-  if (extraFields.waste_percent !== undefined) {
-    // If it's a string (which it likely is from Spoolman), convert to number
-    if (typeof extraFields.waste_percent === 'string') {
-      waste_percent = parseFloat(extraFields.waste_percent) || 0;
-    } else {
-      waste_percent = parseFloat(extraFields.waste_percent) || 0;
-    }
-  }
-
-  // Ensure waste_percent is a number and not NaN
-  waste_percent = isNaN(waste_percent) ? 0 : waste_percent;
-
-  console.log(`Parsed waste_percent for spool ${spool.id}: ${waste_percent} (original: ${spool.extra?.waste_percent})`);
-
   return {
     id: getNextId('materials'),
     materialType: filament.material || '', // Новое поле
@@ -4945,8 +4902,7 @@ function mapSpoolmanToMaterial(spool, filament) {
     balance: spool.remaining_weight ? spool.remaining_weight / 1000 : 0, // Convert g to kg
     declaredWeight: spool.initial_weight ? spool.initial_weight / 1000 :
             (filament.weight ? filament.weight / 1000 : 1), // Convert g to kg
-    waste_percent: waste_percent, // Properly parsed number
-    manufacturer: filament.vendor?.name || extraFields.manufacturer || '',
+    manufacturer: filament.vendor?.name ,
     productionDate: spool.lot_nr || '',
     printers: [],
     profileIds: [],
@@ -5325,7 +5281,6 @@ function createSpoolmanSettingsUI() {
       <button class="btn btn-primary" id="saveSpoolmanSettingsBtn">Сохранить настройки</button>
       <button class="btn btn-success" id="syncToSpoolmanBtn">Экспорт катушек в Spoolman</button>
       <button class="btn btn-info" id="importFromSpoolmanBtn">Импорт катушек из Spoolman</button>
-      <button class="btn btn-danger" id="clearSpoolmanDuplicatesBtn">Очистить дубликаты</button>
       <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#instructionModal">
         Инструкция по установке
       </button>
@@ -5471,11 +5426,11 @@ function setupSpoolmanUI() {
 
   document.getElementById('syncToSpoolmanBtn').addEventListener('click', async function() {
     showSpoolmanStatus('info', 'Синхронизация с Spoolman...');
-    this.disabled = true;
+   // this.disabled = true;
 
     const result = await syncAllMaterialsToSpoolman(msg => showSpoolmanStatus('info', msg));
 
-    this.disabled = false;
+   // this.disabled = false;
     if (result.success) {
       showSpoolmanStatus('success', result.message);
     } else {
@@ -5497,66 +5452,8 @@ function setupSpoolmanUI() {
     }
   });
 
-  // Add button to clean up duplicates
-  if (document.getElementById('clearSpoolmanDuplicatesBtn')) {
-    document.getElementById('clearSpoolmanDuplicatesBtn').addEventListener('click', function() {
-      clearSpoolmanDuplicates();
-    });
-  }
 }
 
-// Add new function to clean up duplicates
-function clearSpoolmanDuplicates() {
-  showSpoolmanStatus('info', 'Поиск и удаление дубликатов...');
-
-  try {
-    // Track materials by their external ID
-    const materialsByExternalId = {};
-    const duplicates = [];
-
-    // Group materials by external ID
-    appData.materials.forEach(material => {
-      if (material.spoolmanSpoolId) {
-        const externalId = `3dprice_spool_${material.id}`;
-
-        if (!materialsByExternalId[externalId]) {
-          materialsByExternalId[externalId] = [];
-        }
-
-        materialsByExternalId[externalId].push(material);
-      }
-    });
-
-    // Find duplicates (where multiple materials have the same external ID)
-    for (const [externalId, materials] of Object.entries(materialsByExternalId)) {
-      if (materials.length > 1) {
-        // Keep the first one, mark the rest for deletion
-        for (let i = 1; i < materials.length; i++) {
-          duplicates.push(materials[i]);
-        }
-      }
-    }
-
-    // Remove duplicates from appData.materials
-    if (duplicates.length > 0) {
-      // Create a set of duplicate IDs for faster lookup
-      const duplicateIds = new Set(duplicates.map(m => m.id));
-
-      // Filter out duplicates
-      appData.materials = appData.materials.filter(m => !duplicateIds.has(m.id));
-
-      saveToLocalStorage();
-      renderGlobalMaterialsTable();
-
-      showSpoolmanStatus('success', `Удалено ${duplicates.length} дубликатов. Обновите страницу для применения изменений.`);
-    } else {
-      showSpoolmanStatus('info', 'Дубликатов не найдено.');
-    }
-  } catch (error) {
-    console.error('Error cleaning up duplicates:', error);
-    showSpoolmanStatus('danger', `Ошибка очистки дубликатов: ${error.message}`);
-  }
-}
 
 function showSpoolmanStatus(type, message) {
   const statusEl = document.getElementById('spoolmanSyncStatus');
@@ -5612,12 +5509,6 @@ function initSpoolmanIntegration() {
     tabNav.appendChild(tabItem);
   }
 
-  // Fix existing materials that have undefined waste_percent
-  appData.materials.forEach(material => {
-    if (material.waste_percent === undefined) {
-      material.waste_percent = 0;
-    }
-  });
   saveToLocalStorage();
 
   // Hook into material usage tracking
