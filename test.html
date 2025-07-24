@@ -1585,7 +1585,8 @@ async function massEdit(type) {
           {id:'declared',label:'Заявленный вес (кг)',type:'number'},
           {id:'manuf',label:'Производитель'},
           {id:'prodDate',label:'Дата производства'},
-          {id:'printers',label:'Принтеры',type:'multiselect',options:appData.printers.map(p=>({value:String(p.id),label:p.name}))}
+          {id:'printers',label:'Принтеры',type:'multiselect',options:appData.printers.map(p=>({value:String(p.id),label:p.name}))},
+          {id:'profiles',label:'Профили',type:'multiselect',options:(appData.materialProfiles||[]).map(p=>({value:String(p.id),label:p.info||`Профиль ${p.id}`}))}
         ]);
         if(!vals) return;
         appData.materials.forEach(m=>{
@@ -1598,6 +1599,10 @@ async function massEdit(type) {
             if(vals.manuf) m.manufacturer=vals.manuf;
             if(vals.prodDate) m.productionDate=vals.prodDate;
             if(vals.printers && vals.printers.length) m.printers=vals.printers;
+            if(vals.profiles && vals.profiles.length) {
+              if(!Array.isArray(m.profileIds)) m.profileIds = [];
+              m.profileIds = vals.profiles;
+            }
           }
         });
         renderGlobalMaterialsTable();
@@ -1762,7 +1767,7 @@ function renderGlobalMaterialsTable(){
     const tc = textColorForBg(col);
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
-      <td style="background-color:${col};color:${tc};">${m.name}<\/td>
+      <td style="background-color:${col};color:${tc};">${m.name} (ID: ${m.id})<\/td>
       <td>${m.materialType}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance}<\/td>
@@ -2028,7 +2033,7 @@ function addModelRow(printerId, modelData) {
   ).join("");
   const mats = getAllMaterialsForPrinter(printerId, true);
   const optsMat = mats.map(m =>
-    `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name}<\/option>`
+    `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>${m.name} (ID: ${m.id})<\/option>`
   ).join("");
   const uniqueId = getNextId('clients');
   const nameId = `modelName_${printerId}_${uniqueId}`;
@@ -2214,7 +2219,7 @@ function onCalculateAll() {
         status: selStatus.value || "new",
         hours: h,
         weight: w,
-        matName: mat.name,
+        matName: `${mat.name} (ID: ${mat.id})`,
         realWeight: realW,
         costPrinterPart: costPrinterPart,
         costMaterial: costMaterial,
@@ -3876,7 +3881,7 @@ ensureIconsLoaded();
             if (!results.materialStats[materialId]) {
               const mat = findMaterialById(materialId);
               results.materialStats[materialId] = {
-                name: mat ? `${mat.name} | ${mat.manufacturer}` : 
+                name: mat ? `${mat.name} (ID: ${mat.id}) | ${mat.manufacturer}` : 
                           `${model.matName} | ${model.materialData?.manufacturer || 'N/A'}`,
                 totalGrams: 0,
                 totalCost: 0
