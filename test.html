@@ -2599,8 +2599,10 @@ function findMaterialById(mid) {
   let mat = appData.materials.find(m => String(m.id) === String(mid));
   if (mat) return mat;
   for (let p of appData.printers) {
-    mat = p.materials.find(m => String(m.id) === String(mid));
-    if (mat) return mat;
+    if (Array.isArray(p.materials)) {
+      mat = p.materials.find(m => String(m.id) === String(mid));
+      if (mat) return mat;
+    }
   }
   return null;
 }
@@ -3143,8 +3145,10 @@ function downloadMaterialLabelHtml(materialId) {
   if(!mat) {
     // Если не найден в глобальных, проверяем у каждого принтера
     for(let p of appData.printers) {
-      mat = p.materials.find(m => String(m.id) === String(materialId));
-      if(mat) break;
+      if (Array.isArray(p.materials)) {
+        mat = p.materials.find(m => String(m.id) === String(materialId));
+        if(mat) break;
+      }
     }
   }
   if(!mat) { alert("Материал не найден."); return; }
