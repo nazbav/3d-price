@@ -1586,7 +1586,15 @@ async function massEdit(type) {
           {id:'manuf',label:'Производитель'},
           {id:'prodDate',label:'Дата производства'},
           {id:'printers',label:'Принтеры',type:'multiselect',options:appData.printers.map(p=>({value:String(p.id),label:p.name}))},
-          {id:'profiles',label:'Профили',type:'multiselect',options:(appData.materialProfiles||[]).map(p=>({value:String(profileNameById(p.id)),label:p.info||`Профиль ${p.id}`}))}
+          {
+            id: 'profiles',
+            label: 'Профили',
+            type: 'multiselect',
+            options: (appData.materialProfiles || []).map(p => ({
+              value: String(p.id),
+              label: profileNameById(p.id) || `Профиль ${p.id}`
+            }))
+          }
         ]);
         if(!vals) return;
         appData.materials.forEach(m=>{
