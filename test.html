@@ -4633,8 +4633,7 @@ function prepareExtraForSpoolman(extra) {
   }
   return prepared;
 }
-
-// Map Spoolman data to our material format - FIXED waste_percent issue
+	
 function mapSpoolmanToMaterial(spool, filament) {
   // Parse extra fields properly
   let extraFields = {};
@@ -4660,11 +4659,6 @@ function mapSpoolmanToMaterial(spool, filament) {
       }
     }
   }
-
-  // Ensure waste_percent is a number and not NaN
-  waste_percent = isNaN(waste_percent) ? 0 : waste_percent;
-
-  console.log(`Parsed waste_percent for spool ${spool.id}: ${waste_percent} (original: ${spool.extra?.waste_percent})`);
 
   return {
     id: getNextId('materials'),
@@ -5201,12 +5195,6 @@ function initSpoolmanIntegration() {
     tabNav.appendChild(tabItem);
   }
 
-  // Fix existing materials that have undefined waste_percent
-  appData.materials.forEach(material => {
-    if (material.waste_percent === undefined) {
-      material.waste_percent = 0;
-    }
-  });
   saveToLocalStorage();
 
   // Hook into material usage tracking
