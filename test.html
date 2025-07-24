@@ -212,7 +212,7 @@
                 <th onclick="sortTable('materialsTable',1)">Название</th>
                 <th onclick="sortTable('materialsTable',1)">Тип</th>
                 <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
-                <th onclick="sortTable('materialsTable',3)">Остаток (кг)</th>
+                <th onclick="sortTable('materialsTable',3)">Остаток (гр)</th>
                 <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
                 <th onclick="sortTable('materialsTable',6)">Производитель</th>
                  <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
@@ -1786,7 +1786,7 @@ function renderGlobalMaterialsTable(){
       <td style="background-color:${col};color:${tc};">${m.name} (ID: ${m.id}${spoolmanText})<\/td>
       <td>${m.materialType}<\/td>
       <td>${m.costPerKg}<\/td>
-      <td>${m.balance}<\/td>
+      <td>${m.balance * 1000}<\/td>
       <td>${m.declaredWeight || "-"}<\/td>
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
