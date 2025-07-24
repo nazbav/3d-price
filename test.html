@@ -1769,7 +1769,7 @@ function renderGlobalMaterialsTable(){
  	 col = '#' + col;
 	}
 
-	      const spoolmanText = m.spoolman_id ? ` | SM: ${m.spoolman_id}` : '';
+	      const spoolmanText = m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : '';
     
 
     const tc = textColorForBg(col);
@@ -2041,7 +2041,7 @@ function addModelRow(printerId, modelData) {
   ).join("");
   const mats = getAllMaterialsForPrinter(printerId, true);
 const optsMat = mats.map(m => {
-  const spoolmanText = m.spoolman_id ? ` | SM: ${m.spoolman_id}` : '';
+  const spoolmanText = m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : '';
   return `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>
     ${m.name} (ID: ${m.id}${spoolmanText})
   </option>`;
