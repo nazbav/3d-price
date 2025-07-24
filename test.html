@@ -1765,6 +1765,10 @@ function renderGlobalMaterialsTable(){
     const tr = document.createElement("tr");
     const col = m.color || '#ffffff';
 	  console.log(m.color);
+	if (!col.startsWith('#')) {
+ 	 col = '#' + col;
+	}
+
     const tc = textColorForBg(col);
     tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
