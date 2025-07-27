@@ -1611,7 +1611,35 @@ function setupGcodeDrop() {
     for (const f of files) {
       const txt = await f.text();
       const parsed = await parseGcodeText(txt);
-      const mid = await resolveMaterialIdByProfile(parsed.matProfile);
+      let mid = await resolveMaterialIdByProfile(parsed.matProfile);
+      
+      // If no material found, prompt user to select from all available materials
+      if (!mid) {
+        const materialOptions = appData.materials.map(m => ({
+          value: String(m.id),
+          label: `${m.name} (ID: ${m.id})`
+        }));
+        
+        if (materialOptions.length > 0) {
+          const result = await showMultiPrompt('Выберите материал', [{
+            id: 'materialId',
+            label: 'Материал',
+            type: 'select',
+            options: materialOptions
+          }]);
+          
+          if (result && result.materialId) {
+            mid = result.materialId;
+          } else {
+            // User cancelled, skip this file
+            continue;
+          }
+        } else {
+          alert('Нет доступных материалов. Добавьте материалы во вкладке "Материалы".');
+          continue;
+        }
+      }
+      
       addModelRow(printerId, {
         id: parsed.code,
         name: parsed.code,
