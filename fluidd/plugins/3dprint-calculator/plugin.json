@@ -2,22 +2,28 @@
   "name": "3D Print Cost Calculator",
   "version": "1.0.0",
   "platform": "fluidd",
-  "description": "A comprehensive 3D printing cost calculator for Fluidd with printer amortization, material usage, and full cost breakdown",
+  "description": "A comprehensive 3D printing cost calculator for Fluidd with printer amortization, material usage, and full cost breakdown including operator time, electricity, and maintenance costs",
   "author": "nazbav",
   "homepage": "https://github.com/nazbav/3d-price",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nazbav/3d-price.git"
+  },
   "license": "MIT",
-  "keywords": ["3d-printing", "calculator", "cost", "pricing", "fluidd"],
+  "keywords": ["3d-printing", "calculator", "cost", "pricing", "fluidd", "klipper"],
   "main": "calculator.html",
   "entry": {
     "type": "iframe",
     "src": "calculator.html",
     "title": "3D Print Calculator",
-    "icon": "calculator"
+    "icon": "mdi-calculator",
+    "category": "tools"
   },
   "navigation": {
     "title": "Print Calculator",
-    "icon": "calculator",
-    "position": "sidebar"
+    "icon": "mdi-calculator",
+    "position": "sidebar",
+    "order": 100
   },
   "permissions": [
     "storage.local"
@@ -26,5 +32,9 @@
     "calculator.html",
     "calculator.js",
     "plugin.json"
-  ]
+  ],
+  "fluidd": {
+    "minimum_version": "1.20.0",
+    "maximum_version": "2.0.0"
+  }
 }
