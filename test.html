@@ -301,6 +301,13 @@
           <input type="number" step="1" id="calcShipping" class="form-control" />
         </div>
         <div class="col-md-3">
+          <label for="calcModelingCost" class="form-label">Стоимость моделирования (₽):</label>
+          <div class="input-group">
+            <input type="number" step="0.01" id="calcModelingCost" class="form-control" />
+            <button class="btn btn-outline-secondary" type="button" onclick="openModelingCalculatorModal()">📊</button>
+          </div>
+        </div>
+        <div class="col-md-3">
           <label for="calcStartDate" class="form-label">Дата начала:</label>
           <input type="date" id="calcStartDate" class="form-control" />
         </div>
@@ -311,6 +318,8 @@
             <option value="yes">Да</option>
           </select>
         </div>
+      </div>
+      <div class="row mb-3">
         <div class="col-md-3">
           <label for="calcMarkupPercent" class="form-label">Наценка (%):</label>
           <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
@@ -793,6 +802,46 @@
           <input type="text" readonly class="form-control" id="checkLinkInput">
           <button class="btn btn-outline-secondary" type="button" id="copyCheckLinkBtn">Копировать</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно калькулятора стоимости моделирования -->
+<div class="modal fade" id="modelingCalculatorModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Калькулятор стоимости моделирования</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="modelingRateInput" class="form-label">Ставка моделирования (₽/ч):</label>
+          <input type="number" step="0.01" class="form-control" id="modelingRateInput" />
+        </div>
+        <div class="mb-3">
+          <label for="modelingTimeInput" class="form-label">Время моделирования (ч):</label>
+          <input type="number" step="0.1" class="form-control" id="modelingTimeInput" />
+        </div>
+        <div class="mb-3">
+          <label for="modelingComplexityInput" class="form-label">Множитель сложности:</label>
+          <select class="form-select" id="modelingComplexityInput">
+            <option value="1">Простая модель (x1.0)</option>
+            <option value="1.5">Средняя сложность (x1.5)</option>
+            <option value="2">Сложная модель (x2.0)</option>
+            <option value="2.5">Очень сложная (x2.5)</option>
+            <option value="3">Экстремально сложная (x3.0)</option>
+          </select>
+        </div>
+        <div class="alert alert-info">
+          <strong>Предварительный расчёт:</strong>
+          <div id="modelingPreview">0.00 ₽</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+        <button type="button" class="btn btn-primary" onclick="calculateModelingCost()">Рассчитать</button>
       </div>
     </div>
   </div>
@@ -1289,7 +1338,9 @@ let appData = {
     taxPercent: 6,
     parallelPrinting: "no",
     markupPercent: 0,
-    discountPercent: 0
+    discountPercent: 0,
+    modelingRate: 500,
+    modelingCost: 0
   },
   labelSettings: {
   companyName: "Компания",
@@ -1353,6 +1404,7 @@ function initAll(){
   document.getElementById("calcCostKwh").value = appData.calcSettings.costKwh || "";
   document.getElementById("calcTaxPercent").value = appData.calcSettings.taxPercent || "";
   document.getElementById("calcShipping").value = appData.calcSettings.shipping || "";
+  document.getElementById("calcModelingCost").value = appData.calcSettings.modelingCost || 0;
   document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
   document.getElementById("calcParallelPrinting").value = appData.calcSettings.parallelPrinting || "no";
   document.getElementById("calcMarkupPercent").value = appData.calcSettings.markupPercent || 0;
@@ -2159,6 +2211,7 @@ function onCalculateAll() {
   const cKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
   const tPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
   const ship = parseFloat(document.getElementById("calcShipping").value) || 0;
+  const modelingCost = parseFloat(document.getElementById("calcModelingCost").value) || 0;
   const sDate = document.getElementById("calcStartDate").value;
   const parallelMode = document.getElementById("calcParallelPrinting").value;
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
@@ -2175,6 +2228,7 @@ function onCalculateAll() {
   appData.calcSettings.costKwh = cKwh;
   appData.calcSettings.taxPercent = tPercent;
   appData.calcSettings.shipping = ship;
+  appData.calcSettings.modelingCost = modelingCost;
   appData.calcSettings.startDate = sDate;
   appData.calcSettings.parallelPrinting = parallelMode;
   appData.calcSettings.markupPercent = markupPercent;
@@ -2346,7 +2400,7 @@ function onCalculateAll() {
   }
 
   
-  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost;
+  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost + modelingCost;
 
   if (markupPercent > 0) {
     subtotal *= (1 + markupPercent / 100);
@@ -2374,6 +2428,7 @@ function onCalculateAll() {
   htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
+  htmlRes += `Стоимость моделирования: ${safeFixed(modelingCost)} ₽<br/>`;
   htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
   htmlRes += `Подитог: ${safeFixed(subtotal)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${safeFixed(taxAmount)} ₽<br/>`;
@@ -2429,7 +2484,8 @@ if(discountPercent > 0){
       finDate: finDateStr,
       modelsHtml: summaryModels,
       qr: qrDataUrl,
-      paymentInfo: appData.labelSettings.bankDetails
+      paymentInfo: appData.labelSettings.bankDetails,
+      modelingCost: modelingCost > 0 ? safeFixed(modelingCost) : null
     });
   });
   if (warnings.length > 0) {
@@ -2565,6 +2621,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     totalHours: finalTimeOperator,
     taxPercent: tPercent,
     shipping: ship,
+    modelingCost: modelingCost,
     detailsByPrinter,
     costKwh: cKwh,
     operatorRate: opRate,
@@ -2617,6 +2674,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     totalHours: finalTimeOperator,
     taxPercent: tPercent,
     shipping: ship,
+    modelingCost: modelingCost,
     operatorRate: opRate,
     costKwh: cKwh,
     totalOperatorCost: totalOperatorCost,
@@ -2644,6 +2702,60 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   saveToLocalStorage();
   renderHistoryTable();
   updateHistoryStats();
+}
+
+// Функции для калькулятора стоимости моделирования
+function openModelingCalculatorModal() {
+  // Загружаем сохраненные настройки
+  document.getElementById('modelingRateInput').value = appData.calcSettings.modelingRate || 500;
+  document.getElementById('modelingTimeInput').value = '';
+  document.getElementById('modelingComplexityInput').value = '1';
+  
+  // Обновляем предварительный расчет
+  updateModelingPreview();
+  
+  // Добавляем обработчики для автоматического обновления превью
+  const inputs = ['modelingRateInput', 'modelingTimeInput', 'modelingComplexityInput'];
+  inputs.forEach(id => {
+    document.getElementById(id).addEventListener('input', updateModelingPreview);
+  });
+  
+  const modal = new bootstrap.Modal(document.getElementById('modelingCalculatorModal'));
+  modal.show();
+}
+
+function updateModelingPreview() {
+  const rate = parseFloat(document.getElementById('modelingRateInput').value) || 0;
+  const time = parseFloat(document.getElementById('modelingTimeInput').value) || 0;
+  const complexity = parseFloat(document.getElementById('modelingComplexityInput').value) || 1;
+  
+  const total = rate * time * complexity;
+  document.getElementById('modelingPreview').textContent = `${total.toFixed(2)} ₽`;
+}
+
+function calculateModelingCost() {
+  const rate = parseFloat(document.getElementById('modelingRateInput').value) || 0;
+  const time = parseFloat(document.getElementById('modelingTimeInput').value) || 0;
+  const complexity = parseFloat(document.getElementById('modelingComplexityInput').value) || 1;
+  
+  if (time <= 0) {
+    alert('Пожалуйста, укажите время моделирования больше 0.');
+    return;
+  }
+  
+  const totalCost = rate * time * complexity;
+  
+  // Сохраняем настройки
+  appData.calcSettings.modelingRate = rate;
+  appData.calcSettings.modelingCost = totalCost;
+  saveToLocalStorage();
+  
+  // Заполняем поле в калькуляторе
+  document.getElementById('calcModelingCost').value = totalCost.toFixed(2);
+  
+  // Закрываем модальное окно
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modelingCalculatorModal'));
+  modal.hide();
 }
 
 function findMaterialById(mid) {
@@ -3304,6 +3416,7 @@ function buildSummaryCardHtml(data){
     <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
     <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
     <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
+    ${data.modelingCost && data.modelingCost > 0 ? `<div class="info-item"><span class="label">Стоимость моделирования:<\/span><span class="value">${data.modelingCost} ₽<\/span></div>` : ''}
     <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
     <div class="info-item"><span class="label">Цена за 1 грамм:<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
     ${data.paymentInfo ? `<div class="info-item"><span class="label">Оплата:<\/span><span class="value">${data.paymentInfo}<\/span></div>` : ''}
@@ -3837,6 +3950,7 @@ function onEditCalcHistory(timestamp){
   document.getElementById("calcCostKwh").value = it.costKwh || "";
   document.getElementById("calcTaxPercent").value = it.taxPercent || "";
   document.getElementById("calcShipping").value = it.shipping || "";
+  document.getElementById("calcModelingCost").value = it.modelingCost || 0;
   document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
   document.getElementById("calcParallelPrinting").value = it.parallelMode || "no";
   document.getElementById("calcMarkupPercent").value = it.markupPercent || 0;
@@ -3912,6 +4026,7 @@ ensureIconsLoaded();
       totalPrintHours: 0,
       totalElectricityCost: 0,
       totalOperatorExpenses: 0,
+      totalModelingCost: 0,
       materialStats: {},
       printerStats: {},
       completedOrdersCount: completedOrders.length
@@ -3939,6 +4054,9 @@ ensureIconsLoaded();
 
       // Учет расходов на оператора
       results.totalOperatorExpenses += order.totalOperatorCost || 0;
+      
+      // Учет расходов на моделирование
+      results.totalModelingCost += order.modelingCost || 0;
 
       // Обработка деталей заказа
       order.details?.forEach(printer => {
@@ -3991,6 +4109,7 @@ ensureIconsLoaded();
       results.totalCost += order.globalAdditional?.sumGlobalAdd || 0;
       results.totalCost += order.shipping || 0;
       results.totalCost += order.totalOperatorCost || 0;
+      results.totalCost += order.modelingCost || 0;
     });
 
     return results;
@@ -4217,6 +4336,10 @@ ensureIconsLoaded();
                     <li class="list-group-item d-flex justify-content-between">
                       <span>Расходы на оператора:</span>
                       <span>${formatCurrency(totalOperatorExpenses)}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Расходы на моделирование:</span>
+                      <span>${formatCurrency(ordersAnalysis.totalModelingCost)}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                       <span>Окупаемость (прибыль - вложения):</span>
