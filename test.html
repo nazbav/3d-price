@@ -1462,39 +1462,101 @@ function parseTimeFromLink(str){
   return parseTimeInput(str);
 }
 
-async function parseGcodeText(text){
-  const lines=text.split(/\r?\n/);
-  let code='',timeStr='',weight='',printer='Unknown',matProfile='',thumb='';
-  let afterExec=false,inConfig=false,inThumb=false;
-  for(let raw of lines){
-    const line=raw.trim();
-    if(line.startsWith('; MODEL_CODE:')){ code=line.split(':')[1].trim(); continue; }
-    if(line.startsWith('; THUMBNAIL_BLOCK_START')) continue;
-    if(line.startsWith('; thumbnail begin')){ inThumb=true; continue; }
-    if(line.startsWith('; thumbnail end')){ inThumb=false; continue; }
-    if(inThumb){
-      if(line.startsWith(';')) thumb+=line.slice(1).trim();
-      else thumb+=line.trim();
+async function parseGcodeText(text) {
+  const lines = text.split(/\r?\n/);
+  let code = '', timeStr = '', weight = '', printer = 'Unknown', matProfile = '', thumb = '';
+  let afterExec = false, inConfig = false, inThumb = false;
+  let thumbnailFound = false; // Flag to track if we already found a thumbnail
+  
+  for (let raw of lines) {
+    const line = raw.trim();
+    
+    // Parse model code
+    if (line.startsWith('; MODEL_CODE:')) {
+      code = line.split(':')[1].trim();
       continue;
     }
-    if(line==='; EXECUTABLE_BLOCK_END'){ afterExec=true; continue; }
-    if(!afterExec) continue;
-    if(line==='; CONFIG_BLOCK_START'){ inConfig=true; continue; }
-    if(line==='; CONFIG_BLOCK_END'){ inConfig=false; continue; }
-    if(line.startsWith('; estimated printing time') && line.includes('=')){
-      timeStr=line.split('=')[1].trim();
-    }else if(line.startsWith('; total filament used [g]') && line.includes('=')){
-      weight=line.split('=')[1].trim();
-    }else if(inConfig){
-      if(line.includes('printer_settings_id') && line.includes('=')){
-        printer=line.split('=')[1].replace(/"/g,'').trim();
-      }else if(line.startsWith('; filament_settings_id') && line.includes('=')){
-        matProfile=line.split('=')[1].replace(/"/g,'').trim();
+    
+    // Handle thumbnail blocks - only process the first one
+    if (line.startsWith('; THUMBNAIL_BLOCK_START')) {
+      continue;
+    }
+    
+    if (line.startsWith('; thumbnail begin')) {
+      if (!thumbnailFound) {
+        inThumb = true;
+        thumbnailFound = true; // Mark that we found our first thumbnail
+      }
+      continue;
+    }
+    
+    if (line.startsWith('; thumbnail end')) {
+      if (inThumb) {
+        inThumb = false; // Stop processing this thumbnail
+      }
+      continue;
+    }
+    
+    // Process thumbnail data only for the first thumbnail
+    if (inThumb && !thumbnailFound) {
+      // This condition will never be true now, but keeping the structure
+      continue;
+    } else if (inThumb && thumbnailFound) {
+      // Process the first thumbnail data
+      if (line.startsWith(';')) {
+        thumb += line.slice(1).trim();
+      } else {
+        thumb += line.trim();
+      }
+      continue;
+    }
+    
+    // Handle THUMBNAIL_BLOCK_END
+    if (line.startsWith('; THUMBNAIL_BLOCK_END')) {
+      continue;
+    }
+    
+    // Handle executable block end
+    if (line === '; EXECUTABLE_BLOCK_END') {
+      afterExec = true;
+      continue;
+    }
+    
+    if (!afterExec) continue;
+    
+    // Handle config blocks
+    if (line === '; CONFIG_BLOCK_START') {
+      inConfig = true;
+      continue;
+    }
+    
+    if (line === '; CONFIG_BLOCK_END') {
+      inConfig = false;
+      continue;
+    }
+    
+    // Parse printing time
+    if (line.startsWith('; estimated printing time') && line.includes('=')) {
+      timeStr = line.split('=')[1].trim();
+    }
+    // Parse filament weight
+    else if (line.startsWith('; total filament used [g]') && line.includes('=')) {
+      weight = line.split('=')[1].trim();
+    }
+    // Parse config parameters
+    else if (inConfig) {
+      if (line.includes('printer_settings_id') && line.includes('=')) {
+        printer = line.split('=')[1].replace(/"/g, '').trim();
+      } else if (line.startsWith('; filament_settings_id') && line.includes('=')) {
+        matProfile = line.split('=')[1].replace(/"/g, '').trim();
       }
     }
   }
-  if(!code) code=getNextId('gcodeModels');
-  return {code,timeStr,weight,printer,matProfile,thumb};
+  
+  // Generate code if not found
+  if (!code) code = getNextId('gcodeModels');
+  
+  return { code, timeStr, weight, printer, matProfile, thumb };
 }
 
 async function addModelFromGcode(parsed){
