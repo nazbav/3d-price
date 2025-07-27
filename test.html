@@ -80,6 +80,110 @@
       .order-summary-card { flex-direction: column; }
       .order-summary-card .order-info, .order-summary-card .models { flex: 1 1 auto; }
     }
+
+    /* Стили для камер и управления принтерами */
+    .printer-control-card {
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      background: #fff;
+    }
+    
+    .printer-control-header {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-bottom: 1px solid #dee2e6;
+      border-radius: 8px 8px 0 0;
+    }
+    
+    .printer-status-online {
+      color: #28a745;
+    }
+    
+    .printer-status-offline {
+      color: #dc3545;
+    }
+    
+    .temperature-display {
+      background: #e9ecef;
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin: 0.25rem;
+      font-family: monospace;
+    }
+    
+    .progress-info {
+      background: #d1ecf1;
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin: 0.5rem 0;
+    }
+    
+    .camera-container {
+      position: relative;
+      max-width: 100%;
+      margin: 1rem 0;
+    }
+    
+    .camera-stream {
+      width: 100%;
+      max-width: 400px;
+      height: auto;
+      border-radius: 4px;
+      border: 1px solid #dee2e6;
+    }
+    
+    .camera-error {
+      width: 100%;
+      max-width: 400px;
+      height: 300px;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 0.9rem;
+    }
+    
+    .control-buttons {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+    
+    .printer-info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    
+    .camera-tabs {
+      margin-bottom: 1rem;
+    }
+    
+    .camera-tabs .nav-link {
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+    }
+    
+    @media (max-width: 768px) {
+      .printer-info-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .control-buttons {
+        justify-content: center;
+      }
+      
+      .camera-stream,
+      .camera-error {
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -144,6 +248,14 @@
               data-bs-target="#summaryPane" type="button" role="tab"
               aria-controls="summaryPane" aria-selected="false">
         Итоги
+      </button>
+    </li>
+    
+    <li class="nav-item">
+      <button class="nav-link" id="cameras-tab" data-bs-toggle="tab"
+              data-bs-target="#camerasPane" type="button" role="tab"
+              aria-controls="camerasPane" aria-selected="false">
+        Камеры и управление
       </button>
     </li>
 
@@ -347,6 +459,37 @@
         <h3>Общий обзор («Итоги»)</h3>
         <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
         <div id="summaryContent"></div>
+      </div>
+    </div>
+
+    <!-- Камеры и управление -->
+    <div class="tab-pane fade" id="camerasPane" role="tabpanel" aria-labelledby="cameras-tab">
+      <div class="mt-4">
+        <h3>Камеры и управление принтерами</h3>
+        <p class="small-text">
+          Мониторинг камер и управление принтерами через Moonraker API. 
+          Автоматическое обновление статуса каждые 5 секунд.
+        </p>
+        
+        <div class="mb-3">
+          <button class="btn btn-primary btn-sm" onclick="refreshAllPrinters()">
+            <i class="bi bi-arrow-clockwise"></i> Обновить все
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAutoRefresh()">
+            <span id="autoRefreshToggleText">Автообновление: ВКЛ</span>
+          </button>
+        </div>
+        
+        <div id="printersControlContainer">
+          <!-- Принтеры будут добавлены динамически -->
+        </div>
+        
+        <div class="alert alert-info mt-4">
+          <h6><i class="bi bi-info-circle"></i> Информация</h6>
+          <p class="mb-2">Для работы требуется настроенный Moonraker API на принтерах.</p>
+          <p class="mb-2">Убедитесь, что указаны корректные адреса <code>print_host</code> в профилях принтеров.</p>
+          <p class="mb-0">При возникновении ошибок CORS установите расширение для обхода ограничений.</p>
+        </div>
       </div>
     </div>
 
@@ -837,6 +980,646 @@ document.getElementById("themeToggle").addEventListener("click",()=>{
 });
 const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)||"light";
 setTheme(savedTheme);
+
+// ===== MOONRAKER API INTEGRATION =====
+
+class MoonrakerClient {
+  constructor(hostPort) {
+    this.host = hostPort.includes(':') ? hostPort : `${hostPort}:7125`;
+    this.baseUrl = `http://${this.host}`;
+    this.websocket = null;
+    this.subscribers = [];
+  }
+
+  async apiRequest(endpoint, method = 'GET', body = null) {
+    try {
+      const url = `${this.baseUrl}/api${endpoint}`;
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        mode: 'cors'
+      };
+
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Moonraker API error for ${this.host}:`, error);
+      throw error;
+    }
+  }
+
+  async getServerInfo() {
+    return await this.apiRequest('/server/info');
+  }
+
+  async getPrinterInfo() {
+    return await this.apiRequest('/printer/info');
+  }
+
+  async getWebcamList() {
+    return await this.apiRequest('/server/webcams/list');
+  }
+
+  async getPrinterObjects(objects = ['print_stats', 'extruder', 'heater_bed']) {
+    const objectsQuery = objects.join(',');
+    return await this.apiRequest(`/printer/objects/query?${objects.map(obj => `${obj}`).join('&')}`);
+  }
+
+  async pausePrint() {
+    return await this.apiRequest('/printer/print/pause', 'POST');
+  }
+
+  async resumePrint() {
+    return await this.apiRequest('/printer/print/resume', 'POST');
+  }
+
+  async cancelPrint() {
+    return await this.apiRequest('/printer/print/cancel', 'POST');
+  }
+
+  async sendGcode(command) {
+    return await this.apiRequest('/printer/gcode/script', 'POST', { script: command });
+  }
+
+  connectWebSocket() {
+    try {
+      const wsUrl = `ws://${this.host}/websocket`;
+      this.websocket = new WebSocket(wsUrl);
+      
+      this.websocket.onopen = () => {
+        console.log(`WebSocket connected to ${this.host}`);
+      };
+
+      this.websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.subscribers.forEach(callback => callback(data));
+        } catch (error) {
+          console.error('WebSocket message parse error:', error);
+        }
+      };
+
+      this.websocket.onclose = () => {
+        console.log(`WebSocket disconnected from ${this.host}`);
+        // Reconnect after 5 seconds
+        setTimeout(() => this.connectWebSocket(), 5000);
+      };
+
+      this.websocket.onerror = (error) => {
+        console.error(`WebSocket error for ${this.host}:`, error);
+      };
+    } catch (error) {
+      console.error(`Failed to connect WebSocket to ${this.host}:`, error);
+    }
+  }
+
+  subscribe(callback) {
+    this.subscribers.push(callback);
+  }
+
+  disconnect() {
+    if (this.websocket) {
+      this.websocket.close();
+      this.websocket = null;
+    }
+    this.subscribers = [];
+  }
+}
+
+class PrinterCameraManager {
+  constructor() {
+    this.printers = new Map();
+    this.autoRefreshInterval = null;
+    this.autoRefreshEnabled = true;
+  }
+
+  addPrinter(printer, profiles) {
+    if (!printer || !profiles || profiles.length === 0) return;
+    
+    // Extract print_host from first available profile
+    let printHost = null;
+    let webUiHost = null;
+    
+    for (const profile of profiles) {
+      if (profile.config && profile.config.print_host) {
+        printHost = profile.config.print_host;
+        webUiHost = profile.config.print_host_webui || printHost.split(':')[0];
+        break;
+      }
+    }
+
+    if (!printHost) return;
+
+    const client = new MoonrakerClient(printHost);
+    
+    this.printers.set(printer.id, {
+      printer,
+      client,
+      printHost,
+      webUiHost,
+      status: 'unknown',
+      lastUpdate: null,
+      cameras: [],
+      printerState: null,
+      temperatures: { extruder: null, bed: null },
+      printJob: null
+    });
+
+    // Subscribe to WebSocket updates
+    client.subscribe((data) => this.handleWebSocketUpdate(printer.id, data));
+  }
+
+  async refreshPrinter(printerId) {
+    const printerData = this.printers.get(printerId);
+    if (!printerData) return;
+
+    try {
+      // Test connection and get basic info
+      const serverInfo = await printerData.client.getServerInfo();
+      const printerInfo = await printerData.client.getPrinterInfo();
+      
+      printerData.status = 'online';
+      printerData.lastUpdate = new Date();
+
+      // Get cameras
+      try {
+        const webcamResult = await printerData.client.getWebcamList();
+        printerData.cameras = webcamResult.webcams || [];
+      } catch (error) {
+        console.warn(`Failed to get cameras for ${printerData.printHost}:`, error);
+        printerData.cameras = [];
+      }
+
+      // Get printer objects (temperatures, print status)
+      try {
+        const objects = await printerData.client.getPrinterObjects([
+          'print_stats', 'extruder', 'heater_bed', 'display_status'
+        ]);
+        
+        if (objects.status) {
+          printerData.printerState = objects.status.print_stats;
+          printerData.temperatures = {
+            extruder: objects.status.extruder,
+            bed: objects.status.heater_bed
+          };
+          printerData.printJob = objects.status.display_status;
+        }
+      } catch (error) {
+        console.warn(`Failed to get printer objects for ${printerData.printHost}:`, error);
+      }
+
+      // Connect WebSocket if not already connected
+      if (!printerData.client.websocket || printerData.client.websocket.readyState !== WebSocket.OPEN) {
+        printerData.client.connectWebSocket();
+      }
+
+    } catch (error) {
+      console.error(`Failed to refresh printer ${printerId}:`, error);
+      printerData.status = 'offline';
+      printerData.lastUpdate = new Date();
+    }
+
+    this.updatePrinterUI(printerId);
+  }
+
+  handleWebSocketUpdate(printerId, data) {
+    const printerData = this.printers.get(printerId);
+    if (!printerData || !data.params) return;
+
+    // Update printer state from WebSocket data
+    if (data.params[0] && data.params[0].print_stats) {
+      printerData.printerState = data.params[0].print_stats;
+    }
+    
+    if (data.params[0] && data.params[0].extruder) {
+      printerData.temperatures.extruder = data.params[0].extruder;
+    }
+    
+    if (data.params[0] && data.params[0].heater_bed) {
+      printerData.temperatures.bed = data.params[0].heater_bed;
+    }
+
+    if (data.params[0] && data.params[0].display_status) {
+      printerData.printJob = data.params[0].display_status;
+    }
+
+    this.updatePrinterUI(printerId);
+  }
+
+  updatePrinterUI(printerId) {
+    const printerData = this.printers.get(printerId);
+    if (!printerData) return;
+
+    const container = document.getElementById(`printer-${printerId}`);
+    if (!container) return;
+
+    // Update status
+    const statusEl = container.querySelector('.printer-status');
+    if (statusEl) {
+      statusEl.textContent = printerData.status === 'online' ? 'В сети' : 'Не в сети';
+      statusEl.className = `printer-status ${printerData.status === 'online' ? 'printer-status-online' : 'printer-status-offline'}`;
+    }
+
+    // Update temperatures
+    const tempContainer = container.querySelector('.temperatures');
+    if (tempContainer && printerData.temperatures) {
+      let tempHtml = '';
+      
+      if (printerData.temperatures.extruder) {
+        const ext = printerData.temperatures.extruder;
+        tempHtml += `<div class="temperature-display">
+          Экструдер: ${ext.temperature ? ext.temperature.toFixed(1) : 'N/A'}°C 
+          ${ext.target ? `/ ${ext.target.toFixed(1)}°C` : ''}
+        </div>`;
+      }
+      
+      if (printerData.temperatures.bed) {
+        const bed = printerData.temperatures.bed;
+        tempHtml += `<div class="temperature-display">
+          Стол: ${bed.temperature ? bed.temperature.toFixed(1) : 'N/A'}°C 
+          ${bed.target ? `/ ${bed.target.toFixed(1)}°C` : ''}
+        </div>`;
+      }
+      
+      tempContainer.innerHTML = tempHtml;
+    }
+
+    // Update print job info
+    const jobContainer = container.querySelector('.job-info');
+    if (jobContainer && printerData.printerState) {
+      const state = printerData.printerState;
+      let jobHtml = '';
+      
+      if (state.filename && state.state !== 'standby') {
+        const progress = printerData.printJob && printerData.printJob.progress ? 
+          (printerData.printJob.progress * 100).toFixed(1) : 'N/A';
+        
+        jobHtml = `
+          <div class="progress-info">
+            <div><strong>Файл:</strong> ${state.filename}</div>
+            <div><strong>Статус:</strong> ${state.state}</div>
+            <div><strong>Прогресс:</strong> ${progress}%</div>
+            ${progress !== 'N/A' ? `
+              <div class="progress mt-2">
+                <div class="progress-bar" role="progressbar" style="width: ${progress}%"></div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      } else {
+        jobHtml = '<div class="text-muted">Нет активных заданий</div>';
+      }
+      
+      jobContainer.innerHTML = jobHtml;
+    }
+
+    // Update control buttons state
+    const controls = container.querySelector('.control-buttons');
+    if (controls && printerData.printerState) {
+      const state = printerData.printerState.state;
+      const pauseBtn = controls.querySelector('.pause-btn');
+      const resumeBtn = controls.querySelector('.resume-btn');
+      const cancelBtn = controls.querySelector('.cancel-btn');
+      
+      if (pauseBtn) pauseBtn.disabled = state !== 'printing';
+      if (resumeBtn) resumeBtn.disabled = state !== 'paused';
+      if (cancelBtn) cancelBtn.disabled = !['printing', 'paused'].includes(state);
+    }
+
+    // Update last refresh time
+    const lastUpdateEl = container.querySelector('.last-update');
+    if (lastUpdateEl && printerData.lastUpdate) {
+      lastUpdateEl.textContent = `Обновлено: ${printerData.lastUpdate.toLocaleTimeString()}`;
+    }
+  }
+
+  createPrinterUI(printerId) {
+    const printerData = this.printers.get(printerId);
+    if (!printerData) return '';
+
+    const printer = printerData.printer;
+    
+    return `
+      <div class="printer-control-card" id="printer-${printerId}">
+        <div class="printer-control-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">${printer.name}</h5>
+            <div>
+              <span class="printer-status printer-status-offline">Проверка...</span>
+              <a href="http://${printerData.webUiHost}" target="_blank" class="btn btn-outline-primary btn-sm ms-2">
+                <i class="bi bi-box-arrow-up-right"></i> Веб-интерфейс
+              </a>
+            </div>
+          </div>
+          <small class="text-muted">Host: ${printerData.printHost}</small>
+        </div>
+        
+        <div class="card-body p-3">
+          <div class="printer-info-grid">
+            <div>
+              <h6>Температуры</h6>
+              <div class="temperatures">
+                <div class="text-muted">Загрузка...</div>
+              </div>
+            </div>
+            
+            <div>
+              <h6>Задание печати</h6>
+              <div class="job-info">
+                <div class="text-muted">Загрузка...</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="control-buttons">
+            <button class="btn btn-warning btn-sm pause-btn" onclick="controlPrint('${printerId}', 'pause')" disabled>
+              <i class="bi bi-pause-fill"></i> Пауза
+            </button>
+            <button class="btn btn-success btn-sm resume-btn" onclick="controlPrint('${printerId}', 'resume')" disabled>
+              <i class="bi bi-play-fill"></i> Продолжить
+            </button>
+            <button class="btn btn-danger btn-sm cancel-btn" onclick="controlPrint('${printerId}', 'cancel')" disabled>
+              <i class="bi bi-stop-fill"></i> Отмена
+            </button>
+            <button class="btn btn-info btn-sm" onclick="refreshPrinter('${printerId}')">
+              <i class="bi bi-arrow-clockwise"></i> Обновить
+            </button>
+          </div>
+          
+          <div class="cameras-section mt-3">
+            <h6>Камеры</h6>
+            <div id="cameras-${printerId}">
+              <div class="text-muted">Загрузка камер...</div>
+            </div>
+          </div>
+          
+          <div class="mt-2">
+            <small class="text-muted last-update">Статус не обновлялся</small>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  updateCamerasUI(printerId) {
+    const printerData = this.printers.get(printerId);
+    if (!printerData) return;
+
+    const camerasContainer = document.getElementById(`cameras-${printerId}`);
+    if (!camerasContainer) return;
+
+    if (printerData.cameras.length === 0) {
+      camerasContainer.innerHTML = '<div class="text-muted">Камеры не найдены</div>';
+      return;
+    }
+
+    let camerasHtml = '';
+    
+    if (printerData.cameras.length === 1) {
+      // Single camera - no tabs
+      const camera = printerData.cameras[0];
+      camerasHtml = this.createCameraElement(camera, printerData.printHost);
+    } else {
+      // Multiple cameras - use tabs
+      camerasHtml = `
+        <ul class="nav nav-tabs camera-tabs" role="tablist">
+          ${printerData.cameras.map((camera, index) => `
+            <li class="nav-item" role="presentation">
+              <button class="nav-link ${index === 0 ? 'active' : ''}" 
+                      id="camera-tab-${printerId}-${index}" 
+                      data-bs-toggle="tab" 
+                      data-bs-target="#camera-content-${printerId}-${index}" 
+                      type="button" role="tab">
+                ${camera.name || `Камера ${index + 1}`}
+              </button>
+            </li>
+          `).join('')}
+        </ul>
+        <div class="tab-content">
+          ${printerData.cameras.map((camera, index) => `
+            <div class="tab-pane fade ${index === 0 ? 'show active' : ''}" 
+                 id="camera-content-${printerId}-${index}" role="tabpanel">
+              ${this.createCameraElement(camera, printerData.printHost)}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    camerasContainer.innerHTML = camerasHtml;
+  }
+
+  createCameraElement(camera, hostPort) {
+    const baseUrl = `http://${hostPort.split(':')[0]}`;
+    
+    // Handle different stream URL formats
+    let streamUrl = camera.stream_url || camera.url;
+    if (streamUrl && !streamUrl.startsWith('http')) {
+      streamUrl = streamUrl.startsWith('/') ? `${baseUrl}${streamUrl}` : `${baseUrl}/${streamUrl}`;
+    }
+
+    if (!streamUrl) {
+      return '<div class="camera-error">URL потока не настроен</div>';
+    }
+
+    // Apply flip and rotation transforms
+    let transform = '';
+    if (camera.flip_horizontal) transform += 'scaleX(-1) ';
+    if (camera.flip_vertical) transform += 'scaleY(-1) ';
+    if (camera.rotation) transform += `rotate(${camera.rotation}deg)`;
+
+    const transformStyle = transform ? `style="transform: ${transform};"` : '';
+
+    return `
+      <div class="camera-container">
+        <img src="${streamUrl}" 
+             class="camera-stream" 
+             ${transformStyle}
+             alt="${camera.name || 'Камера принтера'}"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="camera-error" style="display: none;">
+          Ошибка загрузки потока<br>
+          <small>${streamUrl}</small>
+        </div>
+      </div>
+    `;
+  }
+
+  startAutoRefresh() {
+    if (this.autoRefreshInterval) return;
+    
+    this.autoRefreshInterval = setInterval(() => {
+      if (this.autoRefreshEnabled) {
+        this.refreshAllPrinters();
+      }
+    }, 5000); // 5 seconds
+  }
+
+  stopAutoRefresh() {
+    if (this.autoRefreshInterval) {
+      clearInterval(this.autoRefreshInterval);
+      this.autoRefreshInterval = null;
+    }
+  }
+
+  toggleAutoRefresh() {
+    this.autoRefreshEnabled = !this.autoRefreshEnabled;
+    const toggleText = document.getElementById('autoRefreshToggleText');
+    if (toggleText) {
+      toggleText.textContent = `Автообновление: ${this.autoRefreshEnabled ? 'ВКЛ' : 'ВЫКЛ'}`;
+    }
+  }
+
+  async refreshAllPrinters() {
+    const promises = Array.from(this.printers.keys()).map(id => this.refreshPrinter(id));
+    await Promise.allSettled(promises);
+  }
+
+  disconnect() {
+    this.stopAutoRefresh();
+    this.printers.forEach(printerData => {
+      printerData.client.disconnect();
+    });
+    this.printers.clear();
+  }
+}
+
+// Global printer camera manager instance
+let printerCameraManager = null;
+
+// ===== UI FUNCTIONS =====
+
+function initializeCamerasAndControl() {
+  if (printerCameraManager) {
+    printerCameraManager.disconnect();
+  }
+  
+  printerCameraManager = new PrinterCameraManager();
+  
+  const container = document.getElementById('printersControlContainer');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  // Get printers with profiles that have print_host configured
+  const availablePrinters = appData.printers.filter(printer => {
+    const profiles = (printer.profileIds || [])
+      .map(id => appData.printerProfiles.find(p => p.id === id))
+      .filter(p => p && p.config && p.config.print_host);
+    return profiles.length > 0;
+  });
+  
+  if (availablePrinters.length === 0) {
+    container.innerHTML = `
+      <div class="alert alert-warning">
+        <h6><i class="bi bi-exclamation-triangle"></i> Принтеры не найдены</h6>
+        <p>Не найдено ни одного принтера с настроенным параметром <code>print_host</code>.</p>
+        <p>Убедитесь, что в профилях OrcaSlicer указаны корректные адреса принтеров.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Add each printer to the manager and UI
+  availablePrinters.forEach(printer => {
+    const profiles = (printer.profileIds || [])
+      .map(id => appData.printerProfiles.find(p => p.id === id))
+      .filter(p => p && p.config && p.config.print_host);
+    
+    printerCameraManager.addPrinter(printer, profiles);
+    container.innerHTML += printerCameraManager.createPrinterUI(printer.id);
+  });
+  
+  // Start auto-refresh
+  printerCameraManager.startAutoRefresh();
+  
+  // Initial refresh
+  setTimeout(() => {
+    printerCameraManager.refreshAllPrinters().then(() => {
+      // Update cameras UI after initial data load
+      availablePrinters.forEach(printer => {
+        printerCameraManager.updateCamerasUI(printer.id);
+      });
+    });
+  }, 100);
+}
+
+function refreshAllPrinters() {
+  if (printerCameraManager) {
+    printerCameraManager.refreshAllPrinters().then(() => {
+      // Update cameras UI after refresh
+      printerCameraManager.printers.forEach((_, printerId) => {
+        printerCameraManager.updateCamerasUI(printerId);
+      });
+    });
+  }
+}
+
+function refreshPrinter(printerId) {
+  if (printerCameraManager) {
+    printerCameraManager.refreshPrinter(printerId).then(() => {
+      printerCameraManager.updateCamerasUI(printerId);
+    });
+  }
+}
+
+function toggleAutoRefresh() {
+  if (printerCameraManager) {
+    printerCameraManager.toggleAutoRefresh();
+  }
+}
+
+async function controlPrint(printerId, action) {
+  if (!printerCameraManager) return;
+  
+  const printerData = printerCameraManager.printers.get(printerId);
+  if (!printerData) return;
+  
+  try {
+    let result;
+    switch (action) {
+      case 'pause':
+        result = await printerData.client.pausePrint();
+        break;
+      case 'resume':
+        result = await printerData.client.resumePrint();
+        break;
+      case 'cancel':
+        if (confirm('Вы уверены, что хотите отменить печать?')) {
+          result = await printerData.client.cancelPrint();
+        }
+        break;
+      default:
+        return;
+    }
+    
+    // Refresh printer status after control action
+    setTimeout(() => refreshPrinter(printerId), 1000);
+    
+  } catch (error) {
+    alert(`Ошибка выполнения команды: ${error.message}`);
+  }
+}
+
+// Initialize when cameras tab is shown
+document.addEventListener('DOMContentLoaded', () => {
+  const camerasTab = document.getElementById('cameras-tab');
+  if (camerasTab) {
+    camerasTab.addEventListener('shown.bs.tab', () => {
+      initializeCamerasAndControl();
+    });
+  }
+});
+
+// ===== END MOONRAKER INTEGRATION =====
 
 function getNextId(type) {
   if (!appData.counters) appData.counters = {};
