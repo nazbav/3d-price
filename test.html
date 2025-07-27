@@ -3464,6 +3464,10 @@ async function cancelMyNalogReceipt(){
   }
   const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
   const comment = prompt('Причина отмены чекa:','');
+  if (!comment || !comment.trim()) {
+    alert('Не указана причина отмены чека.\nЧек не будет отменён.');
+    return;
+  }
   const btn=document.getElementById('cancelMyNalogBtn');
   if(btn) btn.disabled=true;
   const ok = await cancelReceiptInternal(last, comment || '');
