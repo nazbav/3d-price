@@ -1190,6 +1190,72 @@ function showMultiPrompt(title, fields){
   });
 }
 
+function showMaterialSelectionForGcode(fileName, thumbnail, materialOptions) {
+  return new Promise(res => {
+    const body = document.getElementById('multiPromptBody');
+    body.innerHTML = '';
+    document.getElementById('multiPromptTitle').textContent = 'Выберите материал для модели';
+    
+    // Create container for model info
+    const modelInfoDiv = document.createElement('div');
+    modelInfoDiv.className = 'mb-3 p-3 border rounded bg-light';
+    
+    // Add thumbnail if available
+    if (thumbnail) {
+      const thumbImg = document.createElement('img');
+      thumbImg.src = `data:image/png;base64,${thumbnail}`;
+      thumbImg.style.cssText = 'width: 80px; height: 80px; object-fit: contain; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; display: block;';
+      modelInfoDiv.appendChild(thumbImg);
+    }
+    
+    // Add filename
+    const fileNameDiv = document.createElement('div');
+    fileNameDiv.innerHTML = `<strong>Файл:</strong> ${fileName}`;
+    fileNameDiv.className = 'mb-2';
+    modelInfoDiv.appendChild(fileNameDiv);
+    
+    body.appendChild(modelInfoDiv);
+    
+    // Add material selection
+    const materialDiv = document.createElement('div');
+    materialDiv.className = 'mb-2';
+    
+    const label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = 'Выберите материал:';
+    
+    const select = document.createElement('select');
+    select.className = 'form-select';
+    select.id = 'mp_materialId';
+    
+    // Add default option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '-- Выберите материал --';
+    select.appendChild(defaultOption);
+    
+    // Add material options
+    materialOptions.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      select.appendChild(option);
+    });
+    
+    materialDiv.appendChild(label);
+    materialDiv.appendChild(select);
+    body.appendChild(materialDiv);
+    
+    const modal = new bootstrap.Modal(document.getElementById('multiPromptModal'));
+    document.getElementById('multiPromptOk').onclick = () => {
+      const materialId = document.getElementById('mp_materialId').value;
+      modal.hide();
+      res(materialId ? { materialId } : null);
+    };
+    modal.show();
+  });
+}
+
 function populatePrintersSelect(sel, selected){
   sel.innerHTML='';
   appData.printers.forEach(p=>{
@@ -1613,22 +1679,19 @@ function setupGcodeDrop() {
       const parsed = await parseGcodeText(txt);
       let mid = await resolveMaterialIdByProfile(parsed.matProfile);
 
+      // Get the original file name without extension for display
+      const fileName = f.name;
+      const modelName = fileName.replace(/\.gcode$/i, '');
+
       // If no material found, prompt user to select from all available materials
       if (!mid) {
-
-	
-	const materialOptions = appData.materials.map(m => ({
-	  value: String(m.id),
-	  label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
-	}));
+        const materialOptions = appData.materials.map(m => ({
+          value: String(m.id),
+          label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
+        }));
         
         if (materialOptions.length > 0) {
-          const result = await showMultiPrompt('Выберите материал', [{
-            id: 'materialId',
-            label: 'Материал',
-            type: 'select',
-            options: materialOptions
-          }]);
+          const result = await showMaterialSelectionForGcode(fileName, parsed.thumb, materialOptions);
           
           if (result && result.materialId) {
             mid = result.materialId;
@@ -1644,7 +1707,7 @@ function setupGcodeDrop() {
       
       addModelRow(printerId, {
         id: parsed.code,
-        name: parsed.code,
+        name: modelName, // Use file name instead of parsed.code
         thumbnail: parsed.thumb,
         status: 'new',
         hours: parseTimeFromLink(parsed.timeStr),
