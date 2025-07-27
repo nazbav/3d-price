@@ -2,6 +2,45 @@
 
 Проект представляет набор HTML‑страниц для расчёта полной стоимости моделей, печатаемых на 3D‑принтере. Содержит как стабильные, так и экспериментальные версии калькулятора.
 
+## Fluidd Plugin Integration
+
+This calculator is now available as a Fluidd plugin for seamless integration with your Klipper 3D printer web interface.
+
+### Installation in Fluidd
+
+1. Copy the plugin files to your Fluidd plugins directory:
+   ```bash
+   cp -r fluidd/plugins/3dprint-calculator /path/to/fluidd/plugins/
+   ```
+
+2. Alternatively, if you have direct access to your Fluidd installation:
+   ```bash
+   cd /path/to/fluidd/plugins/
+   git clone https://github.com/nazbav/3d-price.git temp-calc
+   mv temp-calc/fluidd/plugins/3dprint-calculator ./
+   rm -rf temp-calc
+   ```
+
+3. Restart your Fluidd service:
+   ```bash
+   sudo systemctl restart fluidd
+   ```
+
+4. The "Print Calculator" menu item will appear in Fluidd's sidebar.
+
+### Plugin Features
+
+- **Printer Management**: Add multiple printers with cost amortization settings
+- **Material Library**: Track material costs, waste percentages, and stock levels  
+- **Cost Calculation**: Comprehensive cost breakdown including:
+  - Printer amortization based on usage hours
+  - Material costs with waste factor
+  - Electricity consumption
+  - Operator time
+  - Maintenance costs
+  - Shipping and markup
+- **Fluidd Integration**: Native sidebar navigation and responsive design
+
 ## Содержание репозитория
 
 1. **index1.html** – первая версия с минимальным функционалом

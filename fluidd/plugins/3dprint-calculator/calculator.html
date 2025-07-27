@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>3D Print Cost Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body { 
+      margin: 0; 
+      padding: 20px; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .container { margin-top: 10px; margin-bottom: 20px; }
+    .nav-tabs .nav-link.active { font-weight: bold; }
+    .small-text { font-size: 0.9rem; color: #666; }
+    table td, table th { vertical-align: middle; white-space: nowrap; }
+    .btn-group-sm > .btn { font-size: 0.8rem; padding: 2px 6px; margin-left: 2px; }
+    .form-select.form-select-sm { min-width: 120px; }
+    .calculator-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    .result-card {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .cost-breakdown {
+      background: white;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container-fluid">
+  <div class="calculator-header text-center">
+    <h1 class="mb-2">3D Print Cost Calculator</h1>
+    <p class="mb-0">Calculate comprehensive 3D printing costs for Fluidd</p>
+  </div>
+
+  <ul class="nav nav-tabs" id="mainTab" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
+              data-bs-target="#calculatePane" type="button" role="tab">
+        Calculator
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
+              data-bs-target="#printersPane" type="button" role="tab">
+        Printers
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="materials-tab" data-bs-toggle="tab"
+              data-bs-target="#materialsPane" type="button" role="tab">
+        Materials
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
+              data-bs-target="#settingsPane" type="button" role="tab">
+        Settings
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <!-- Calculator Tab -->
+    <div class="tab-pane fade show active" id="calculatePane" role="tabpanel">
+      <div class="my-4">
+        <h3>Calculate Print Cost</h3>
+        <p class="small-text">Enter your print parameters to calculate the total cost including printer amortization, materials, and electricity.</p>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-6">
+          <label for="calcName" class="form-label">Job Name:</label>
+          <input type="text" id="calcName" class="form-control" placeholder="e.g. Print Job #123" />
+        </div>
+        <div class="col-md-6">
+          <label for="calcClientName" class="form-label">Client Name:</label>
+          <input type="text" id="calcClientName" class="form-control" placeholder="Client name" />
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcPrinter" class="form-label">Printer:</label>
+          <select id="calcPrinter" class="form-select">
+            <option value="">Select printer...</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="calcMaterial" class="form-label">Material:</label>
+          <select id="calcMaterial" class="form-select">
+            <option value="">Select material...</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="calcHours" class="form-label">Print Time (hours):</label>
+          <input type="number" step="0.1" id="calcHours" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcWeight" class="form-label">Material Weight (g):</label>
+          <input type="number" step="0.1" id="calcWeight" class="form-control" />
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcShipping" class="form-label">Shipping/Packaging (₽):</label>
+          <input type="number" step="1" id="calcShipping" class="form-control" value="0" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcMarkup" class="form-label">Markup (%):</label>
+          <input type="number" step="1" id="calcMarkup" class="form-control" value="0" />
+        </div>
+      </div>
+
+      <div class="d-flex mt-3">
+        <button class="btn btn-success" onclick="calculateCost()">Calculate Cost</button>
+        <button class="btn btn-secondary ms-2" onclick="clearCalculation()">Clear</button>
+      </div>
+
+      <div id="calcResult" style="display: none;"></div>
+    </div>
+
+    <!-- Printers Tab -->
+    <div class="tab-pane fade" id="printersPane" role="tabpanel">
+      <div class="my-4">
+        <h3>Printer Management</h3>
+        <p class="small-text">Add and manage your 3D printers with cost and power settings.</p>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <input type="text" id="printerName" class="form-control" placeholder="Printer name" />
+        </div>
+        <div class="col-md-2">
+          <input type="number" id="printerCost" class="form-control" placeholder="Cost (₽)" />
+        </div>
+        <div class="col-md-2">
+          <input type="number" id="printerHours" class="form-control" placeholder="Hours to recoup" />
+        </div>
+        <div class="col-md-2">
+          <input type="number" id="printerPower" class="form-control" placeholder="Power (W)" />
+        </div>
+        <div class="col-md-2">
+          <input type="number" step="0.01" id="printerMaint" class="form-control" placeholder="Maint. ₽/h" />
+        </div>
+        <div class="col-md-1">
+          <button class="btn btn-primary" onclick="addPrinter()">Add</button>
+        </div>
+      </div>
+      
+      <div id="printersTable"></div>
+    </div>
+
+    <!-- Materials Tab -->
+    <div class="tab-pane fade" id="materialsPane" role="tabpanel">
+      <div class="my-4">
+        <h3>Material Management</h3>
+        <p class="small-text">Manage your filament materials with costs and waste percentages.</p>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <input type="text" id="materialName" class="form-control" placeholder="Material name" />
+        </div>
+        <div class="col-md-3">
+          <input type="number" id="materialCost" class="form-control" placeholder="Cost per kg (₽)" />
+        </div>
+        <div class="col-md-2">
+          <input type="number" id="materialWaste" class="form-control" placeholder="Waste %" value="5" />
+        </div>
+        <div class="col-md-2">
+          <input type="number" step="0.1" id="materialStock" class="form-control" placeholder="Stock (kg)" />
+        </div>
+        <div class="col-md-1">
+          <button class="btn btn-primary" onclick="addMaterial()">Add</button>
+        </div>
+      </div>
+      
+      <div id="materialsTable"></div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-pane fade" id="settingsPane" role="tabpanel">
+      <div class="my-4">
+        <h3>Calculation Settings</h3>
+        <p class="small-text">Configure global settings for cost calculations.</p>
+      </div>
+      
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="operatorRate" class="form-label">Operator Rate (₽/hour):</label>
+          <input type="number" step="0.01" id="operatorRate" class="form-control" value="200" />
+        </div>
+        <div class="col-md-3">
+          <label for="electricityRate" class="form-label">Electricity Rate (₽/kWh):</label>
+          <input type="number" step="0.01" id="electricityRate" class="form-control" value="5" />
+        </div>
+        <div class="col-md-3">
+          <label for="taxPercent" class="form-label">Tax Percentage (%):</label>
+          <input type="number" step="0.1" id="taxPercent" class="form-control" value="0" />
+        </div>
+        <div class="col-md-3">
+          <label for="workHours" class="form-label">Work Hours per Day:</label>
+          <input type="number" step="0.1" id="workHours" class="form-control" value="8" />
+        </div>
+      </div>
+      
+      <button class="btn btn-success" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="calculator.js"></script>
+
+</body>
+</html>
