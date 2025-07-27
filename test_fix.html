@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Receipt Fix Test</title>
+</head>
+<body>
+    <h1>Testing Receipt Fix</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Simulate the application data structure
+        const appData = {
+            calcHistory: [],
+            counters: { orders: 0 }
+        };
+        
+        function getNextId(type) {
+            if (!appData.counters) appData.counters = {};
+            if (!appData.counters[type]) appData.counters[type] = 0;
+            return ++appData.counters[type];
+        }
+        
+        // Test scenario 1: Auto-generated ID (number)
+        console.log("=== Test 1: Auto-generated ID (number) ===");
+        
+        const orderId1 = getNextId('orders'); // Returns number 1
+        console.log("Generated orderId1:", orderId1, typeof orderId1);
+        
+        // Simulate creating a calculation entry
+        const historyEntry1 = {
+            id: orderId1,
+            calcName: "Test Order 1",
+            nalogReceipts: []
+        };
+        appData.calcHistory.push(historyEntry1);
+        
+        const lastCalcFullData1 = {
+            id: orderId1,
+            calcName: "Test Order 1"
+        };
+        
+        // Test the old buggy way (should fail)
+        const oldWayIndex1 = appData.calcHistory.findIndex(e => e.id === lastCalcFullData1.id);
+        console.log("Old way search result:", oldWayIndex1);
+        
+        // Test the new fixed way (should work)
+        const newWayIndex1 = appData.calcHistory.findIndex(e => String(e.id) === String(lastCalcFullData1.id));
+        console.log("New way search result:", newWayIndex1);
+        
+        // Test scenario 2: Manual string ID
+        console.log("\n=== Test 2: Manual string ID ===");
+        
+        const orderId2 = "ORDER-123"; // String ID
+        console.log("Manual orderId2:", orderId2, typeof orderId2);
+        
+        const historyEntry2 = {
+            id: orderId2,
+            calcName: "Test Order 2", 
+            nalogReceipts: []
+        };
+        appData.calcHistory.push(historyEntry2);
+        
+        const lastCalcFullData2 = {
+            id: orderId2,
+            calcName: "Test Order 2"
+        };
+        
+        // Test the old buggy way (should work for strings)
+        const oldWayIndex2 = appData.calcHistory.findIndex(e => e.id === lastCalcFullData2.id);
+        console.log("Old way search result:", oldWayIndex2);
+        
+        // Test the new fixed way (should also work)
+        const newWayIndex2 = appData.calcHistory.findIndex(e => String(e.id) === String(lastCalcFullData2.id));
+        console.log("New way search result:", newWayIndex2);
+        
+        // Test scenario 3: Mixed ID types (the problematic case)
+        console.log("\n=== Test 3: Mixed ID types (number in history, string in search) ===");
+        
+        const orderId3 = getNextId('orders'); // Returns number 2
+        console.log("Generated orderId3:", orderId3, typeof orderId3);
+        
+        const historyEntry3 = {
+            id: orderId3, // number
+            calcName: "Test Order 3",
+            nalogReceipts: []
+        };
+        appData.calcHistory.push(historyEntry3);
+        
+        // Simulate user manually entering the same ID as string
+        const lastCalcFullData3 = {
+            id: String(orderId3), // string version of the same ID
+            calcName: "Test Order 3"
+        };
+        
+        console.log("History entry ID:", historyEntry3.id, typeof historyEntry3.id);
+        console.log("Search ID:", lastCalcFullData3.id, typeof lastCalcFullData3.id);
+        
+        // Test the old buggy way (should fail due to type mismatch)
+        const oldWayIndex3 = appData.calcHistory.findIndex(e => e.id === lastCalcFullData3.id);
+        console.log("Old way search result (should be -1):", oldWayIndex3);
+        
+        // Test the new fixed way (should work)
+        const newWayIndex3 = appData.calcHistory.findIndex(e => String(e.id) === String(lastCalcFullData3.id));
+        console.log("New way search result (should be 2):", newWayIndex3);
+        
+        // Summary
+        console.log("\n=== Summary ===");
+        console.log("Current calcHistory:", appData.calcHistory.map(h => ({id: h.id, type: typeof h.id, name: h.calcName})));
+        
+        // Test updating nalogReceipts (simulate the actual bug scenario)
+        console.log("\n=== Testing nalogReceipts update ===");
+        
+        // Simulate the receipt creation
+        const receiptData = {uuid: "test-uuid-123", inn: "123456789", canceled: false};
+        
+        // Old way (buggy)
+        const buggyIdx = appData.calcHistory.findIndex(e => e.id === lastCalcFullData3.id);
+        console.log("Buggy search found index:", buggyIdx);
+        if (buggyIdx !== -1) {
+            console.log("Would update nalogReceipts - this shouldn't happen with type mismatch");
+        } else {
+            console.log("Failed to find entry - receipt would NOT be saved (BUG!)");
+        }
+        
+        // New way (fixed)
+        const fixedIdx = appData.calcHistory.findIndex(e => String(e.id) === String(lastCalcFullData3.id));
+        console.log("Fixed search found index:", fixedIdx);
+        if (fixedIdx !== -1) {
+            const recList = Array.isArray(appData.calcHistory[fixedIdx].nalogReceipts) ? appData.calcHistory[fixedIdx].nalogReceipts : [];
+            recList.push(receiptData);
+            appData.calcHistory[fixedIdx].nalogReceipts = recList;
+            console.log("Successfully updated nalogReceipts!");
+            console.log("Updated entry:", appData.calcHistory[fixedIdx]);
+        } else {
+            console.log("Still failed to find entry - this shouldn't happen with the fix");
+        }
+        
+        // Display results in the page
+        document.getElementById('result').innerHTML = `
+            <h2>Test Results</h2>
+            <p><strong>Test 1 (Auto-generated number ID):</strong></p>
+            <p>Old way: ${oldWayIndex1} | New way: ${newWayIndex1}</p>
+            
+            <p><strong>Test 2 (Manual string ID):</strong></p>
+            <p>Old way: ${oldWayIndex2} | New way: ${newWayIndex2}</p>
+            
+            <p><strong>Test 3 (Mixed types - the bug scenario):</strong></p>
+            <p>Old way: ${oldWayIndex3} (should be -1) | New way: ${newWayIndex3} (should be 2)</p>
+            
+            <p><strong>Receipt Update Test:</strong></p>
+            <p>Buggy method found index: ${buggyIdx}</p>
+            <p>Fixed method found index: ${fixedIdx}</p>
+            <p>Final nalogReceipts: ${JSON.stringify(appData.calcHistory[fixedIdx]?.nalogReceipts)}</p>
+            
+            <h3>Fix Status</h3>
+            <p style="color: ${newWayIndex3 !== -1 && fixedIdx !== -1 ? 'green' : 'red'}">
+                ${newWayIndex3 !== -1 && fixedIdx !== -1 ? '✅ Fix is working correctly!' : '❌ Fix is not working'}
+            </p>
+        `;
+    </script>
+</body>
+</html>

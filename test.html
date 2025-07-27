@@ -3368,7 +3368,7 @@ async function cancelReceiptInternal(receipt, comment){
     const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/cancel',payload);
     if(resp.ok){
       receipt.canceled = true;
-      const idx = appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
+      const idx = appData.calcHistory.findIndex(e=>String(e.id)===String(lastCalcFullData.id));
       if(idx!==-1 && Array.isArray(appData.calcHistory[idx].nalogReceipts)){
         const arr = appData.calcHistory[idx].nalogReceipts;
         const j = arr.findIndex(r=>r.uuid===receipt.uuid);
@@ -3423,7 +3423,7 @@ async function sendMyNalogReceipt(){
         lastCalcFullData.orderStatus = 'paid';
         document.getElementById('calcOrderStatus').value = 'paid';
         toggleFinalFields('paid');
-        const idx = appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
+        const idx = appData.calcHistory.findIndex(e=>String(e.id)===String(lastCalcFullData.id));
         if(idx!==-1){
           const recList = Array.isArray(appData.calcHistory[idx].nalogReceipts) ? appData.calcHistory[idx].nalogReceipts : [];
           recList.push({uuid:data.approvedReceiptUuid,inn,canceled:false});
@@ -3477,7 +3477,7 @@ async function cancelMyNalogReceipt(){
   const ok = await cancelReceiptInternal(last, comment || '');
   if(ok){
     lastCalcFullData.orderStatus='canceled';
-    const idx=appData.calcHistory.findIndex(e=>e.id===lastCalcFullData.id);
+    const idx=appData.calcHistory.findIndex(e=>String(e.id)===String(lastCalcFullData.id));
     if(idx!==-1){
       appData.calcHistory[idx].orderStatus='canceled';
       saveToLocalStorage();
