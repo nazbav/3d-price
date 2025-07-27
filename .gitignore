@@ -1,1 +1,3 @@
 __pycache__/
+deps/
+download_deps.log
