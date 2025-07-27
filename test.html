@@ -1612,13 +1612,15 @@ function setupGcodeDrop() {
       const txt = await f.text();
       const parsed = await parseGcodeText(txt);
       let mid = await resolveMaterialIdByProfile(parsed.matProfile);
-      
+
       // If no material found, prompt user to select from all available materials
       if (!mid) {
-        const materialOptions = appData.materials.map(m => ({
-          value: String(m.id),
-          label: `${m.name} (ID: ${m.id})`
-        }));
+
+	
+	const materialOptions = appData.materials.map(m => ({
+	  value: String(m.id),
+	  label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
+	}));
         
         if (materialOptions.length > 0) {
           const result = await showMultiPrompt('Выберите материал', [{
