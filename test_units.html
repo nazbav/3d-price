@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ID Normalization Unit Tests</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .fail { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .test-section { margin: 20px 0; }
+        h2 { color: #333; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>ID Normalization Unit Tests</h1>
+    <div id="results"></div>
+    
+    <script src="utils/normalizeIds.js"></script>
+    <script>
+        function runTests() {
+            const results = document.getElementById('results');
+            let passCount = 0;
+            let totalCount = 0;
+            
+            function test(description, fn) {
+                totalCount++;
+                try {
+                    const result = fn();
+                    if (result === true) {
+                        passCount++;
+                        results.innerHTML += `<div class="test-result pass">✓ ${description}</div>`;
+                    } else {
+                        results.innerHTML += `<div class="test-result fail">✗ ${description}: ${result}</div>`;
+                    }
+                } catch (error) {
+                    results.innerHTML += `<div class="test-result fail">✗ ${description}: ${error.message}</div>`;
+                }
+            }
+            
+            // Test data with mixed ID types
+            const testData = {
+                printers: [
+                    { id: "printer_1", name: "Printer A", profileIds: ["profile_1"] },
+                    { id: 999, name: "Printer B", profileIds: [123] }
+                ],
+                materials: [
+                    { id: "mat_abc", name: "PLA", printers: ["printer_1", 999], profileIds: ["profile_1"] },
+                    { id: 777, name: "PETG", printers: [], profileIds: [] }
+                ],
+                materialProfiles: [
+                    { id: "profile_1", name: "PLA Profile" },
+                    { id: 123, name: "PETG Profile" }
+                ],
+                printerProfiles: [
+                    { id: "profile_1", printerId: "printer_1", name: "Profile A" },
+                    { id: 123, printerId: 999, name: "Profile B" }
+                ],
+                clients: [
+                    { id: "client_xyz", name: "Client 1" }
+                ],
+                calcHistory: [
+                    { 
+                        id: "calc_test",
+                        clientId: "client_xyz",
+                        details: [{ printerId: "printer_1", materialId: "mat_abc" }],
+                        calcData: { "printer_1": [{ materialId: "mat_abc" }] }
+                    }
+                ]
+            };
+            
+            results.innerHTML += '<div class="test-section"><h2>Testing ensureNumericIds</h2></div>';
+            
+            test("ensureNumericIds converts string IDs to null", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                ensureNumericIds(data);
+                return data.printers[0].id === null && data.printers[1].id === 999;
+            });
+            
+            test("ensureNumericIds preserves numeric IDs", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                ensureNumericIds(data);
+                return data.printers[1].id === 999 && data.materials[1].id === 777;
+            });
+            
+            results.innerHTML += '<div class="test-section"><h2>Testing validateUniqueIds</h2></div>';
+            
+            test("validateUniqueIds detects non-numeric IDs", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                const result = validateUniqueIds(data);
+                return !result.success && result.errors.length > 0;
+            });
+            
+            test("validateUniqueIds passes with normalized data", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                normalizeIds(data);
+                const result = validateUniqueIds(data);
+                return result.success && result.errors.length === 0;
+            });
+            
+            results.innerHTML += '<div class="test-section"><h2>Testing normalizeIds</h2></div>';
+            
+            test("normalizeIds assigns sequential IDs starting from 1", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                normalizeIds(data);
+                return data.printers[0].id === 1 && 
+                       data.printers[1].id === 2 &&
+                       data.materials[0].id === 1 &&
+                       data.materials[1].id === 2;
+            });
+            
+            test("normalizeIds updates cross-references correctly", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                normalizeIds(data);
+                return data.printers[0].profileIds.includes(1) &&
+                       data.materials[0].printers.includes(1) &&
+                       data.materials[0].printers.includes(2) &&
+                       data.printerProfiles[0].printerId === 1 &&
+                       data.printerProfiles[1].printerId === 2;
+            });
+            
+            test("normalizeIds updates calcHistory references", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                normalizeIds(data);
+                return data.calcHistory[0].clientId === 1 &&
+                       data.calcHistory[0].details[0].printerId === 1 &&
+                       data.calcHistory[0].details[0].materialId === 1 &&
+                       data.calcHistory[0].calcData["1"] !== undefined &&
+                       data.calcHistory[0].calcData["1"][0].materialId === 1;
+            });
+            
+            test("normalizeIds updates counters", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                normalizeIds(data);
+                return data.counters &&
+                       data.counters.printers === 2 &&
+                       data.counters.materials === 2 &&
+                       data.counters.clients === 1;
+            });
+            
+            results.innerHTML += '<div class="test-section"><h2>Integration Tests</h2></div>';
+            
+            test("Full normalization pipeline works", () => {
+                const data = JSON.parse(JSON.stringify(testData));
+                
+                // Initial validation should fail
+                const initialValidation = validateUniqueIds(data);
+                if (initialValidation.success) return "Initial validation should fail";
+                
+                // Normalize
+                normalizeIds(data);
+                
+                // Final validation should pass
+                const finalValidation = validateUniqueIds(data);
+                if (!finalValidation.success) return "Final validation should pass";
+                
+                return true;
+            });
+            
+            test("Handles empty arrays gracefully", () => {
+                const emptyData = {
+                    printers: [],
+                    materials: [],
+                    materialProfiles: [],
+                    printerProfiles: [],
+                    clients: [],
+                    calcHistory: [],
+                    additionalGlobal: []
+                };
+                normalizeIds(emptyData);
+                const validation = validateUniqueIds(emptyData);
+                return validation.success;
+            });
+            
+            test("Handles missing arrays gracefully", () => {
+                const minimalData = {};
+                normalizeIds(minimalData);
+                const validation = validateUniqueIds(minimalData);
+                return validation.success;
+            });
+            
+            // Summary
+            results.innerHTML += `<div class="test-section"><h2>Test Summary</h2>
+                <div class="test-result ${passCount === totalCount ? 'pass' : 'fail'}">
+                    ${passCount}/${totalCount} tests passed
+                </div></div>`;
+        }
+        
+        window.onload = runTests;
+    </script>
+</body>
+</html>
