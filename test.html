@@ -844,6 +844,153 @@ function getNextId(type) {
   return ++appData.counters[type];
 }
 
+/* ID Normalization Helper Functions */
+function ensureNumericIds() {
+  // Convert all existing IDs in appData arrays to numbers
+  const arrayTypes = ['printers', 'materials', 'materialProfiles', 'printerProfiles', 'additionalGlobal', 'clients', 'calcHistory'];
+  
+  arrayTypes.forEach(type => {
+    if (Array.isArray(appData[type])) {
+      appData[type].forEach(item => {
+        if (item.id !== undefined) {
+          item.id = Number(item.id);
+        }
+      });
+    }
+  });
+}
+
+function normalizeIds() {
+  // Reassign sequential IDs starting from 1 for each type and rebuild old-to-new ID maps
+  const idMaps = {};
+  
+  // Define array types and their relationship fields
+  const arrayConfig = {
+    printers: { relationFields: ['profileIds'] },
+    materials: { relationFields: ['printers'] },
+    materialProfiles: { relationFields: [] },
+    printerProfiles: { relationFields: ['printerId'] },
+    additionalGlobal: { relationFields: ['printers'] },
+    clients: { relationFields: [] },
+    calcHistory: { relationFields: [] }
+  };
+  
+  // First pass: create ID maps for each type
+  Object.keys(arrayConfig).forEach(type => {
+    if (Array.isArray(appData[type])) {
+      idMaps[type] = {};
+      appData[type].forEach((item, index) => {
+        if (item.id !== undefined) {
+          const oldId = item.id;
+          const newId = index + 1;
+          idMaps[type][oldId] = newId;
+          item.id = newId;
+        }
+      });
+    }
+  });
+  
+  // Second pass: remap all relationships
+  Object.keys(arrayConfig).forEach(type => {
+    if (Array.isArray(appData[type])) {
+      appData[type].forEach(item => {
+        arrayConfig[type].relationFields.forEach(field => {
+          if (field === 'printers' && Array.isArray(item[field])) {
+            // Remap printer ID references
+            item[field] = item[field].map(printerId => {
+              const newId = idMaps.printers[printerId];
+              return newId !== undefined ? String(newId) : printerId;
+            });
+          } else if (field === 'profileIds' && Array.isArray(item[field])) {
+            // Remap profile ID references - could be materialProfiles or printerProfiles
+            item[field] = item[field].map(profileId => {
+              // Try materialProfiles first, then printerProfiles
+              let newId = idMaps.materialProfiles[profileId];
+              if (newId === undefined) {
+                newId = idMaps.printerProfiles[profileId];
+              }
+              return newId !== undefined ? newId : profileId;
+            });
+          } else if (field === 'printerId' && item[field] !== undefined) {
+            // Remap single printer ID reference
+            const newId = idMaps.printers[item[field]];
+            if (newId !== undefined) {
+              item[field] = String(newId);
+            }
+          }
+        });
+      });
+    }
+  });
+  
+  // Special handling for calcHistory details and calcData
+  if (Array.isArray(appData.calcHistory)) {
+    appData.calcHistory.forEach(history => {
+      // Remap printerId in details array
+      if (Array.isArray(history.details)) {
+        history.details.forEach(detail => {
+          if (detail.printerId !== undefined) {
+            const newId = idMaps.printers[detail.printerId];
+            if (newId !== undefined) {
+              detail.printerId = String(newId);
+            }
+          }
+        });
+      }
+      
+      // Remap keys in calcData object
+      if (history.calcData && typeof history.calcData === 'object') {
+        const newCalcData = {};
+        Object.keys(history.calcData).forEach(oldPrinterId => {
+          const newId = idMaps.printers[oldPrinterId];
+          const keyToUse = newId !== undefined ? String(newId) : oldPrinterId;
+          newCalcData[keyToUse] = history.calcData[oldPrinterId];
+        });
+        history.calcData = newCalcData;
+      }
+    });
+  }
+  
+  // Update counters to match the new sequential IDs
+  if (!appData.counters) appData.counters = {};
+  Object.keys(arrayConfig).forEach(type => {
+    if (Array.isArray(appData[type])) {
+      appData.counters[type] = appData[type].length;
+    }
+  });
+  
+  return idMaps;
+}
+
+function validateUniqueIds() {
+  // Detect duplicates after normalization and return warnings
+  const warnings = [];
+  const arrayTypes = ['printers', 'materials', 'materialProfiles', 'printerProfiles', 'additionalGlobal', 'clients', 'calcHistory'];
+  
+  arrayTypes.forEach(type => {
+    if (Array.isArray(appData[type])) {
+      const idSet = new Set();
+      const duplicates = new Set();
+      
+      appData[type].forEach(item => {
+        if (item.id !== undefined) {
+          if (idSet.has(item.id)) {
+            duplicates.add(item.id);
+          } else {
+            idSet.add(item.id);
+          }
+        }
+      });
+      
+      if (duplicates.size > 0) {
+        warnings.push(`Дубликаты ID найдены в ${type}: ${Array.from(duplicates).join(', ')}`);
+      }
+    }
+  });
+  
+  return warnings;
+}
+
 /* Перенос данных из старого формата */
 function migrateOldData(obj){
   if(!Array.isArray(obj.printers)) obj.printers = [];
@@ -1039,7 +1186,15 @@ function migrateOldData(obj){
     if(h.calcData) Object.keys(h.calcData).forEach(pid=> used.add(String(pid)) );
   });
   obj.printers = obj.printers.filter(p=> !p.isTemp || used.has(String(p.id)) );
-  return obj;
+  
+  // Normalize IDs to ensure sequential numbering starting from 1
+  const savedAppData = appData;
+  appData = obj;
+  normalizeIds();
+  const result = appData;
+  appData = savedAppData;
+  
+  return result;
 }
 
 function showMultiPrompt(title, fields){
@@ -1322,6 +1477,15 @@ function loadFromLocalStorage(){
         delete appData.labelSettings.paymentInfo;
       }
       if(!('bankDetails' in appData.labelSettings)) appData.labelSettings.bankDetails = '';
+      
+      // Check for duplicate IDs and normalize if needed
+      const warnings = validateUniqueIds();
+      if (warnings.length > 0) {
+        console.warn("Обнаружены дубликаты ID, выполняется нормализация:", warnings);
+        ensureNumericIds();
+        normalizeIds();
+        saveToLocalStorage();
+      }
     }
   } catch(e){}
 }
@@ -2966,9 +3130,20 @@ function onImportJson(){
   try{
     const obj = JSON.parse(s);
     appData = migrateOldData(obj);
+    
+    // Enforce ID conventions after import
+    ensureNumericIds();
+    normalizeIds();
+    const warnings = validateUniqueIds();
+    
     saveToLocalStorage();
     initAll();
-    alert("Импорт выполнен.");
+    
+    let message = "Импорт выполнен.";
+    if (warnings.length > 0) {
+      message += "\n\nПредупреждения:\n" + warnings.join("\n");
+    }
+    alert(message);
   } catch(e){
     alert("Ошибка: " + e);
   }
