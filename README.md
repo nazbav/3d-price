@@ -9,8 +9,72 @@
 3. **index3.html** – тест предыдущего поколения
 4. **index.html**  – четвёртый релиз
 5. **test.html**   – эксперименты и новые возможности
+6. **fluid/plugins/3dprint-calculator/** – плагин для Fluid UI
 
 Онлайн‑версию можно открыть по ссылке: <https://nazbav.github.io/3d-price/test.html> (см. раздел *Навигация и разделы*).
+
+---
+
+## Fluid Plugin Installation
+
+The calculator can now be embedded as a Fluid plugin for seamless integration with 3D printer management systems.
+
+### Installation Steps:
+
+1. **Copy Plugin Files**
+   ```bash
+   # Copy the entire plugin directory to your Fluid plugins folder
+   cp -r fluid/plugins/3dprint-calculator /path/to/fluid/plugins/
+   ```
+
+2. **Configure Fluid**
+   - Add the plugin to your Fluid configuration file (usually `config.yaml` or similar)
+   - Ensure the plugin directory is included in the plugins path
+
+3. **Restart Fluid**
+   ```bash
+   # Restart your Fluid service
+   sudo systemctl restart fluid
+   # or
+   docker restart fluid-container
+   ```
+
+4. **Access the Calculator**
+   - The calculator will appear as a new tab "3D Cost Calculator" in the Fluid sidebar
+   - Click to open the full calculator interface within Fluid
+
+### Plugin Features:
+
+- **Full Calculator Integration** - Complete cost calculation with material tracking
+- **Printer Management** - Add and configure multiple printers 
+- **Material Database** - Track material costs, usage, and inventory
+- **Order History** - Save and manage calculation history
+- **Export/Import** - Backup and restore calculator data
+- **Responsive Design** - Works seamlessly within Fluid's interface
+
+### Plugin Structure:
+
+```
+fluid/plugins/3dprint-calculator/
+├── plugin.json          # Plugin manifest and configuration
+├── calculator.html      # Main calculator interface
+├── calculator.js        # JavaScript functionality
+└── normalizeIds.js     # Utility functions
+```
+
+### Configuration:
+
+Edit `plugin.json` to customize:
+- Plugin name and description
+- Navigation order and icon
+- Required permissions
+- Fluid version compatibility
+
+### Troubleshooting:
+
+1. **Plugin not appearing**: Check that the plugin directory is in the correct location and Fluid has been restarted
+2. **Permission errors**: Ensure Fluid has read access to the plugin files
+3. **Calculator not loading**: Check browser console for JavaScript errors and verify all dependencies are loaded
 
 ---
 

@@ -1,0 +1,31 @@
+{
+  "name": "3dprint-calculator",
+  "version": "1.0.0",
+  "title": "3D Cost Calculator", 
+  "description": "Comprehensive 3D print cost calculator with material tracking, printer management, and order history",
+  "author": "nazbav",
+  "license": "MIT",
+  "homepage": "https://github.com/nazbav/3d-price",
+  "fluid": {
+    "minVersion": "1.0.0"
+  },
+  "navigation": {
+    "title": "3D Cost Calculator",
+    "icon": "calculator",
+    "route": "/calculator",
+    "order": 100
+  },
+  "main": "calculator.html",
+  "scripts": [
+    "calculator.js"
+  ],
+  "dependencies": {
+    "bootstrap": "^5.3.2",
+    "qrcode": "^1.0.0",
+    "supabase": "^2.0.0"
+  },
+  "permissions": [
+    "storage",
+    "network"
+  ]
+}

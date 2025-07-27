@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>3D Print Cost Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { margin: 0; padding: 0; }
+    .container { margin-top: 20px; margin-bottom: 20px; }
+    .nav-tabs .nav-link.active { font-weight: bold; }
+    .small-text { font-size: 0.9rem; color: #555; }
+    .footer { margin-top: 40px; font-size: 0.9rem; border-top: 1px solid var(--bs-border-color); padding-top: 10px; }
+    table td, table th { vertical-align: middle; white-space: nowrap; }
+    .btn-group-sm > .btn { font-size: 0.8rem; padding: 2px 6px; margin-left: 2px; }
+    thead th { background-color: var(--bs-table-bg) !important; color: var(--bs-body-color) !important; }
+    [data-bs-theme="dark"] thead th { background-color: var(--bs-dark-bg-subtle) !important; color: var(--bs-light) !important; }
+    @media (max-width: 576px) {
+      .d-flex { flex-wrap: wrap !important; }
+      .d-flex > * { margin-top: .5rem; }
+    }
+    @media (max-width: 768px) {
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      th, td {
+        min-width: 100px;
+      }
+    }
+    .form-select.form-select-sm { min-width: 120px; }
+    /* Label styles */
+    .label-preview { border: 1px solid #000; width: 30mm; height: 20mm; padding: 2mm; font-family: sans-serif; }
+
+    /* Order summary card for customer */
+    .order-summary-card {
+      max-width: 1200px;
+      margin: 1rem auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .order-summary-card .order-info {
+      flex: 1 1 300px;
+      background: #f9fafb;
+      padding: 1.5rem;
+    }
+    .order-summary-card .order-info h2 {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: #4a90e2;
+    }
+    .order-summary-card .order-info .qr {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .order-summary-card .order-info .qr img {
+      width: 120px;
+      height: 120px;
+    }
+    .order-summary-card .info-item { margin-bottom: 0.5rem; font-size: 0.95rem; }
+    .order-summary-card .info-item .label { font-weight: 600; color: #666; }
+    .order-summary-card .info-item .value { margin-left: 0.5rem; font-weight: 500; }
+
+    .order-summary-card .models { flex: 2 1 600px; padding: 1.5rem; }
+    .models-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .model-card { background: #fff; border-radius: 8px; padding: 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform .3s ease, box-shadow .3s ease; }
+    .model-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .model-card img { width: 48px; height: 48px; margin-bottom: 0.5rem; }
+    .model-card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #4a90e2; }
+    .model-card p { font-size: 0.9rem; margin: 0.25rem 0; color: #666; }
+    .model-card p strong { color: #333; }
+
+    @media (max-width: 800px) {
+      .order-summary-card { flex-direction: column; }
+      .order-summary-card .order-info, .order-summary-card .models { flex: 1 1 auto; }
+    }
+
+    /* Fluid plugin specific styles */
+    .plugin-container {
+      height: 100vh;
+      overflow-y: auto;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container-fluid plugin-container">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="my-4">3D Print Cost Calculator</h1>
+    <button class="btn btn-outline-secondary" id="themeToggle">🌙 Dark Theme</button>
+  </div>
+  
+  <ul class="nav nav-tabs" id="mainTab" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
+              data-bs-target="#calculatePane" type="button" role="tab" aria-selected="true"
+              aria-controls="calculatePane">
+        Calculator
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="history-tab" data-bs-toggle="tab"
+              data-bs-target="#historyPane" type="button" role="tab"
+              aria-controls="historyPane" aria-selected="false">
+        History
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
+              data-bs-target="#clientsPane" type="button" role="tab"
+              aria-controls="clientsPane" aria-selected="false">
+        Clients
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
+              data-bs-target="#printersPane" type="button" role="tab" aria-controls="printersPane">
+        Printers
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
+              data-bs-target="#globalMaterialsPane" type="button" role="tab"
+              aria-controls="globalMaterialsPane" aria-selected="false">
+        Materials
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
+              data-bs-target="#globalAdditionalPane" type="button" role="tab"
+              aria-controls="globalAdditionalPane" aria-selected="false">
+        Additional Costs
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
+              data-bs-target="#settingsPane" type="button" role="tab"
+              aria-controls="settingsPane" aria-selected="false">
+        Settings
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
+              data-bs-target="#summaryPane" type="button" role="tab"
+              aria-controls="summaryPane" aria-selected="false">
+        Summary
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="mainTabContent">
+    <!-- Printers Tab -->
+    <div class="tab-pane fade" id="printersPane" role="tabpanel" aria-labelledby="printers-tab">
+      <div class="mt-4">
+        <h3>Printers List</h3>
+        <p class="small-text">
+          Configure printer parameters and add additional costs and materials specific to each printer.
+        </p>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddPrinter()">Add Printer</button>
+          <button class="btn btn-danger btn-sm" onclick="massDelete('printers')">Mass Delete</button>
+          <button class="btn btn-warning btn-sm" onclick="massEdit('printers')">Mass Edit</button>
+          <button class="btn btn-info btn-sm" id="managePrinterProfilesBtn">Printer Profiles</button>
+        </div>
+        <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Search..." oninput="filterTable('printersTable', this.value)">
+          <table class="table table-bordered table-hover" id="printersTable">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAll_printers" onchange="selectAll(this, 'printers')"></th>
+                <th onclick="sortTable('printersTable',1)">Name</th>
+                <th onclick="sortTable('printersTable',2)">Cost (₽)</th>
+                <th onclick="sortTable('printersTable',3)">Hours to recoup</th>
+                <th onclick="sortTable('printersTable',4)">Power (W)</th>
+                <th onclick="sortTable('printersTable',5)">Maintenance (₽/h)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Materials Tab -->
+    <div class="tab-pane fade" id="globalMaterialsPane" role="tabpanel" aria-labelledby="globalMaterials-tab">
+      <div class="mt-4">
+        <h3>Global Materials</h3>
+        <p class="small-text">These materials are available to all printers by default. Specify cost per kg, remaining amount, declared weight, manufacturer and production date.</p>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddGlobalMaterial()">Add Material</button>
+          <button class="btn btn-danger btn-sm" onclick="massDelete('globalMaterials')">Mass Delete</button>
+          <button class="btn btn-warning btn-sm" onclick="massEdit('globalMaterials')">Mass Edit</button>
+          <button class="btn btn-info btn-sm" id="manageMaterialProfilesBtn">Orca Profiles</button>
+        </div>
+        <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Search..." oninput="filterTable('materialsTable', this.value)">
+          <table class="table table-bordered table-hover" id="materialsTable">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAll_globalMaterials" onchange="selectAll(this, 'globalMaterials')"></th>
+                <th onclick="sortTable('materialsTable',1)">Name</th>
+                <th onclick="sortTable('materialsTable',1)">Type</th>
+                <th onclick="sortTable('materialsTable',2)">Cost/kg</th>
+                <th onclick="sortTable('materialsTable',3)">Remaining (g)</th>
+                <th onclick="sortTable('materialsTable',4)">Declared weight (kg)</th>
+                <th onclick="sortTable('materialsTable',6)">Manufacturer</th>
+                <th onclick="sortTable('materialsTable',7)">Production date</th>
+                <th>Printers</th>
+                <th>Profiles</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Additional Costs Tab -->
+    <div class="tab-pane fade" id="globalAdditionalPane" role="tabpanel" aria-labelledby="globalAdditional-tab">
+      <div class="mt-4">
+        <h3>Global Additional Costs</h3>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddGlobalAdditional()">Add Cost</button>
+          <button class="btn btn-danger btn-sm" onclick="massDelete('globalAdditional')">Mass Delete</button>
+          <button class="btn btn-warning btn-sm" onclick="massEdit('globalAdditional')">Mass Edit</button>
+        </div>
+        <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Search..." oninput="filterTable('additionalGlobalTable', this.value)">
+          <table class="table table-bordered table-hover" id="additionalGlobalTable">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="selectAll_globalAdditional" onchange="selectAll(this, 'globalAdditional')"></th>
+                <th onclick="sortTable('additionalGlobalTable',1)">Description</th>
+                <th onclick="sortTable('additionalGlobalTable',2)">Cost (₽)</th>
+                <th onclick="sortTable('additionalGlobalTable',3)">Hours to recoup</th>
+                <th onclick="sortTable('additionalGlobalTable',4)">Include in calculation?</th>
+                <th>Printers</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calculator Tab -->
+    <div class="tab-pane fade show active" id="calculatePane" role="tabpanel" aria-labelledby="calculate-tab">
+      <div class="my-4">
+        <h3>Cost Calculation (Print Queue)</h3>
+        <p class="small-text">
+          Up to 10 models per printer. Here you can set calculation name, client name and order status.
+        </p>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="calcName" class="form-label">Calculation Name:</label>
+          <input type="text" id="calcName" class="form-control" placeholder="e.g., Order 123" />
+        </div>
+        <div class="col-md-4">
+          <label for="calcClientName" class="form-label">Client (Name/Company):</label>
+          <div class="input-group">
+            <input type="text" id="calcClientName" list="clientsList" class="form-control" placeholder="John Doe" />
+            <button class="btn btn-outline-secondary" type="button" onclick="quickAddClient()">+</button>
+          </div>
+          <datalist id="clientsList"></datalist>
+        </div>
+        <div class="col-md-4">
+          <label for="calcOrderStatus" class="form-label">Order Status:</label>
+          <select id="calcOrderStatus" class="form-select" onchange="toggleFinalFields(this.value)">
+            <option value="new">New</option>
+            <option value="inprogress">In Progress</option>
+            <option value="done">Completed</option>
+            <option value="paid">Paid</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <label for="calcOrderId" class="form-label">Order Code:</label>
+          <input type="text" id="calcOrderId" class="form-control" readonly />
+        </div>
+      </div>
+      <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcShipping" class="form-label">Packaging/Shipping (₽):</label>
+          <input type="number" step="1" id="calcShipping" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcStartDate" class="form-label">Start Date:</label>
+          <input type="date" id="calcStartDate" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label for="calcParallelPrinting" class="form-label">Parallel Printing?</label>
+          <select id="calcParallelPrinting" class="form-select">
+            <option value="no">No</option>
+            <option value="yes">Yes</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="calcMarkupPercent" class="form-label">Markup (%):</label>
+          <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcDiscountPercent" class="form-label">Discount (%):</label>
+          <input type="number" step="1" id="calcDiscountPercent" class="form-control" />
+        </div>
+        <div class="col-md-3 d-none" id="finalCostGroup">
+          <label for="calcFinalCost" class="form-label">Final Price (₽):</label>
+          <input type="number" step="0.01" id="calcFinalCost" class="form-control" />
+        </div>
+      </div>
+      <hr/>
+      <div id="calcPrintersContainer"></div>
+      <div class="d-flex mt-3" style="justify-content: space-between;">
+        <button class="btn btn-success" onclick="onCalculateAll()">Calculate All</button>
+        <button class="btn btn-secondary ms-2" onclick="startNewCalculation()">New Calculation</button>
+      </div>
+      <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
+      <div class="mt-2">
+        <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none">Download All Labels</button>
+        <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none">Download Invoice</button>
+        <button class="btn btn-primary ms-2" id="sendMyNalogBtn" style="display:none">Send Receipt</button>
+        <button class="btn btn-danger ms-2" id="cancelMyNalogBtn" style="display:none">Cancel Receipt</button>
+      </div>
+    </div>
+
+    <!-- Summary Tab -->
+    <div class="tab-pane fade" id="summaryPane" role="tabpanel" aria-labelledby="summary-tab">
+      <div class="mt-4">
+        <h3>Overview ("Summary")</h3>
+        <p class="small-text">Summary indicators by printers, materials (excl. remaining).</p>
+        <div id="summaryContent"></div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div class="tab-pane fade" id="historyPane" role="tabpanel" aria-labelledby="history-tab">
+      <div class="mt-4">
+        <h3>Calculation History</h3>
+        <p class="small-text">
+          Past calculations. Buttons: "JSON" - show object, "HTML" - download report, "Edit" - load data back into calculator.
+        </p>
+        <button class="btn btn-danger mb-3" onclick="onClearCalcHistory()">Clear History</button>
+        <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Search..." oninput="filterTable('historyTable', this.value)">
+          <table class="table table-bordered table-hover" id="historyTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('historyTable',0)">Date/Time</th>
+                <th onclick="sortTable('historyTable',1)">Code</th>
+                <th onclick="sortTable('historyTable',2)">Calculation Name</th>
+                <th onclick="sortTable('historyTable',3)">Client</th>
+                <th onclick="sortTable('historyTable',4)">Status</th>
+                <th onclick="sortTable('historyTable',5)">Total (₽)</th>
+                <th>Receipt</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="row g-2 mt-3">
+            <div class="col-auto">
+              <input type="date" class="form-control" id="histFrom">
+            </div>
+            <div class="col-auto">
+              <input type="date" class="form-control" id="histTo">
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-primary" onclick="updateHistoryStats()">Filter</button>
+            </div>
+          </div>
+          <div id="historyStats" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clients Tab -->
+    <div class="tab-pane fade" id="clientsPane" role="tabpanel" aria-labelledby="clients-tab">
+      <div class="mt-4">
+        <h3>Clients</h3>
+        <div class="mb-2">
+          <button class="btn btn-primary btn-sm" onclick="onAddClient()">Add Client</button>
+        </div>
+        <div class="table-responsive">
+          <input type="text" class="form-control form-control-sm mb-2" placeholder="Search..." oninput="filterTable('clientsTable', this.value)">
+          <table class="table table-bordered table-hover" id="clientsTable">
+            <thead>
+              <tr>
+                <th onclick="sortTable('clientsTable',0)">Name</th>
+                <th onclick="sortTable('clientsTable',1)">Phone</th>
+                <th onclick="sortTable('clientsTable',2)">Links</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-pane fade" id="settingsPane" role="tabpanel" aria-labelledby="settings-tab">
+      <div class="row mt-4">
+        <div class="col-md-3 mb-3">
+          <div class="nav flex-column nav-pills" id="settingsSubTab" role="tablist">
+            <button class="nav-link active" id="brand-set-tab" data-bs-toggle="pill" data-bs-target="#brandSet" type="button" role="tab">Branding</button>
+            <button class="nav-link" id="calc-set-tab" data-bs-toggle="pill" data-bs-target="#calcSet" type="button" role="tab">Calculation</button>
+            <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Import/Export</button>
+            <button class="nav-link" id="nalog-set-tab" data-bs-toggle="pill" data-bs-target="#nalogSet" type="button" role="tab">Tax Integration</button>
+          </div>
+        </div>
+        <div class="col-md-9">
+          <div class="tab-content" id="settingsSubTabContent">
+            <div class="tab-pane fade show active" id="brandSet" role="tabpanel">
+              <h3>Branding</h3>
+              <div class="mb-3">
+                <label for="companyNameInput" class="form-label">Company Name:</label>
+                <input type="text" id="companyNameInput" class="form-control"/>
+              </div>
+              <div class="mb-3">
+                <label for="chatLinkInput" class="form-label">Chat Link (QR):</label>
+                <input type="text" id="chatLinkInput" class="form-control"/>
+              </div>
+              <div class="mb-3">
+                <label for="bankDetailsInput" class="form-label">Bank Details:</label>
+                <textarea id="bankDetailsInput" class="form-control" rows="4"></textarea>
+              </div>
+              <div class="mb-3">
+                <label for="calcWorkHoursDay" class="form-label">Work hours per day:</label>
+                <input type="number" id="calcWorkHoursDay" class="form-control" />
+              </div>
+              <button class="btn btn-primary" onclick="saveBrandingSettings()">Save</button>
+            </div>
+            <div class="tab-pane fade" id="calcSet" role="tabpanel">
+              <h3>Calculation</h3>
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="printLabelsCheckbox">
+                <label class="form-check-label" for="printLabelsCheckbox">Print labels</label>
+              </div>
+              <div class="mb-3">
+                <label for="labelCostInput" class="form-label">Cost per label (₽):</label>
+                <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
+              </div>
+              <div class="mb-3">
+                <label for="calcOperatorRate" class="form-label">Operator rate (₽/h):</label>
+                <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
+              </div>
+              <div class="mb-3">
+                <label for="calcCostKwh" class="form-label">Cost per kWh (₽):</label>
+                <input type="number" step="0.01" id="calcCostKwh" class="form-control" />
+              </div>
+              <div class="mb-3">
+                <label for="calcTaxPercent" class="form-label">Tax (%):</label>
+                <input type="number" step="1" id="calcTaxPercent" class="form-control" />
+              </div>
+              <button class="btn btn-primary" onclick="saveCalcSettings()">Save</button>
+            </div>
+            <div class="tab-pane fade" id="cloudSet" role="tabpanel">
+              <div class="mt-4">
+                <h3>Cloud Export</h3>
+                <button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Generate Link and QR</button>
+                <button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Save to Cloud (5 min)</button>
+                <button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Load from Cloud</button>
+                <input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
+                <div id="qrcode" class="mt-2"></div>
+              </div>
+              <div class="mt-4">
+                <h3>Data Export</h3>
+                <button class="btn btn-primary" onclick="onExportJson()">Export JSON</button>
+                <button class="btn btn-info" id="downloadJsonFileBtn">Download JSON File</button>
+                <button class="btn btn-secondary" onclick="onExportHistory()">Export History</button>
+                <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
+              </div>
+              <div class="mt-4">
+                <h3>Data Import</h3>
+                <textarea id="importArea" class="form-control" rows="5"></textarea>
+                <input type="file" id="importJsonFile" class="form-control mt-2" accept=".json">
+                <button class="btn btn-success mt-2" onclick="onImportJson()">Import</button>
+                <button class="btn btn-info mt-2" onclick="importFromFile()">Import from File</button>
+                <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Load History</button>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="nalogSet" role="tabpanel">
+              <h3>Tax Integration</h3>
+              <div class="mb-3">
+                <label for="myNalogToken" class="form-label">Access Token:</label>
+                <input type="text" id="myNalogToken" class="form-control" />
+              </div>
+              <div class="mb-3">
+                <label for="myNalogPhone" class="form-label">Phone:</label>
+                <input type="text" id="myNalogPhone" class="form-control" />
+              </div>
+              <div class="mb-3">
+                <button class="btn btn-secondary" id="requestSmsBtn">Request SMS</button>
+              </div>
+              <div class="mb-3">
+                <label for="myNalogSms" class="form-label">SMS Code:</label>
+                <input type="text" id="myNalogSms" class="form-control" />
+                <button class="btn btn-primary mt-2" id="confirmSmsBtn">Get Token</button>
+              </div>
+              <div class="mb-3">
+                <button class="btn btn-primary" onclick="saveMyNalogSettings()">Save</button>
+                <button class="btn btn-info ms-2" onclick="checkMyNalogStatus()">Check Status</button>
+              </div>
+              <div id="myNalogStatus" class="small-text"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer" style="text-align:center">
+    <p class="mb-1">All data is saved in LocalStorage with any changes.</p>
+    <p class="mb-0">To reset, import empty JSON or clear LocalStorage manually.</p>
+    <p class="mt-3">©2025. Made with AI assistance</p>
+  </div>
+</div>
+
+<!-- Modal dialogs -->
+
+<!-- Printer Modal -->
+<div class="modal fade" id="printerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Printer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Name</label>
+          <input type="text" class="form-control" id="printerNameInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Cost (₽)</label>
+          <input type="number" class="form-control" id="printerCostInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Hours to recoup</label>
+          <input type="number" class="form-control" id="printerHoursInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Power (W)</label>
+          <input type="number" class="form-control" id="printerPowerInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Maintenance (₽/h)</label>
+          <input type="number" class="form-control" id="printerMaintInput">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="savePrinterBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Material Modal -->
+<div class="modal fade" id="materialModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Material</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Material Type (PLA, PETG, etc.)</label>
+          <input type="text" class="form-control" id="matMaterialTypeInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Name</label>
+          <input type="text" class="form-control" id="matNameInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Cost per kg</label>
+          <input type="number" class="form-control" id="matCostInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Remaining (kg)</label>
+          <input type="number" class="form-control" id="matBalanceInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Declared weight (kg)</label>
+          <input type="number" class="form-control" id="matDeclaredInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Color</label>
+          <input type="color" class="form-control form-control-color" id="matColorInput" value="#ffffff">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Manufacturer</label>
+          <input type="text" class="form-control" id="matManufInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Production Date</label>
+          <input type="text" class="form-control" id="matProdDateInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Printers</label>
+          <select multiple class="form-select" id="matPrintersSelect"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveMaterialBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap & QR dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Load utility scripts -->
+<script src="normalizeIds.js"></script>
+
+<!-- Load the main calculator script -->
+<script src="calculator.js"></script>
+
+</body>
+</html>
