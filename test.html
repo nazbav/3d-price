@@ -300,6 +300,10 @@
           <label for="calcShipping" class="form-label">Упаковка/Доставка (₽):</label>
           <input type="number" step="1" id="calcShipping" class="form-control" />
         </div>
+	<div class="col-md-3">
+   	 <label for="calcModelingCost" class="form-label">Стоимость моделирования (₽):</label>
+   	 <input type="number" step="1" id="calcModelingCost" class="form-control" value="0" />
+ 	 </div>
         <div class="col-md-3">
           <label for="calcStartDate" class="form-label">Дата начала:</label>
           <input type="date" id="calcStartDate" class="form-control" />
@@ -2159,6 +2163,7 @@ function onCalculateAll() {
   const cKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
   const tPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
   const ship = parseFloat(document.getElementById("calcShipping").value) || 0;
+  const modelingCost = parseFloat(document.getElementById("calcModelingCost").value) || 0;
   const sDate = document.getElementById("calcStartDate").value;
   const parallelMode = document.getElementById("calcParallelPrinting").value;
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
@@ -2175,6 +2180,7 @@ function onCalculateAll() {
   appData.calcSettings.costKwh = cKwh;
   appData.calcSettings.taxPercent = tPercent;
   appData.calcSettings.shipping = ship;
+  appData.calcSettings.modelingCost = modelingCost;
   appData.calcSettings.startDate = sDate;
   appData.calcSettings.parallelPrinting = parallelMode;
   appData.calcSettings.markupPercent = markupPercent;
@@ -2346,7 +2352,7 @@ function onCalculateAll() {
   }
 
   
-  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost;
+  let subtotal = sumWithoutTax + sumGlobalAdd + ship + modelingCost + totalOperatorCost + totalLabelsCost;
 
   if (markupPercent > 0) {
     subtotal *= (1 + markupPercent / 100);
@@ -2374,6 +2380,7 @@ function onCalculateAll() {
   htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
+  htmlRes += `Стоимость моделирования: ${safeFixed(modelingCost)} ₽<br/>`;
   htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
   htmlRes += `Подитог: ${safeFixed(subtotal)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${safeFixed(taxAmount)} ₽<br/>`;
@@ -2560,6 +2567,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     calcName,
     clientName,
     clientId,
+    modelingCost: modelingCost,
     orderStatus,
     total: finalSum,
     totalHours: finalTimeOperator,
@@ -3654,6 +3662,7 @@ function startNewCalculation(){
   document.getElementById("calcOrderId").value="";
   document.getElementById("calcDiscountPercent").value = 0;
   document.getElementById("calcFinalCost").value = "";
+  document.getElementById("calcModelingCost").value = 0; 
   toggleFinalFields('new');
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("calcStartDate").value=today;
@@ -3837,6 +3846,7 @@ function onEditCalcHistory(timestamp){
   document.getElementById("calcCostKwh").value = it.costKwh || "";
   document.getElementById("calcTaxPercent").value = it.taxPercent || "";
   document.getElementById("calcShipping").value = it.shipping || "";
+  document.getElementById("calcModelingCost").value = it.modelingCost || 0;
   document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
   document.getElementById("calcParallelPrinting").value = it.parallelMode || "no";
   document.getElementById("calcMarkupPercent").value = it.markupPercent || 0;
