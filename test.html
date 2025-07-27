@@ -779,6 +779,25 @@
   </div>
 </div>
 
+<!-- Модальное окно с ссылкой на чек -->
+<div class="modal fade" id="checkLinkModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Ссылка на чек</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+      </div>
+      <div class="modal-body">
+        <label for="checkLinkInput" class="form-label">Ссылка для копирования:</label>
+        <div class="input-group mb-3">
+          <input type="text" readonly class="form-control" id="checkLinkInput">
+          <button class="btn btn-outline-secondary" type="button" id="copyCheckLinkBtn">Копировать</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 const _instrumentInitialKeys = new Set(Object.keys(window));
@@ -3364,6 +3383,12 @@ async function cancelReceiptInternal(receipt, comment){
   return false;
 }
 
+function showCheckLinkModal(checkUrl) {
+  document.getElementById('checkLinkInput').value = checkUrl;
+  const modal = new bootstrap.Modal(document.getElementById('checkLinkModal'));
+  modal.show();
+}
+
 async function sendMyNalogReceipt(){
   if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
   if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
@@ -3391,7 +3416,8 @@ async function sendMyNalogReceipt(){
     if(resp.ok){
       const data = await resp.json().catch(()=>null);
       if(data?.approvedReceiptUuid){
-        const inn = localStorage.getItem('my_nalog_inn') || '';
+        console.log(data);
+	const inn = localStorage.getItem('my_nalog_inn') || '';
         lastCalcFullData.receiptUuid = data.approvedReceiptUuid;
         lastCalcFullData.receiptInn = inn;
         lastCalcFullData.orderStatus = 'paid';
@@ -3414,6 +3440,9 @@ async function sendMyNalogReceipt(){
         if(cancelBtn) cancelBtn.style.display='inline-block';
         if(btn) btn.disabled = false;
         alert('Чек отправлен.');
+ 	const receiptUrl = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${data.approvedReceiptUuid}/print` : '';
+ 	showCheckLinkModal(receiptUrl);
+	      
       }else{
         alert('Запрос отправлен в Мой Налог');
       }
@@ -5242,6 +5271,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   console.log(appData);
 });
+
+document.getElementById('copyCheckLinkBtn').onclick = function() {
+  const linkInput = document.getElementById('checkLinkInput');
+  navigator.clipboard.writeText(linkInput.value);
+};
 
 </script>
 
