@@ -2582,13 +2582,13 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     }else if(ex.nalogReceiptUuid){
       lastCalcFullData.nalogReceipts = [{uuid: ex.nalogReceiptUuid, inn: ex.nalogInn || '', canceled: !!ex.nalogCanceled}];
     }
-    if(lastCalcFullData.nalogReceipts.length){
+    if(Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length){
       const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
       lastCalcFullData.receiptUuid = last.uuid;
       lastCalcFullData.receiptInn = last.inn;
     }
     const cancelBtn=document.getElementById('cancelMyNalogBtn');
-    const showCancel = lastCalcFullData.nalogReceipts.length && !lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1].canceled;
+    const showCancel = Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length && !lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1].canceled;
     if(cancelBtn) cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
   }
 
@@ -2622,7 +2622,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     discountPercent,
     priceBeforeDiscount: totalBeforeDiscount,
     realTotal: manualFinalCost > 0 ? manualFinalCost : null,
-    nalogReceipts: lastCalcFullData.nalogReceipts.slice(),
+    nalogReceipts: Array.isArray(lastCalcFullData.nalogReceipts) ? lastCalcFullData.nalogReceipts.slice() : [],
     nalogReceiptUuid: lastCalcFullData.receiptUuid || null,
     nalogInn: lastCalcFullData.receiptInn || null
   };
@@ -3431,11 +3431,15 @@ async function sendMyNalogReceipt(){
           appData.calcHistory[idx].nalogReceiptUuid = data.approvedReceiptUuid;
           appData.calcHistory[idx].nalogInn = inn;
           appData.calcHistory[idx].orderStatus = 'paid';
-          saveToLocalStorage();
-          renderHistoryTable();
         }
         if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
         lastCalcFullData.nalogReceipts.push({uuid:data.approvedReceiptUuid,inn,canceled:false});
+        
+        // Save to localStorage after all updates are complete
+        saveToLocalStorage();
+        if(idx!==-1){
+          renderHistoryTable();
+        }
         const cancelBtn=document.getElementById('cancelMyNalogBtn');
         if(cancelBtn) cancelBtn.style.display='inline-block';
         if(btn) btn.disabled = false;
