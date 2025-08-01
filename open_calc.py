@@ -22,8 +22,11 @@ with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
     lines = f.readlines()
 
 model_code = None
-if lines and lines[0].startswith('; MODEL_CODE: '):
-    model_code = lines[0].split('=', 1)[1].strip()
+if lines and (lines[0].startswith('; MODEL_CODE: ') or lines[0].startswith('; MODEL_CODE=')):
+    if '=' in lines[0]:
+        model_code = lines[0].split('=', 1)[1].strip()
+    elif ':' in lines[0]:
+        model_code = lines[0].split(':', 1)[1].strip()
 else:
     model_code = generate_uuid()
     lines.insert(0, f'; MODEL_CODE: {model_code}\n')
@@ -40,6 +43,9 @@ after_exec = False
 in_config = False
 thumbnail_data = ""
 in_thumbnail = False
+in_executable_block = False
+executable_line_count = 0
+plate_name = None
 
 for line in lines:
     line = line.strip()
@@ -58,9 +64,25 @@ for line in lines:
             thumbnail_data += line.strip()
         continue
 
+    if line.startswith('; EXECUTABLE_BLOCK_START'):
+        in_executable_block = True
+        executable_line_count = 0
+        continue
     if line == '; EXECUTABLE_BLOCK_END':
+        in_executable_block = False
         after_exec = True
         continue
+    
+    # Check for plate_name within first 50 lines after EXECUTABLE_BLOCK_START
+    if in_executable_block:
+        executable_line_count += 1
+        if executable_line_count <= 50 and plate_name is None:
+            # Look for plate_name=<name> pattern
+            plate_match = re.search(r';\s*plate_name\s*=\s*(.+)', line)
+            if plate_match:
+                plate_name = plate_match.group(1).strip()
+        continue
+    
     if not after_exec:
         continue
     if line == '; CONFIG_BLOCK_START':
@@ -91,7 +113,7 @@ for line in lines:
             if m:
                 filament_settings = m.group(1).strip()
 
-model_name = model_code  # use unique code as name
+model_name = plate_name if plate_name else model_code  # use plate_name if available, otherwise use unique code
 
 final_filament = f"{filament_settings}".strip('_')
 
