@@ -1531,8 +1531,11 @@ function parseTimeFromLink(str){
 async function parseGcodeText(text) {
   const lines = text.split(/\r?\n/);
   let code = '', timeStr = '', weight = '', printer = 'Unknown', matProfile = '', thumb = '';
-  let afterExec = false, inConfig = false, inThumb = false;
+  let plateNameFound = false;
+  let plateName = '';
+  let afterExecStart = false, afterExecEnd = false, inConfig = false, inThumb = false;
   let thumbnailFound = false; // Flag to track if we already found a thumbnail
+  let linesAfterExecStart = 0;
   
   for (let raw of lines) {
     const line = raw.trim();
@@ -1541,6 +1544,32 @@ async function parseGcodeText(text) {
     if (line.startsWith('; MODEL_CODE:')) {
       code = line.split(':')[1].trim();
       continue;
+    }
+
+    // Track EXECUTABLE_BLOCK_START to count lines for plate_name
+    if (line === '; EXECUTABLE_BLOCK_START') {
+      afterExecStart = true;
+      continue;
+    }
+    
+    // Handle executable block end
+    if (line === '; EXECUTABLE_BLOCK_END') {
+      afterExecEnd = true;
+      continue;
+    }
+
+    // Count lines after EXECUTABLE_BLOCK_START for plate_name search
+    if (afterExecStart && !plateNameFound && linesAfterExecStart < 50) {
+      linesAfterExecStart++;
+      
+      // Search for plate_name
+      if (line.includes('plate_name=')) {
+        const match = line.match(/plate_name=\s*([^;]+)/);
+        if (match && match[1]) {
+          plateName = match[1].trim();
+          plateNameFound = true;
+        }
+      }
     }
     
     // Handle thumbnail blocks - only process the first one
@@ -1551,24 +1580,20 @@ async function parseGcodeText(text) {
     if (line.startsWith('; thumbnail begin')) {
       if (!thumbnailFound) {
         inThumb = true;
-        thumbnailFound = true; // Mark that we found our first thumbnail
+        thumbnailFound = true;
       }
       continue;
     }
     
     if (line.startsWith('; thumbnail end')) {
       if (inThumb) {
-        inThumb = false; // Stop processing this thumbnail
+        inThumb = false;
       }
       continue;
     }
     
     // Process thumbnail data only for the first thumbnail
-    if (inThumb && !thumbnailFound) {
-      // This condition will never be true now, but keeping the structure
-      continue;
-    } else if (inThumb && thumbnailFound) {
-      // Process the first thumbnail data
+    if (inThumb && thumbnailFound) {
       if (line.startsWith(';')) {
         thumb += line.slice(1).trim();
       } else {
@@ -1582,15 +1607,7 @@ async function parseGcodeText(text) {
       continue;
     }
     
-    // Handle executable block end
-    if (line === '; EXECUTABLE_BLOCK_END') {
-      afterExec = true;
-      continue;
-    }
-    
-    if (!afterExec) continue;
-    
-    // Handle config blocks
+    // Handle config blocks - they can appear anywhere in the file
     if (line === '; CONFIG_BLOCK_START') {
       inConfig = true;
       continue;
@@ -1601,48 +1618,53 @@ async function parseGcodeText(text) {
       continue;
     }
     
-    // Parse printing time
-    if (line.startsWith('; estimated printing time') && line.includes('=')) {
-      timeStr = line.split('=')[1].trim();
-    }
-    // Parse filament weight
-    else if (line.startsWith('; total filament used [g]') && line.includes('=')) {
-      weight = line.split('=')[1].trim();
-    }
-    // Parse config parameters
-    else if (inConfig) {
+    // Parse config parameters - now independent of EXECUTABLE_BLOCK position
+    if (inConfig) {
       if (line.includes('printer_settings_id') && line.includes('=')) {
         printer = line.split('=')[1].replace(/"/g, '').trim();
       } else if (line.startsWith('; filament_settings_id') && line.includes('=')) {
         matProfile = line.split('=')[1].replace(/"/g, '').trim();
       }
     }
+    
+    // Parse printing time and weight - now independent of EXECUTABLE_BLOCK position
+    if (line.startsWith('; estimated printing time') && line.includes('=')) {
+      timeStr = line.split('=')[1].trim();
+    }
+    else if (line.startsWith('; total filament used [g]') && line.includes('=')) {
+      weight = line.split('=')[1].trim();
+    }
   }
   
   // Generate code if not found
   if (!code) code = getNextId('gcodeModels');
   
-  return { code, timeStr, weight, printer, matProfile, thumb };
+  // Use plate_name if found
+  const modelName = plateNameFound ? plateName : code;
+  
+  return { code, modelName, timeStr, weight, printer, matProfile, thumb };
 }
 
+// Update the addModelFromGcode function to use the new modelName
 async function addModelFromGcode(parsed){
-  const pr=await resolvePrinterForLink(parsed.printer);
+  const pr = await resolvePrinterForLink(parsed.printer);
   if(!pr){
     alert('Не найден принтер '+parsed.printer);
     return;
   }
-  const mid=await resolveMaterialIdByProfile(parsed.matProfile);
-  addModelRow(pr.id,{
-    id:parsed.code,
-    name:parsed.code,
-    thumbnail:parsed.thumb,
-    status:'new',
-    hours:parseTimeFromLink(parsed.timeStr),
-    weight:parseFloat(parsed.weight)||0,
-    materialId:mid
+  const mid = await resolveMaterialIdByProfile(parsed.matProfile);
+  addModelRow(pr.id, {
+    id: parsed.code,
+    name: parsed.modelName || parsed.code, // Use the parsed modelName or fall back to code
+    thumbnail: parsed.thumb,
+    status: 'new',
+    hours: parseTimeFromLink(parsed.timeStr),
+    weight: parseFloat(parsed.weight) || 0,
+    materialId: mid
   });
 }
 
+// Update file drop handler to use the model name from parsed data
 function setupGcodeDrop() {
   window.addEventListener('dragover', e => {
     e.preventDefault(); // Allow drop
@@ -1679,9 +1701,8 @@ function setupGcodeDrop() {
       const parsed = await parseGcodeText(txt);
       let mid = await resolveMaterialIdByProfile(parsed.matProfile);
 
-      // Get the original file name without extension for display
-      const fileName = f.name;
-      const modelName = fileName.replace(/\.gcode$/i, '');
+      // Get the model name from parsed data or use file name without extension
+      const modelName = parsed.modelName || f.name.replace(/\.gcode$/i, '');
 
       // If no material found, prompt user to select from all available materials
       if (!mid) {
@@ -1691,7 +1712,7 @@ function setupGcodeDrop() {
         }));
         
         if (materialOptions.length > 0) {
-          const result = await showMaterialSelectionForGcode(fileName, parsed.thumb, materialOptions);
+          const result = await showMaterialSelectionForGcode(f.name, parsed.thumb, materialOptions);
           
           if (result && result.materialId) {
             mid = result.materialId;
@@ -1707,7 +1728,7 @@ function setupGcodeDrop() {
       
       addModelRow(printerId, {
         id: parsed.code,
-        name: modelName, // Use file name instead of parsed.code
+        name: modelName, 
         thumbnail: parsed.thumb,
         status: 'new',
         hours: parseTimeFromLink(parsed.timeStr),
