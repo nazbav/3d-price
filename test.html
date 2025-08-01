@@ -1530,9 +1530,10 @@ function parseTimeFromLink(str){
 
 async function parseGcodeText(text) {
   const lines = text.split(/\r?\n/);
-  let code = '', timeStr = '', weight = '', printer = 'Unknown', matProfile = '', thumb = '';
-  let afterExec = false, inConfig = false, inThumb = false;
+  let code = '', timeStr = '', weight = '', printer = 'Unknown', matProfile = '', thumb = '', plateName = '';
+  let afterExecStart = false, inConfig = false, inThumb = false;
   let thumbnailFound = false; // Flag to track if we already found a thumbnail
+  let linesAfterExecStart = 0; // Counter for lines after EXECUTABLE_BLOCK_START
   
   for (let raw of lines) {
     const line = raw.trim();
@@ -1582,15 +1583,32 @@ async function parseGcodeText(text) {
       continue;
     }
     
-    // Handle executable block end
-    if (line === '; EXECUTABLE_BLOCK_END') {
-      afterExec = true;
+    // Handle executable block start - track for plate_name extraction
+    if (line === '; EXECUTABLE_BLOCK_START') {
+      afterExecStart = true;
+      linesAfterExecStart = 0;
       continue;
     }
     
-    if (!afterExec) continue;
+    // Handle executable block end
+    if (line === '; EXECUTABLE_BLOCK_END') {
+      continue;
+    }
     
-    // Handle config blocks
+    // Track lines after EXECUTABLE_BLOCK_START for plate_name extraction
+    if (afterExecStart) {
+      linesAfterExecStart++;
+      
+      // Look for plate_name in first 50 lines after EXECUTABLE_BLOCK_START
+      if (linesAfterExecStart <= 50 && line.includes('plate_name=') && line.includes('=')) {
+        const match = line.match(/plate_name=([^;\s]+)/);
+        if (match) {
+          plateName = match[1].replace(/"/g, '').trim();
+        }
+      }
+    }
+    
+    // Handle config blocks (can appear anywhere in the file)
     if (line === '; CONFIG_BLOCK_START') {
       inConfig = true;
       continue;
@@ -1601,15 +1619,15 @@ async function parseGcodeText(text) {
       continue;
     }
     
-    // Parse printing time
+    // Parse printing time (can appear anywhere in the file)
     if (line.startsWith('; estimated printing time') && line.includes('=')) {
       timeStr = line.split('=')[1].trim();
     }
-    // Parse filament weight
+    // Parse filament weight (can appear anywhere in the file)
     else if (line.startsWith('; total filament used [g]') && line.includes('=')) {
       weight = line.split('=')[1].trim();
     }
-    // Parse config parameters
+    // Parse config parameters (only when in config block)
     else if (inConfig) {
       if (line.includes('printer_settings_id') && line.includes('=')) {
         printer = line.split('=')[1].replace(/"/g, '').trim();
@@ -1622,7 +1640,7 @@ async function parseGcodeText(text) {
   // Generate code if not found
   if (!code) code = getNextId('gcodeModels');
   
-  return { code, timeStr, weight, printer, matProfile, thumb };
+  return { code, timeStr, weight, printer, matProfile, thumb, plateName };
 }
 
 async function addModelFromGcode(parsed){
@@ -1632,9 +1650,13 @@ async function addModelFromGcode(parsed){
     return;
   }
   const mid=await resolveMaterialIdByProfile(parsed.matProfile);
+  
+  // Use plate name if available, otherwise fall back to code
+  const modelName = parsed.plateName || parsed.code;
+  
   addModelRow(pr.id,{
     id:parsed.code,
-    name:parsed.code,
+    name:modelName,
     thumbnail:parsed.thumb,
     status:'new',
     hours:parseTimeFromLink(parsed.timeStr),
@@ -1679,9 +1701,10 @@ function setupGcodeDrop() {
       const parsed = await parseGcodeText(txt);
       let mid = await resolveMaterialIdByProfile(parsed.matProfile);
 
-      // Get the original file name without extension for display
+      // Get the model name - prioritize plate_name from G-code, then file name
       const fileName = f.name;
-      const modelName = fileName.replace(/\.gcode$/i, '');
+      const fileBaseName = fileName.replace(/\.gcode$/i, '');
+      const modelName = parsed.plateName || fileBaseName;
 
       // If no material found, prompt user to select from all available materials
       if (!mid) {
