@@ -894,6 +894,20 @@ function getNextId(type) {
   return ++appData.counters[type];
 }
 
+function getNextOrderId() {
+  if (!appData.counters) appData.counters = {};
+  const maxExisting = Array.isArray(appData.calcHistory)
+    ? appData.calcHistory.reduce((max, h) => {
+        const id = parseInt(h.id, 10);
+        return isNaN(id) ? max : Math.max(max, id);
+      }, 0)
+    : 0;
+  const current = appData.counters.orders || 0;
+  const next = Math.max(current, maxExisting) + 1;
+  appData.counters.orders = next;
+  return String(next);
+}
+
 /* Перенос данных из старого формата */
 function migrateOldData(obj){
   if(!Array.isArray(obj.printers)) obj.printers = [];
@@ -2393,10 +2407,28 @@ function onCalculateAll() {
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
   const discountPercent = parseFloat(document.getElementById("calcDiscountPercent").value) || 0;
   const manualFinalCost = parseFloat(document.getElementById("calcFinalCost").value) || 0;
-  let orderId = document.getElementById("calcOrderId").value.trim();
+    let orderId = document.getElementById("calcOrderId").value.trim();
+    let existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
+    if (!orderId) {
+      orderId = getNextOrderId();
+    } else {
+      const conflict = appData.calcHistory.some((entry, idx) => String(entry.id) === String(orderId) && idx !== existingIndex);
+      if (conflict) {
+        orderId = getNextOrderId();
+      } else {
+        const numericId = parseInt(orderId, 10);
+        if (!isNaN(numericId)) {
+          if (!appData.counters) appData.counters = {};
+          if (!appData.counters.orders || appData.counters.orders < numericId) {
+            appData.counters.orders = numericId;
+          }
+        }
+      }
+    }
+    document.getElementById("calcOrderId").value = orderId;
 
-  // итоговый HTML для вывода
-  var htmlRes = '';
+    // итоговый HTML для вывода
+    var htmlRes = '';
   
   // Сохранение настроек расчёта
   appData.calcSettings.operatorRate = opRate;
@@ -2593,10 +2625,7 @@ function onCalculateAll() {
 
   let finDateStr = calcFinishDate(sDate, Math.ceil(finalTimeOperator / (whDay || 8)));
 
-  if(!orderId) orderId = getNextId('orders');
-  document.getElementById("calcOrderId").value = orderId;
-
-  htmlRes = `<strong>Общий результат:<\/strong><br/>`;
+    htmlRes = `<strong>Общий результат:<\/strong><br/>`;
   htmlRes += `Код: ${orderId}<br/>`;
   htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
@@ -2815,10 +2844,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     realTotal: manualFinalCost > 0 ? manualFinalCost : null,
     nalogReceipts: []
   };
-
-  const existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
-  const existing = existingIndex !== -1 ? appData.calcHistory[existingIndex] : null;
-  if(existingIndex !== -1){
+    if(existingIndex !== -1){
     const ex = appData.calcHistory[existingIndex];
     if(Array.isArray(ex.nalogReceipts)){
       lastCalcFullData.nalogReceipts = ex.nalogReceipts.map(r=>({uuid:r.uuid, inn:r.inn, canceled: !!r.canceled}));
