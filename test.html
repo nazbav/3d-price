@@ -3008,14 +3008,10 @@ async function resolveMaterialIdByProfile(profile){
   if(mats.length===1) return mats[0].id;
   if(mats.length>1){
 
-const options = (mats ?? []).map(m => {
-  const spoolmanText = m?.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : '';
-  return {
-    value: String(m?.id ?? ''),
-    label: `${m?.name ?? ''} (ID: ${m?.id ?? '—'}${spoolmanText})`
-  };
-});
-
+const options = mats.map(m => ({
+  value: String(m.id),
+  label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
+}));
 
     const res=await showMultiPrompt('Материал для профиля '+profile,[{id:'mid',label:'Материал',type:'select',options}]);
     return res&&res.mid?res.mid:'';
