@@ -11,9 +11,11 @@ ORCA_MACHINE_DIR = os.path.join(os.environ.get('APPDATA', ''), 'OrcaSlicer', 'us
 DEFAULT_INPUT = 'calc_data.json'
 DEFAULT_OUTPUT = "calc_data_synced.json"
 
+
 def gen_id():
     alphabet = string.ascii_lowercase + string.digits
     return ''.join(random.choices(alphabet, k=16))
+
 
 def select_item(prompt, options, multi=False):
     if not options:
@@ -41,6 +43,7 @@ def select_item(prompt, options, multi=False):
             return None
         return i - 1
 
+
 def load_json(path):
     try:
         with open(path, 'r', encoding='utf-8') as f:
@@ -48,21 +51,25 @@ def load_json(path):
     except Exception:
         return None
 
+
 def normalize_name(value):
     if isinstance(value, list):
         return value[0] if value else ''
     return value or ''
+
 
 def convert_filament(data):
     name_val = data.get('filament_settings_id') or data.get('name')
     name = normalize_name(name_val) or 'material'
     return name, data
 
+
 def convert_machine(data):
     name_val = data.get('printer_settings_id') or data.get('name')
     name = normalize_name(name_val) or 'printer'
     host_key = (data.get('print_host') or data.get('inherits') or '').lower()
     return name, host_key, data
+
 
 def main():
     parser = argparse.ArgumentParser(description='Sync Orca Slicer data with calculator export')
@@ -82,35 +89,23 @@ def main():
         'printerProfiles': []
     }
 
+    # --- Materials & filament profiles ---------------------------------------------------------
     material_profiles = data.get('materialProfiles', [])
     if not isinstance(material_profiles, list):
         material_profiles = []
-    printer_profiles = data.get('printerProfiles', [])
-    if not isinstance(printer_profiles, list):
-        printer_profiles = []
 
-    pr_profile_keys = {}
-    pair_to_profile = {}
+    # Keep the FULL materials list (no dedup by name)
+    materials = data.get('materials', [])
+    if not isinstance(materials, list):
+        materials = []
 
-    for pf in printer_profiles:
-        cfg = pf.get('config', {})
-        h = (cfg.get('print_host') or cfg.get('inherits') or '').lower()
-        ps = (cfg.get('printer_settings_id') or cfg.get('name') or '').lower()
-        pair = (h, ps)
-        pair_to_profile[pair] = pf
-        pid = pf.get('printerId')
-        if pid:
-            pr_profile_keys.setdefault(pid, set()).add(pair)
-
-    mat_map = {m.get('name', '').lower(): m for m in data.get('materials', [])}
-    materials_list = list(mat_map.values())
-
-    for m in list(mat_map.values()):
+    # Convert old-format materials that embed Orca config
+    for m in materials:
         if 'orca' in m or 'orcaInfo' in m:
             prof = {
                 'id': gen_id(),
-                'config': m.get('orca', {}),
-                'info': m.get('orcaInfo', '')
+                'config': m.get('orca', {}) or {},
+                'info': m.get('orcaInfo', '') or ''
             }
             material_profiles.append(prof)
             m['profileIds'] = [prof['id']]
@@ -120,6 +115,7 @@ def main():
             if not isinstance(m.get('profileIds'), list):
                 m['profileIds'] = []
 
+    # Build profile lookup by filament profile name (normalized)
     pf_map = {}
     for p in material_profiles:
         cfg = p.get('config')
@@ -129,6 +125,19 @@ def main():
         nm = normalize_name(nm_val).lower()
         if nm:
             pf_map[nm] = p
+
+    # Build material name -> list[materials] mapping for linking,
+    # plus a deduped "display list" of names for the menu.
+    seen_names = set()
+    display_names = []
+    materials_by_name = {}
+    for m in materials:
+        nm = (m.get('name') or '').strip()
+        key = nm.lower()
+        if key not in seen_names:
+            seen_names.add(key)
+            display_names.append(nm)
+        materials_by_name.setdefault(key, []).append(m)
 
     fil_dir = os.path.join(args.orca_path, 'filament')
     for fp in glob.glob(os.path.join(fil_dir, '*.json')):
@@ -144,7 +153,7 @@ def main():
             except Exception:
                 info_text = ''
         name, orca = convert_filament(cfg)
-        key = name.lower()
+        key = name.lower().strip()
 
         print(f"\nFound filament profile '{name}' from {os.path.basename(fp)}")
         prof = pf_map.get(key)
@@ -157,27 +166,49 @@ def main():
             material_profiles.append(prof)
             pf_map[key] = prof
 
-        linked = [m for m in materials_list if prof['id'] in m.get('profileIds', [])]
+        # Which materials are already linked to this profile?
+        linked = []
+        for mats in materials_by_name.values():
+            for m in mats:
+                if prof['id'] in (m.get('profileIds') or []):
+                    linked.append(m.get('name') or '')
+                    break  # show each name once
         if linked:
-            names = ', '.join(m.get('name', '') for m in linked)
+            names = ', '.join(linked)
             ans = input(f"  already linked to {names or '?'}; change? [y/N]: ").strip().lower()
             if ans not in ('y', 'yes'):
                 continue
-            for m in linked:
-                m['profileIds'] = [x for x in m.get('profileIds', []) if x != prof['id']]
-        sel = select_item('Assign to materials', [m.get('name', '') for m in materials_list], multi=True)
-        for idx in sel:
-            mat = materials_list[idx]
-            if not isinstance(mat.get('profileIds'), list):
-                mat['profileIds'] = []
-            if prof['id'] not in mat['profileIds']:
-                mat['profileIds'].append(prof['id'])
+            # Unlink from all
+            for mats in materials_by_name.values():
+                for m in mats:
+                    if prof['id'] in (m.get('profileIds') or []):
+                        m['profileIds'] = [x for x in (m.get('profileIds') or []) if x != prof['id']]
 
-    data['materials'] = list(mat_map.values())
+        sel = select_item('Assign to materials', display_names, multi=True)
+        for idx in sel:
+            if 0 <= idx < len(display_names):
+                nm = display_names[idx]
+                mats = materials_by_name.get(nm.lower().strip(), [])
+                for mat in mats:
+                    if not isinstance(mat.get('profileIds'), list):
+                        mat['profileIds'] = []
+                    if prof['id'] not in mat['profileIds']:
+                        mat['profileIds'].append(prof['id'])
+
+    data['materials'] = materials  # keep full list
     data['materialProfiles'] = material_profiles
 
-    pr_map = {}
-    name_map = {}
+    # --- Printers & machine profiles -----------------------------------------------------------
+    printer_profiles = data.get('printerProfiles', [])
+    if not isinstance(printer_profiles, list):
+        printer_profiles = []
+
+    pr_profile_keys = {}
+    pair_to_profile = {}
+
+    # Helper maps
+    pr_map = {}    # host_key -> printer
+    name_map = {}  # lower(name) -> printer
 
     def score_printer(pr):
         fields = ['cost', 'hoursToRecoup', 'power', 'maintCostHour']
@@ -251,6 +282,7 @@ def main():
     mach_dir = os.path.join(args.orca_path, 'machine')
     printer_list = list(name_map.values())
     pr_id_map = {p.get('id'): p for p in printer_list}
+
     for fp in glob.glob(os.path.join(mach_dir, '*.json')):
         cfg = load_json(fp)
         if not cfg:
@@ -265,7 +297,8 @@ def main():
                 info_text = ''
         name, host_key, orca = convert_machine(cfg)
         print(f"\nMachine profile '{name}' from {os.path.basename(fp)}")
-        pair = (host_key, name.lower())
+        pair = (host_key, (name or '').lower())
+
         existing = pair_to_profile.get(pair)
         if existing:
             old_p = pr_id_map.get(existing.get('printerId'))
@@ -274,6 +307,7 @@ def main():
             if ans in ('y', 'yes'):
                 if old_p and existing['id'] in old_p.get('profileIds', []):
                     old_p['profileIds'].remove(existing['id'])
+                # choose a target printer for reassignment
                 sel = select_item('Select printer', [p.get('name', '') for p in printer_list], multi=False)
                 target = printer_list[sel] if sel is not None else None
                 if not target:
@@ -288,12 +322,21 @@ def main():
                     pr_map[host_key] = target
             continue
 
-        # ✅ Исправление: выбор принтера, если профиля ещё нет
-        sel = select_item('Select printer', [p.get('name', '') for p in printer_list], multi=False)
-        if sel is None:
-            print("  Пропущено, не выбран принтер.")
+        # Create a new machine profile -> we MUST pick a target printer safely.
+        target = None
+        # 1) try host match
+        if host_key and host_key in pr_map:
+            target = pr_map[host_key]
+        # 2) if only one printer exists, pick it
+        if not target and len(printer_list) == 1:
+            target = printer_list[0]
+        # 3) ask the user
+        if not target:
+            sel = select_item('Select printer', [p.get('name', '') for p in printer_list], multi=False)
+            target = printer_list[sel] if sel is not None else None
+        if not target:
+            print("  skipped: no printer selected.")
             continue
-        target = printer_list[sel]
 
         pid = gen_id()
         profile_obj = {'id': pid, 'config': orca, 'info': info_text, 'printerId': target.get('id')}
@@ -305,6 +348,7 @@ def main():
         if host_key:
             pr_map[host_key] = target
 
+    # Keep all printers; just clean helper flag
     printers = list(name_map.values())
     for p in printers:
         if not isinstance(p.get('profileIds'), list):
@@ -318,6 +362,7 @@ def main():
     with open(args.output, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     print('Saved', args.output)
+
 
 if __name__ == '__main__':
     main()
