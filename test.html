@@ -214,6 +214,7 @@
                 <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
                 <th onclick="sortTable('materialsTable',3)">Остаток (гр)</th>
                 <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
+                <th onclick="sortTable('materialsTable',5)">Время остыв. (мин)</th>
                 <th onclick="sortTable('materialsTable',6)">Производитель</th>
                  <th onclick="sortTable('materialsTable',7)">Дата произв.</th>
                  <th>Принтеры</th>
@@ -333,6 +334,12 @@
         <div class="col-md-3 d-none" id="finalCostGroup">
           <label for="calcFinalCost" class="form-label">Финальная цена (₽):</label>
           <input type="number" step="0.01" id="calcFinalCost" class="form-control" />
+        </div>
+      </div>
+      <div class="row mb-3">
+        <div class="col-md-3">
+          <label for="calcPreparationTime" class="form-label">Часы подготовки (ч:м):</label>
+          <input type="text" id="calcPreparationTime" class="form-control" onblur="this.value = formatTimeForDisplay(handleTimeInput({target:{value:this.value}}))" />
         </div>
       </div>
       <hr/>
@@ -492,6 +499,14 @@
           <div class="mb-3">
             <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
             <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label for="calcDowntimeCost" class="form-label">Стоимость минуты простоя (₽/мин):</label>
+            <input type="number" step="0.01" id="calcDowntimeCost" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label for="calcPreparationRate" class="form-label">Стоимость часа подготовки (₽/ч):</label>
+            <input type="number" step="0.01" id="calcPreparationRate" class="form-control" />
           </div>
           <div class="mb-3">
             <label for="calcCostKwh" class="form-label">Цена 1 кВт⋅ч (₽):</label>
@@ -681,6 +696,10 @@
         <div class="mb-2">
           <label class="form-label">Заявленный вес (кг)</label>
           <input type="number" class="form-control" id="matDeclaredInput">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Время остывания (мин)</label>
+          <input type="number" class="form-control" id="matCoolingTimeInput">
         </div>
         <div class="mb-2">
           <label class="form-label">Цвет</label>
@@ -916,6 +935,11 @@ function migrateOldData(obj){
   if(!Array.isArray(obj.clients)) obj.clients = [];
   if(!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
 
+  if(!obj.calcSettings) obj.calcSettings = {};
+  if(typeof obj.calcSettings.downtimeCost !== 'number') obj.calcSettings.downtimeCost = 0;
+  if(typeof obj.calcSettings.preparationRate !== 'number') obj.calcSettings.preparationRate = 0;
+  if(typeof obj.calcSettings.preparationTime !== 'number') obj.calcSettings.preparationTime = 0;
+
   if (!obj.counters) {
     obj.counters = {
       printers: obj.printers.length,
@@ -1028,9 +1052,17 @@ function migrateOldData(obj){
 
   // Обновление истории расчётов и calcData
   obj.calcHistory.forEach(h=>{
+    if(h.nalogInn) delete h.nalogInn;
+    if(Array.isArray(h.nalogReceipts)){
+      h.nalogReceipts = h.nalogReceipts.map(r=>({uuid:r.uuid, canceled: !!r.canceled}));
+    }
     if(!h.markupPercent) h.markupPercent = 0;
     if(!h.discountPercent) h.discountPercent = 0;
     if(!h.globalAdditional) h.globalAdditional = {sumGlobalAdd:0,taxAmount:0,details:[]};
+    if(typeof h.downtimeMinutes !== 'number') h.downtimeMinutes = 0;
+    if(typeof h.downtimeCost !== 'number') h.downtimeCost = 0;
+    if(typeof h.preparationTime !== 'number') h.preparationTime = 0;
+    if(typeof h.preparationCost !== 'number') h.preparationCost = 0;
     if(Array.isArray(h.details)){
       h.details.forEach(d=>{
         let pr = ensurePrinter(d.printerId) || ensurePrinter(d.printerName?.toLowerCase());
@@ -1083,6 +1115,7 @@ function migrateOldData(obj){
   obj.materials.forEach(m=>{ if(!m.printers) m.printers=[]; });
   if(!Array.isArray(obj.materialProfiles)) obj.materialProfiles=[];
   obj.materials.forEach(m=>{
+    if(typeof m.coolingTime !== 'number') m.coolingTime = 0;
     if(!Array.isArray(m.profileIds)) m.profileIds=[];
     if(m.orca || m.orcaInfo){
       const pf={id:getNextId('materialProfiles'),config:m.orca||{},info:m.orcaInfo||''};
@@ -1420,7 +1453,10 @@ let appData = {
     markupPercent: 0,
     discountPercent: 0,
     modelingRate: 500,
-    modelingCost: 0
+    modelingCost: 0,
+    downtimeCost: 0,
+    preparationRate: 0,
+    preparationTime: 0
   },
   labelSettings: {
   companyName: "Компания",
@@ -1480,6 +1516,9 @@ function initAll(){
   updateHistoryStats();
   renderSummary();
   document.getElementById("calcOperatorRate").value = appData.calcSettings.operatorRate || "";
+  document.getElementById("calcDowntimeCost").value = appData.calcSettings.downtimeCost || "";
+  document.getElementById("calcPreparationRate").value = appData.calcSettings.preparationRate || "";
+  document.getElementById("calcPreparationTime").value = appData.calcSettings.preparationTime ? formatTimeForDisplay(appData.calcSettings.preparationTime) : "";
   document.getElementById("calcWorkHoursDay").value = appData.calcSettings.workHoursDay || "";
   document.getElementById("calcCostKwh").value = appData.calcSettings.costKwh || "";
   document.getElementById("calcTaxPercent").value = appData.calcSettings.taxPercent || "";
@@ -2059,6 +2098,7 @@ function renderGlobalMaterialsTable(){
       <td>${m.costPerKg}<\/td>
       <td>${m.balance * 1000}<\/td>
       <td>${m.declaredWeight || "-"}<\/td>
+      <td>${m.coolingTime || 0}<\/td>
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
@@ -2099,6 +2139,7 @@ function onEditGlobalMaterial(id){
   document.getElementById('matCostInput').value = m.costPerKg;
   document.getElementById('matBalanceInput').value = m.balance;
   document.getElementById('matDeclaredInput').value = m.declaredWeight;
+  document.getElementById('matCoolingTimeInput').value = m.coolingTime || 0;
   document.getElementById('matColorInput').value = m.color || '#ffffff';
   document.getElementById('matManufInput').value = m.manufacturer || '';
   document.getElementById('matProdDateInput').value = m.productionDate || '';
@@ -2114,6 +2155,7 @@ function saveMaterialFromModal(){
   m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
   m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
   m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
+  m.coolingTime = parseFloat(document.getElementById('matCoolingTimeInput').value) || 0;
   m.color = document.getElementById('matColorInput').value;
   m.manufacturer = document.getElementById('matManufInput').value;
   m.productionDate = document.getElementById('matProdDateInput').value;
@@ -2407,6 +2449,9 @@ function onCalculateAll() {
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
   const discountPercent = parseFloat(document.getElementById("calcDiscountPercent").value) || 0;
   const manualFinalCost = parseFloat(document.getElementById("calcFinalCost").value) || 0;
+  const downtimeRate = parseFloat(document.getElementById("calcDowntimeCost").value) || 0;
+  const prepRate = parseFloat(document.getElementById("calcPreparationRate").value) || 0;
+  const prepTime = handleTimeInput({target:{value: document.getElementById("calcPreparationTime").value}});
     let orderId = document.getElementById("calcOrderId").value.trim();
     let existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
     if (!orderId) {
@@ -2441,6 +2486,9 @@ function onCalculateAll() {
   appData.calcSettings.parallelPrinting = parallelMode;
   appData.calcSettings.markupPercent = markupPercent;
   appData.calcSettings.discountPercent = discountPercent;
+  appData.calcSettings.downtimeCost = downtimeRate;
+  appData.calcSettings.preparationRate = prepRate;
+  appData.calcSettings.preparationTime = prepTime;
   
   saveToLocalStorage();
   
@@ -2481,6 +2529,7 @@ function onCalculateAll() {
   let sumWithoutTax = 0;
   let finalTimeAllPrinters = 0;
   let maxPrinterTime = 0;
+  let totalCoolingMinutes = 0;
   
   appData.printers.forEach(pr => {
     const table = document.getElementById(`calcModelsTable_${pr.id}`);
@@ -2506,6 +2555,8 @@ function onCalculateAll() {
       
       const mat = getAllMaterialsForPrinter(pr.id).find(x => String(x.id) === String(mid));
       if (!mat) return;
+
+      totalCoolingMinutes += parseFloat(mat.coolingTime) || 0;
       
       const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
       const costPrinterPart = h * costPH;
@@ -2575,8 +2626,13 @@ function onCalculateAll() {
     }
   }
   
-  let finalTimeOperator = (parallelMode === "yes") ? maxPrinterTime : finalTimeAllPrinters;
-  const totalOperatorCost = finalTimeOperator * opRate;
+  const totalCoolingHours = totalCoolingMinutes / 60;
+  let baseOperatorTime = (parallelMode === "yes") ? maxPrinterTime : finalTimeAllPrinters;
+  let finalTimeOperator = baseOperatorTime + prepTime + totalCoolingHours;
+  const operatorWorkCost = baseOperatorTime * opRate;
+  const downtimeCost = totalCoolingMinutes * downtimeRate;
+  const preparationCost = prepTime * prepRate;
+  const totalOperatorCost = operatorWorkCost + downtimeCost + preparationCost;
   
   let sumGlobalAdd = 0;
   let globalAdditionalDetails = [];
@@ -2631,6 +2687,8 @@ function onCalculateAll() {
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
   htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
   htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽<br/>`;
+  htmlRes += `Простой: ${formatTimeForDisplay(totalCoolingHours)} ч. (${safeFixed(downtimeCost)} ₽)<br/>`;
+  htmlRes += `Подготовка: ${formatTimeForDisplay(prepTime)} ч. (${safeFixed(preparationCost)} ₽)<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
   htmlRes += `Стоимость моделирования: ${safeFixed(modelingCost)} ₽<br/>`;
@@ -2792,7 +2850,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
 
   if(lastCalcFullData && Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length){
     const links = lastCalcFullData.nalogReceipts.map((r,i)=>{
-      const url = `https://lknpd.nalog.ru/api/v1/receipt/${r.inn||''}/${r.uuid}/print`;
+      const inn = localStorage.getItem('my_nalog_inn') || '';
+      const url = `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${r.uuid}/print`;
       const cls = (r.canceled || i < lastCalcFullData.nalogReceipts.length-1) ? 'class="text-danger"' : '';
       return `<a href="${url}" target="_blank" ${cls}>Чек${lastCalcFullData.nalogReceipts.length>1?' '+(i+1):''}<\/a>`;
     }).join('<br/>');
@@ -2831,6 +2890,11 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     costKwh: cKwh,
     operatorRate: opRate,
     totalOperatorCost: totalOperatorCost,
+    operatorWorkCost: operatorWorkCost,
+    downtimeCost: downtimeCost,
+    downtimeMinutes: totalCoolingMinutes,
+    preparationCost: preparationCost,
+    preparationTime: prepTime,
     calcData,
     globalAdditional: {
       sumGlobalAdd,
@@ -2847,14 +2911,13 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     if(existingIndex !== -1){
     const ex = appData.calcHistory[existingIndex];
     if(Array.isArray(ex.nalogReceipts)){
-      lastCalcFullData.nalogReceipts = ex.nalogReceipts.map(r=>({uuid:r.uuid, inn:r.inn, canceled: !!r.canceled}));
+      lastCalcFullData.nalogReceipts = ex.nalogReceipts.map(r=>({uuid:r.uuid, canceled: !!r.canceled}));
     }else if(ex.nalogReceiptUuid){
-      lastCalcFullData.nalogReceipts = [{uuid: ex.nalogReceiptUuid, inn: ex.nalogInn || '', canceled: !!ex.nalogCanceled}];
+      lastCalcFullData.nalogReceipts = [{uuid: ex.nalogReceiptUuid, canceled: !!ex.nalogCanceled}];
     }
     if(Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length){
       const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
       lastCalcFullData.receiptUuid = last.uuid;
-      lastCalcFullData.receiptInn = last.inn;
     }
     const cancelBtn=document.getElementById('cancelMyNalogBtn');
     const showCancel = Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length && !lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1].canceled;
@@ -2880,6 +2943,11 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     operatorRate: opRate,
     costKwh: cKwh,
     totalOperatorCost: totalOperatorCost,
+    operatorWorkCost: operatorWorkCost,
+    downtimeCost: downtimeCost,
+    downtimeMinutes: totalCoolingMinutes,
+    preparationCost: preparationCost,
+    preparationTime: prepTime,
     details: detailsByPrinter,
     calcData,
     globalAdditional: {
@@ -2892,9 +2960,10 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     discountPercent,
     priceBeforeDiscount: totalBeforeDiscount,
     realTotal: manualFinalCost > 0 ? manualFinalCost : null,
-    nalogReceipts: Array.isArray(lastCalcFullData.nalogReceipts) ? lastCalcFullData.nalogReceipts.slice() : [],
-    nalogReceiptUuid: lastCalcFullData.receiptUuid || null,
-    nalogInn: lastCalcFullData.receiptInn || null
+    nalogReceipts: Array.isArray(lastCalcFullData.nalogReceipts)
+      ? lastCalcFullData.nalogReceipts.map(r=>({uuid:r.uuid, canceled:!!r.canceled}))
+      : [],
+    nalogReceiptUuid: lastCalcFullData.receiptUuid || null
   };
   if (existingIndex !== -1) {
     appData.calcHistory[existingIndex] = newEntry;
@@ -3178,8 +3247,8 @@ function renderHistoryTable(){
       <td>${safeFixed(h.total)}<\/td>
       <td>
         ${Array.isArray(h.nalogReceipts) && h.nalogReceipts.length ?
-          h.nalogReceipts.map((r,i)=>`<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${r.inn || ''}/${r.uuid}/print\" target=\"_blank\" ${(r.canceled || i < h.nalogReceipts.length-1) ? 'class="text-danger"' : ''}>Чек${h.nalogReceipts.length>1 ? ' '+(i+1) : ''}<\/a>`).join('<br/>') :
-          (h.nalogReceiptUuid ? `<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${h.nalogInn || ''}/${h.nalogReceiptUuid}/print\" target=\"_blank\">Чек<\/a>` : '')}
+          h.nalogReceipts.map((r,i)=>`<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${localStorage.getItem('my_nalog_inn') || ''}/${r.uuid}/print\" target=\"_blank\" ${(r.canceled || i < h.nalogReceipts.length-1) ? 'class="text-danger"' : ''}>Чек${h.nalogReceipts.length>1 ? ' '+(i+1) : ''}<\/a>`).join('<br/>') :
+          (h.nalogReceiptUuid ? `<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${localStorage.getItem('my_nalog_inn') || ''}/${h.nalogReceiptUuid}/print\" target=\"_blank\">Чек<\/a>` : '')}
       <\/td>
       <td>
         <button class="btn btn-sm btn-warning" onclick="onEditCalcHistory(${h.timestamp})">Редакт.<\/button>
@@ -3333,6 +3402,8 @@ function saveCalcSettings(){
   appData.labelSettings.printLabels = document.getElementById("printLabelsCheckbox").checked;
   appData.labelSettings.costPerLabel = parseFloat(document.getElementById("labelCostInput").value) || 0;
   appData.calcSettings.operatorRate = parseFloat(document.getElementById("calcOperatorRate").value) || 0;
+  appData.calcSettings.downtimeCost = parseFloat(document.getElementById("calcDowntimeCost").value) || 0;
+  appData.calcSettings.preparationRate = parseFloat(document.getElementById("calcPreparationRate").value) || 0;
   appData.calcSettings.costKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
   appData.calcSettings.taxPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
   saveToLocalStorage();
@@ -3738,7 +3809,7 @@ async function sendMyNalogReceipt(){
   if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
   if(lastCalcFullData.nalogReceipts.length){
     const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
-    const inn = last.inn || localStorage.getItem('my_nalog_inn') || '';
+    const inn = localStorage.getItem('my_nalog_inn') || '';
     const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${last.uuid}/print` : '';
     const force = confirm('Чек уже сформирован' + (url ? '\n'+url : '') + '\nПерегенерировать?');
     if(!force) return;
@@ -3761,23 +3832,23 @@ async function sendMyNalogReceipt(){
       const data = await resp.json().catch(()=>null);
       if(data?.approvedReceiptUuid){
         console.log(data);
-	const inn = localStorage.getItem('my_nalog_inn') || '';
+        const inn = localStorage.getItem('my_nalog_inn') || '';
         lastCalcFullData.receiptUuid = data.approvedReceiptUuid;
-        lastCalcFullData.receiptInn = inn;
         lastCalcFullData.orderStatus = 'paid';
         document.getElementById('calcOrderStatus').value = 'paid';
         toggleFinalFields('paid');
         const idx = appData.calcHistory.findIndex(e=>String(e.id)===String(lastCalcFullData.id));
         if(idx!==-1){
-          const recList = Array.isArray(appData.calcHistory[idx].nalogReceipts) ? appData.calcHistory[idx].nalogReceipts : [];
-          recList.push({uuid:data.approvedReceiptUuid,inn,canceled:false});
+          const recList = Array.isArray(appData.calcHistory[idx].nalogReceipts)
+            ? appData.calcHistory[idx].nalogReceipts.map(r=>({uuid:r.uuid, canceled:!!r.canceled}))
+            : [];
+          recList.push({uuid:data.approvedReceiptUuid, canceled:false});
           appData.calcHistory[idx].nalogReceipts = recList;
           appData.calcHistory[idx].nalogReceiptUuid = data.approvedReceiptUuid;
-          appData.calcHistory[idx].nalogInn = inn;
           appData.calcHistory[idx].orderStatus = 'paid';
         }
         if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
-        lastCalcFullData.nalogReceipts.push({uuid:data.approvedReceiptUuid,inn,canceled:false});
+        lastCalcFullData.nalogReceipts.push({uuid:data.approvedReceiptUuid,canceled:false});
         
         // Save to localStorage after all updates are complete
         saveToLocalStorage();
@@ -3977,6 +4048,7 @@ function startNewCalculation(){
   toggleFinalFields('new');
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("calcStartDate").value=today;
+  document.getElementById("calcPreparationTime").value = appData.calcSettings.preparationTime ? formatTimeForDisplay(appData.calcSettings.preparationTime) : "";
   lastCalcFullData = null;
   appData.printers.forEach(pr=>{
     const table=document.getElementById(`calcModelsTable_${pr.id}`);
