@@ -320,13 +320,12 @@
           </select>
         </div>
       </div>
-      <div class="row mb-3">
+     
+		<div class="row mb-3">
         <div class="col-md-3">
           <label for="calcMarkupPercent" class="form-label">Наценка (%):</label>
           <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
         </div>
-      </div>
-      <div class="row mb-3">
         <div class="col-md-3">
           <label for="calcDiscountPercent" class="form-label">Скидка (%):</label>
           <input type="number" step="1" id="calcDiscountPercent" class="form-control" />
@@ -335,8 +334,6 @@
           <label for="calcFinalCost" class="form-label">Финальная цена (₽):</label>
           <input type="number" step="0.01" id="calcFinalCost" class="form-control" />
         </div>
-      </div>
-      <div class="row mb-3">
         <div class="col-md-3">
           <label for="calcPreparationTime" class="form-label">Часы подготовки (ч:м):</label>
           <input type="text" id="calcPreparationTime" class="form-control" onblur="this.value = formatTimeForDisplay(handleTimeInput({target:{value:this.value}}))" />
