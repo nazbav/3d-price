@@ -1527,7 +1527,7 @@ function initAll(){
   const periodSelect = document.getElementById("summaryPeriod");
   periodSelect.addEventListener("change", onSummaryPeriodChange);
   document.getElementById("summaryApplyBtn").addEventListener("click", renderSummary);
-  onSummaryPeriodChange(true);
+  onSummaryPeriodChange();
   document.getElementById("calcOperatorRate").value = appData.calcSettings.operatorRate || "";
   document.getElementById("calcDowntimeCost").value = appData.calcSettings.downtimeCost || "";
   document.getElementById("calcPreparationRate").value = appData.calcSettings.preparationRate || "";
@@ -4276,16 +4276,15 @@ function onEditCalcHistory(timestamp){
     }
   }
 
-  function onSummaryPeriodChange(skipRender){
+  function onSummaryPeriodChange(){
     const val = document.getElementById('summaryPeriod').value;
     const fromInput = document.getElementById('summaryFrom');
     const toInput = document.getElementById('summaryTo');
     const applyBtn = document.getElementById('summaryApplyBtn');
-    const show = val === 'custom';
-    fromInput.classList.toggle('d-none', !show);
-    toInput.classList.toggle('d-none', !show);
-    applyBtn.classList.toggle('d-none', !show);
-    if(val !== 'custom' && !skipRender) renderSummary();
+    const showCustom = val === 'custom';
+    fromInput.classList.toggle('d-none', !showCustom);
+    toInput.classList.toggle('d-none', !showCustom);
+    applyBtn.classList.remove('d-none');
   }
 
   function renderSummary() {
@@ -4362,6 +4361,7 @@ function onEditCalcHistory(timestamp){
       totalMaintenanceCost: 0,
       materialStats: {},
       printerStats: {},
+      clientStats: {},
       completedOrdersCount: completedOrders.length
     };
 
@@ -4381,7 +4381,8 @@ function onEditCalcHistory(timestamp){
 
     completedOrders.forEach(order => {
       results.totalRevenue += order.total || 0;
-      
+      let orderCost = 0;
+
       // Расчет налогов
       if (order.taxAmount !== undefined) {
         results.totalTax += order.taxAmount;
@@ -4391,7 +4392,7 @@ function onEditCalcHistory(timestamp){
 
       // Учет расходов на оператора
       results.totalOperatorExpenses += order.totalOperatorCost || 0;
-      
+
       // Учет расходов на моделирование
       results.totalModelingCost += order.modelingCost || 0;
 
@@ -4443,6 +4444,7 @@ function onEditCalcHistory(timestamp){
           results.totalMaintenanceCost += maintenance;
           results.totalElectricityCost += electric;
           results.totalCost += materialCost + amortization + electric + maintenance;
+          orderCost += materialCost + amortization + electric + maintenance;
           results.totalPrintHours += hours;
 
           // Статистика по принтерам
@@ -4460,9 +4462,21 @@ function onEditCalcHistory(timestamp){
       // Глобальные расходы
       const addCost = order.globalAdditional?.sumGlobalAdd || 0;
       const shipping = order.shipping || 0;
+      const globalCosts = addCost + shipping + (order.totalOperatorCost || 0) + (order.modelingCost || 0);
       results.totalAdditionalCost += addCost;
       results.totalShippingCost += shipping;
-      results.totalCost += addCost + shipping + (order.totalOperatorCost || 0) + (order.modelingCost || 0);
+      results.totalCost += globalCosts;
+      orderCost += globalCosts;
+
+      // Статистика по клиентам
+      const clientName = order.clientName || '(Не указан)';
+      if (!results.clientStats[clientName]) {
+        results.clientStats[clientName] = { name: clientName, revenue: 0, cost: 0, orders: 0 };
+      }
+      const cs = results.clientStats[clientName];
+      cs.revenue += order.total || 0;
+      cs.cost += orderCost;
+      cs.orders += 1;
     });
 
     return results;
@@ -4559,7 +4573,8 @@ function onEditCalcHistory(timestamp){
       totalPrinterCost,
       totalMaintenanceCost,
       materialStats,
-      printerStats
+      printerStats,
+      clientStats
     } = ordersAnalysis;
 
     const {
@@ -4617,6 +4632,22 @@ function onEditCalcHistory(timestamp){
     const totalPrinterExpenses = Object.values(printerStats).reduce((sum, p) => sum + p.amortization + p.energy + p.material + p.maintenance, 0);
     const totalPrinterProfit = totalPrinterRevenue - totalPrinterExpenses;
     const totalPrinterPrints = Object.values(printerStats).reduce((sum, p) => sum + p.prints, 0);
+
+    const clientRows = Object.values(clientStats).map(c => {
+      const profit = c.revenue - c.cost;
+      return `
+      <tr>
+        <td>${c.name}</td>
+        <td class="text-end">${formatCurrency(c.revenue)}</td>
+        <td class="text-end">${formatCurrency(c.cost)}</td>
+        <td class="text-end ${profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(profit)}</td>
+        <td class="text-end">${c.orders}</td>
+      </tr>`;
+    }).join('');
+    const totalClientRevenue = Object.values(clientStats).reduce((sum, c) => sum + c.revenue, 0);
+    const totalClientCost = Object.values(clientStats).reduce((sum, c) => sum + c.cost, 0);
+    const totalClientProfit = totalClientRevenue - totalClientCost;
+    const totalClientOrders = Object.values(clientStats).reduce((sum, c) => sum + c.orders, 0);
 
     // Генерация карточек KPI
     const kpiCards = [
@@ -4909,7 +4940,42 @@ function onEditCalcHistory(timestamp){
           </div>
         </div>
       </div>
-      
+
+      <div class="row mb-4">
+        <div class="col-md-12">
+          <div class="card shadow-sm h-100">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-people me-2"></i>Показатели по клиентам</h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="">
+                    <tr>
+                      <th>Клиент</th>
+                      <th class="text-end">Выручка</th>
+                      <th class="text-end">Расходы</th>
+                      <th class="text-end">Прибыль</th>
+                      <th class="text-end">Заказы</th>
+                    </tr>
+                  </thead>
+                  <tbody>${clientRows}</tbody>
+                  <tfoot class="">
+                    <tr>
+                      <th>Итого</th>
+                      <th class="text-end">${formatCurrency(totalClientRevenue)}</th>
+                      <th class="text-end">${formatCurrency(totalClientCost)}</th>
+                      <th class="text-end">${formatCurrency(totalClientProfit)}</th>
+                      <th class="text-end">${totalClientOrders}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- KPI -->
       <div class="card shadow-sm">
         <div class="card-header">
