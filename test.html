@@ -359,6 +359,18 @@
       <div class="mt-4">
         <h3>Общий обзор («Итоги»)</h3>
         <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
+        <div class="d-flex align-items-center mb-3">
+          <select id="summaryPeriod" class="form-select form-select-sm w-auto me-2">
+            <option value="all">Весь период</option>
+            <option value="week">Неделя</option>
+            <option value="month">Месяц</option>
+            <option value="year">Год</option>
+            <option value="custom">Ручной</option>
+          </select>
+          <input type="date" id="summaryFrom" class="form-control form-control-sm w-auto me-2 d-none">
+          <input type="date" id="summaryTo" class="form-control form-control-sm w-auto me-2 d-none">
+          <button class="btn btn-primary btn-sm d-none" id="summaryApplyBtn">Применить</button>
+        </div>
         <div id="summaryContent"></div>
       </div>
     </div>
@@ -1512,6 +1524,10 @@ function initAll(){
   renderHistoryTable();
   updateHistoryStats();
   renderSummary();
+  const periodSelect = document.getElementById("summaryPeriod");
+  periodSelect.addEventListener("change", onSummaryPeriodChange);
+  document.getElementById("summaryApplyBtn").addEventListener("click", renderSummary);
+  onSummaryPeriodChange(true);
   document.getElementById("calcOperatorRate").value = appData.calcSettings.operatorRate || "";
   document.getElementById("calcDowntimeCost").value = appData.calcSettings.downtimeCost || "";
   document.getElementById("calcPreparationRate").value = appData.calcSettings.preparationRate || "";
@@ -4251,18 +4267,29 @@ function onEditCalcHistory(timestamp){
   tab.show();
 }
 
-function ensureIconsLoaded() {
-  if (!document.querySelector('link[href*="bootstrap-icons"]')) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
-    document.head.appendChild(link);
+  function ensureIconsLoaded() {
+    if (!document.querySelector('link[href*="bootstrap-icons"]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css';
+      document.head.appendChild(link);
+    }
   }
-}
 
-	
-function renderSummary() {
-ensureIconsLoaded();
+  function onSummaryPeriodChange(skipRender){
+    const val = document.getElementById('summaryPeriod').value;
+    const fromInput = document.getElementById('summaryFrom');
+    const toInput = document.getElementById('summaryTo');
+    const applyBtn = document.getElementById('summaryApplyBtn');
+    const show = val === 'custom';
+    fromInput.classList.toggle('d-none', !show);
+    toInput.classList.toggle('d-none', !show);
+    applyBtn.classList.toggle('d-none', !show);
+    if(val !== 'custom' && !skipRender) renderSummary();
+  }
+
+  function renderSummary() {
+  ensureIconsLoaded();
 // Вспомогательные функции форматирования
   const formatCurrency = (value) => new Intl.NumberFormat('ru-RU', { 
     style: 'currency', 
@@ -4271,11 +4298,27 @@ ensureIconsLoaded();
     maximumFractionDigits: 2
   }).format(value);
 
-  const formatNumber = (value, decimals = 2) => 
-    new Intl.NumberFormat('ru-RU', { 
+  const formatNumber = (value, decimals = 2) =>
+    new Intl.NumberFormat('ru-RU', {
       minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals 
+      maximumFractionDigits: decimals
     }).format(value);
+
+  const period = document.getElementById('summaryPeriod').value;
+  let from = new Date('1970-01-01');
+  let to = new Date();
+  if(period === 'week'){
+    from.setDate(to.getDate() - 7);
+  } else if(period === 'month'){
+    from.setMonth(to.getMonth() - 1);
+  } else if(period === 'year'){
+    from.setFullYear(to.getFullYear() - 1);
+  } else if(period === 'custom'){
+    const fv = document.getElementById('summaryFrom').value;
+    const tv = document.getElementById('summaryTo').value;
+    if(fv) from = new Date(fv);
+    if(tv){ to = new Date(tv); to.setDate(to.getDate()+1); }
+  }
 
   // 1. Расчет капитальных вложений
   const calculateCapitalInvestments = () => {
@@ -4299,10 +4342,11 @@ ensureIconsLoaded();
   };
 
   // 2. Анализ завершенных заказов
-  const analyzeCompletedOrders = () => {
-    const completedOrders = appData.calcHistory.filter(
-      o => o.orderStatus === "done" || o.orderStatus === "paid"
-    );
+  const analyzeCompletedOrders = (fromDate, toDate) => {
+    const completedOrders = appData.calcHistory.filter(o => {
+      const ts = o.timestamp || (o.dateStr ? parseHistoryDate(o.dateStr).getTime() : 0);
+      return (o.orderStatus === "done" || o.orderStatus === "paid") && ts >= fromDate.getTime() && ts < toDate.getTime();
+    });
     const results = {
       totalRevenue: 0,
       totalTax: 0,
@@ -4882,7 +4926,7 @@ ensureIconsLoaded();
 
   // Выполнение расчетов
   const capital = calculateCapitalInvestments();
-  const ordersAnalysis = analyzeCompletedOrders();
+  const ordersAnalysis = analyzeCompletedOrders(from, to);
   const kpis = calculateKPIs(capital, ordersAnalysis);
 
   // Рендеринг результата
