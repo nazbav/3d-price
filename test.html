@@ -4456,6 +4456,12 @@ ensureIconsLoaded();
     const totalGrams = Object.values(materialStats).reduce(
       (sum, m) => sum + m.totalGrams, 0);
 
+    const ebitda = netProfit + totalTax + totalPrinterCost;
+    const breakEvenRevenue = capital.total + (totalCost - totalPrinterCost) + totalTax;
+    const revenueGap = breakEvenRevenue - totalRevenue;
+    const profitabilityIndex = capital.total > 0 ? (netProfit + capital.total) / capital.total : 0;
+    const depreciationRate = capital.printersCost > 0 ? (totalPrinterCost / capital.printersCost) * 100 : 0;
+
     return {
       grossProfit,
       netProfit,
@@ -4484,7 +4490,12 @@ ensureIconsLoaded();
         maintenance: totalCost > 0 ? (totalMaintenanceCost / totalCost) * 100 : 0
       },
       totalMaterialCost,
-      totalGrams
+      totalGrams,
+      ebitda,
+      breakEvenRevenue,
+      revenueGap,
+      profitabilityIndex,
+      depreciationRate
     };
   };
 
@@ -4523,7 +4534,12 @@ ensureIconsLoaded();
       costPerKg,
       netProfitPerKg,
       printerUtilization,
-      costStructure
+      costStructure,
+      ebitda,
+      breakEvenRevenue,
+      revenueGap,
+      profitabilityIndex,
+      depreciationRate
     } = kpis;
 
     const paybackAbs = netProfit - capital.total;
@@ -4572,7 +4588,8 @@ ensureIconsLoaded();
       {title: 'Материал / заказ', value: avgMaterialPerOrder / 1000, unit: 'кг', desc: 'Средний расход', icon: 'bi-bezier', decimals: 3},
       {title: 'Себестоимость кг', value: costPerKg, unit: '₽/кг', desc: '(Затраты / Материалы)', icon: 'bi-printer'},
       {title: 'Прибыль / кг', value: netProfitPerKg, unit: '₽/кг', desc: '(Чистая прибыль / Материалы)', icon: 'bi-box'},
-      {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', desc: '(Использование / Потенциал)', icon: 'bi-cpu'}
+      {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', desc: '(Использование / Потенциал)', icon: 'bi-cpu'},
+      {title: 'Индекс прибыльности', value: profitabilityIndex, unit: '', desc: '(Прибыль + Вложения) / Вложения', icon: 'bi-clipboard-data', decimals: 2}
     ].map(card => `
       <div class="col-md-3 col-sm-6 mb-3">
         <div class="card h-100 shadow-sm">
@@ -4660,10 +4677,37 @@ ensureIconsLoaded();
                 <h3 class="text-center ${netProfit >= 0 ? 'text-success' : 'text-danger'}">
                   ${formatCurrency(netProfit)}
                 </h3>
+          </div>
+        </div>
+      </div>
+
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>EBITDA</h6>
+                <h3 class="text-center">${formatCurrency(ebitda)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Безубыточность</h6>
+                <h3 class="text-center">${formatCurrency(breakEvenRevenue)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Дельта до безуб.</h6>
+                <h3 class="text-center ${revenueGap <= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(revenueGap)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Износ принтеров</h6>
+                <h3 class="text-center">${formatNumber(depreciationRate,1)}%</h3>
               </div>
             </div>
           </div>
-          
+
           <div class="row">
             <div class="col-md-6">
               <div class="card mb-3">
