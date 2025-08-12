@@ -3946,6 +3946,7 @@ async function checkMyNalogStatus() {
         statusEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${data.message}`;
       } else if(data.displayName) {
         statusEl.innerHTML = `<i class="bi bi-check-square me-2"></i>ИНН ${data.inn} ${data.displayName}`;
+        localStorage.setItem('my_nalog_inn', data.inn || '');
       } else {
         statusEl.textContent = 'Сервис доступен';
       }
@@ -4019,6 +4020,11 @@ async function confirmMyNalogSms(){
         localStorage.setItem('my_nalog_token', data.token);
         localStorage.setItem('my_nalog_refresh', data.refreshToken || '');
         document.getElementById('myNalogToken').value = data.token;
+        if(data.inn){
+          localStorage.setItem('my_nalog_inn', data.inn);
+        } else {
+          await checkMyNalogStatus();
+        }
         statusEl.textContent = 'Токен получен';
       }else{
         statusEl.textContent = 'Код подтвержден';
