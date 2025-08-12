@@ -4279,15 +4279,23 @@ ensureIconsLoaded();
 
   // 1. Расчет капитальных вложений
   const calculateCapitalInvestments = () => {
-    const capital = {
-      printersCost: appData.printers.reduce((sum, p) => sum + (p.cost || 0), 0),
-      globalMats: appData.materials.reduce(
-        (sum, m) => sum + ((m.costPerKg || 0) * (m.declaredWeight || 0)), 0),
-      globalAdds: appData.additionalGlobal.reduce((sum, a) => sum + (a.cost || 0), 0)
+    const printersCost = appData.printers.reduce((sum, p) => sum + (p.cost || 0), 0);
+    const materials = appData.materials.reduce((acc, m) => {
+      const weight = m.declaredWeight || 0;
+      const cost = (m.costPerKg || 0) * weight;
+      acc.cost += cost;
+      acc.weight += weight;
+      return acc;
+    }, { cost: 0, weight: 0 });
+    const additional = appData.additionalGlobal.reduce((sum, a) => sum + (a.cost || 0), 0);
+    const total = printersCost + materials.cost + additional;
+    return {
+      printersCost,
+      materialsCost: materials.cost,
+      materialsWeight: materials.weight,
+      additionalCost: additional,
+      total
     };
-
-    capital.total = Object.values(capital).reduce((sum, val) => sum + val, 0);
-    return capital;
   };
 
   // 2. Анализ завершенных заказов
@@ -4303,6 +4311,11 @@ ensureIconsLoaded();
       totalElectricityCost: 0,
       totalOperatorExpenses: 0,
       totalModelingCost: 0,
+      totalShippingCost: 0,
+      totalAdditionalCost: 0,
+      totalMaterialCost: 0,
+      totalPrinterCost: 0,
+      totalMaintenanceCost: 0,
       materialStats: {},
       printerStats: {},
       completedOrdersCount: completedOrders.length
@@ -4313,7 +4326,11 @@ ensureIconsLoaded();
       results.printerStats[p.id] = {
         name: p.name,
         hours: 0,
-        cost: 0,
+        amortization: 0,
+        energy: 0,
+        material: 0,
+        maintenance: 0,
+        revenue: 0,
         prints: 0
       };
     });
@@ -4337,55 +4354,71 @@ ensureIconsLoaded();
       // Обработка деталей заказа
       order.details?.forEach(printer => {
         const printerId = printer.printerId;
-        
+
         if (!results.printerStats[printerId]) {
           results.printerStats[printerId] = {
             name: printer.printerName,
             hours: 0,
-            cost: 0,
+            amortization: 0,
+            energy: 0,
+            material: 0,
+            maintenance: 0,
+            revenue: 0,
             prints: 0
           };
         }
-        
+
         printer.linesDetail?.forEach(model => {
-          if (model.materialData?.id) {
-            const materialId = model.materialData.id;
-            
+          const materialId = model.materialData?.id;
+          const materialCost = model.costMaterial || 0;
+          const amortization = model.costPrinterPart || 0;
+          const electric = model.costElectric || 0;
+          const maintenance = model.costMaintenance || 0;
+          const modelRevenue = model.subTotalModel || 0;
+          const hours = model.hours || 0;
+
+          if (materialId) {
             // Статистика по материалам
             if (!results.materialStats[materialId]) {
               const mat = findMaterialById(materialId);
               results.materialStats[materialId] = {
-                name: mat ? `${mat.name} (ID: ${mat.id}) | ${mat.manufacturer}` : 
+                name: mat ? `${mat.name} (ID: ${mat.id}) | ${mat.manufacturer}` :
                           `${model.matName} | ${model.materialData?.manufacturer || 'N/A'}`,
                 totalGrams: 0,
                 totalCost: 0
               };
             }
-            
+
             results.materialStats[materialId].totalGrams += model.realWeight || 0;
-            results.materialStats[materialId].totalCost += model.costMaterial || 0;
-            
-            // Учет затрат
-            results.totalCost += model.costPrinterPart || 0;
-            results.totalCost += model.costElectric || 0;
-            results.totalCost += model.costMaintenance || 0;
-            
-            // Статистика по принтерам
-            results.printerStats[printerId].hours += model.hours || 0;
-            results.printerStats[printerId].cost += model.costPrinterPart || 0;
-            results.printerStats[printerId].prints++;
-            
-            results.totalElectricityCost += model.costElectric || 0;
-            results.totalPrintHours += model.hours || 0;
+            results.materialStats[materialId].totalCost += materialCost;
           }
+
+          // Глобальные суммы
+          results.totalMaterialCost += materialCost;
+          results.totalPrinterCost += amortization;
+          results.totalMaintenanceCost += maintenance;
+          results.totalElectricityCost += electric;
+          results.totalCost += materialCost + amortization + electric + maintenance;
+          results.totalPrintHours += hours;
+
+          // Статистика по принтерам
+          const ps = results.printerStats[printerId];
+          ps.hours += hours;
+          ps.amortization += amortization;
+          ps.energy += electric;
+          ps.material += materialCost;
+          ps.maintenance += maintenance;
+          ps.revenue += modelRevenue;
+          ps.prints++;
         });
       });
-      
+
       // Глобальные расходы
-      results.totalCost += order.globalAdditional?.sumGlobalAdd || 0;
-      results.totalCost += order.shipping || 0;
-      results.totalCost += order.totalOperatorCost || 0;
-      results.totalCost += order.modelingCost || 0;
+      const addCost = order.globalAdditional?.sumGlobalAdd || 0;
+      const shipping = order.shipping || 0;
+      results.totalAdditionalCost += addCost;
+      results.totalShippingCost += shipping;
+      results.totalCost += addCost + shipping + (order.totalOperatorCost || 0) + (order.modelingCost || 0);
     });
 
     return results;
@@ -4399,37 +4432,70 @@ ensureIconsLoaded();
       totalTax,
       totalPrintHours,
       totalElectricityCost,
+      totalOperatorExpenses,
+      totalModelingCost,
+      totalShippingCost,
+      totalAdditionalCost,
+      totalMaterialCost,
+      totalPrinterCost,
+      totalMaintenanceCost,
       materialStats,
       completedOrdersCount
     } = ordersAnalysis;
-    
-    const netProfit = totalRevenue - totalCost - totalTax;
-    const profitability = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-    
-    // Расчет показателей по материалам
-    const totalMaterialCost = Object.values(materialStats).reduce(
-      (sum, m) => sum + m.totalCost, 0);
+
+    const grossProfit = totalRevenue - totalCost;
+    const netProfit = grossProfit - totalTax;
+    const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+    const roi = capital.total > 0 ? (netProfit / capital.total) * 100 : 0;
+
+    const paybackOrders = completedOrdersCount > 0 && netProfit !== 0
+      ? capital.total / (netProfit / completedOrdersCount)
+      : 0;
+
     const totalGrams = Object.values(materialStats).reduce(
       (sum, m) => sum + m.totalGrams, 0);
 
+    const ebitda = netProfit + totalTax + totalPrinterCost;
+    const breakEvenRevenue = capital.total + (totalCost - totalPrinterCost) + totalTax;
+    const revenueGap = breakEvenRevenue - totalRevenue;
+    const profitabilityIndex = capital.total > 0 ? (netProfit + capital.total) / capital.total : 0;
+    const depreciationRate = capital.printersCost > 0 ? (totalPrinterCost / capital.printersCost) * 100 : 0;
+
     return {
+      grossProfit,
       netProfit,
-      profitability,
+      netMargin,
+      grossMargin,
+      roi,
+      paybackOrders,
       profitPerHour: totalPrintHours > 0 ? netProfit / totalPrintHours : 0,
-      payback: netProfit - capital.total,
+      revenuePerHour: totalPrintHours > 0 ? totalRevenue / totalPrintHours : 0,
       avgOrderRevenue: completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0,
-      netProfitPerOrder: completedOrdersCount > 0 ? netProfit / completedOrdersCount : 0,
-      materialCostPerRevenue: totalRevenue > 0 ? (totalMaterialCost / totalRevenue) * 100 : 0,
-      marginPercent: totalRevenue > 0 ? 
-        ((totalRevenue - totalMaterialCost - totalElectricityCost) / totalRevenue) * 100 : 0,
-      netProfitPerGram: totalGrams > 0 ? netProfit / (totalGrams / 1000) : 0,
-      costPerGram: totalGrams > 0 ? totalCost / (totalGrams / 1000) : 0,
-      printerUtilization: appData.printers.length > 0 ? 
+      avgOrderProfit: completedOrdersCount > 0 ? netProfit / completedOrdersCount : 0,
+      avgPrintHoursPerOrder: completedOrdersCount > 0 ? totalPrintHours / completedOrdersCount : 0,
+      avgMaterialPerOrder: completedOrdersCount > 0 ? totalGrams / completedOrdersCount : 0,
+      costPerKg: totalGrams > 0 ? totalCost / (totalGrams / 1000) : 0,
+      netProfitPerKg: totalGrams > 0 ? netProfit / (totalGrams / 1000) : 0,
+      printerUtilization: appData.printers.length > 0 ?
         (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0,
-      costPerHour: totalPrintHours > 0 ? totalCost / totalPrintHours : 0,
-      materialCostPerHour: totalPrintHours > 0 ? totalMaterialCost / totalPrintHours : 0,
+      costStructure: {
+        material: totalCost > 0 ? (totalMaterialCost / totalCost) * 100 : 0,
+        electricity: totalCost > 0 ? (totalElectricityCost / totalCost) * 100 : 0,
+        operator: totalCost > 0 ? (totalOperatorExpenses / totalCost) * 100 : 0,
+        modeling: totalCost > 0 ? (totalModelingCost / totalCost) * 100 : 0,
+        shipping: totalCost > 0 ? (totalShippingCost / totalCost) * 100 : 0,
+        additional: totalCost > 0 ? (totalAdditionalCost / totalCost) * 100 : 0,
+        amortization: totalCost > 0 ? (totalPrinterCost / totalCost) * 100 : 0,
+        maintenance: totalCost > 0 ? (totalMaintenanceCost / totalCost) * 100 : 0
+      },
       totalMaterialCost,
-      totalGrams
+      totalGrams,
+      ebitda,
+      breakEvenRevenue,
+      revenueGap,
+      profitabilityIndex,
+      depreciationRate
     };
   };
 
@@ -4441,25 +4507,42 @@ ensureIconsLoaded();
       totalTax,
       totalCost,
       totalOperatorExpenses,
+      totalModelingCost,
+      totalElectricityCost,
+      totalMaterialCost,
+      totalShippingCost,
+      totalAdditionalCost,
+      totalPrinterCost,
+      totalMaintenanceCost,
       materialStats,
       printerStats
     } = ordersAnalysis;
 
     const {
+      grossProfit,
       netProfit,
-      profitability,
+      netMargin,
+      grossMargin,
+      roi,
+      paybackOrders,
       profitPerHour,
-      payback,
+      revenuePerHour,
       avgOrderRevenue,
-      netProfitPerOrder,
-      materialCostPerRevenue,
-      marginPercent,
-      netProfitPerGram,
-      costPerGram,
+      avgOrderProfit,
+      avgPrintHoursPerOrder,
+      avgMaterialPerOrder,
+      costPerKg,
+      netProfitPerKg,
       printerUtilization,
-      costPerHour,
-      materialCostPerHour
+      costStructure,
+      ebitda,
+      breakEvenRevenue,
+      revenueGap,
+      profitabilityIndex,
+      depreciationRate
     } = kpis;
+
+    const paybackAbs = netProfit - capital.total;
 
     // Форматирование данных для таблиц
     const materialRows = Object.values(materialStats).map(m => `
@@ -4467,48 +4550,46 @@ ensureIconsLoaded();
         <td>${m.name}</td>
         <td class="text-end">${formatNumber(m.totalGrams / 1000, 3)} кг</td>
         <td class="text-end">${formatCurrency(m.totalCost)}</td>
-        <td class="text-end">${m.totalGrams > 0 ? 
+        <td class="text-end">${m.totalGrams > 0 ?
           formatCurrency(m.totalCost / (m.totalGrams / 1000)) : '0.00'} ₽/кг</td>
       </tr>
     `).join('');
 
-    const printerRows = Object.values(printerStats).map(p => `
+    const printerRows = Object.values(printerStats).map(p => {
+      const expenses = p.amortization + p.energy + p.material + p.maintenance;
+      const profit = p.revenue - expenses;
+      return `
       <tr>
         <td>${p.name}</td>
         <td class="text-end">${formatNumber(p.hours, 1)} ч</td>
-        <td class="text-end">${formatCurrency(p.cost)}</td>
-        <td class="text-end">${p.hours > 0 ? 
-          formatCurrency(p.cost / p.hours) : '0.00'} ₽/ч</td>
+        <td class="text-end">${formatCurrency(p.revenue)}</td>
+        <td class="text-end">${formatCurrency(expenses)}</td>
+        <td class="text-end ${profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(profit)}</td>
         <td class="text-end">${p.prints}</td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
+
+    const totalPrinterRevenue = Object.values(printerStats).reduce((sum, p) => sum + p.revenue, 0);
+    const totalPrinterExpenses = Object.values(printerStats).reduce((sum, p) => sum + p.amortization + p.energy + p.material + p.maintenance, 0);
+    const totalPrinterProfit = totalPrinterRevenue - totalPrinterExpenses;
+    const totalPrinterPrints = Object.values(printerStats).reduce((sum, p) => sum + p.prints, 0);
 
     // Генерация карточек KPI
     const kpiCards = [
-      {title: 'Рентабельность', value: profitability, unit: '%', 
-       desc: '(Чистая прибыль / Выручка)', icon: 'bi-graph-up'},
-      {title: 'Прибыль в час', value: profitPerHour, unit: '₽/ч', 
-       desc: '(Чистая прибыль / Часы печати)', icon: 'bi-speedometer2'},
-      {title: 'Маржинальность', value: marginPercent, unit: '%', 
-       desc: '(Выручка - Материалы - Электричество)', icon: 'bi-percent'},
-      {title: 'Материалы / Выручка', value: materialCostPerRevenue, unit: '%', 
-       desc: 'Доля затрат на материалы', icon: 'bi-coin'},
-      {title: 'Средний чек', value: avgOrderRevenue, unit: '₽', 
-       desc: '(Выручка / Заказы)', icon: 'bi-receipt'},
-      {title: 'Прибыль / заказ', value: netProfitPerOrder, unit: '₽', 
-       desc: '(Чистая прибыль / Заказы)', icon: 'bi-box-seam'},
-      {title: 'Себестоимость печати', value: costPerGram, unit: '₽/кг', 
-       desc: '(Общие затраты / Материалы)', icon: 'bi-printer'},
-      {title: 'Прибыль / кг', value: netProfitPerGram, unit: '₽/кг', 
-       desc: '(Чистая прибыль / Материалы)', icon: 'bi-box'},
-      {title: 'Электричество', value: ordersAnalysis.totalElectricityCost, unit: '₽', 
-       desc: 'Общие затраты', icon: 'bi-lightning'},
-      {title: 'Себестоимость часа', value: costPerHour, unit: '₽/ч', 
-       desc: '(Затраты / Часы печати)', icon: 'bi-clock'},
-      {title: 'Материалы / час', value: materialCostPerHour, unit: '₽/ч', 
-       desc: 'Расход материалов', icon: 'bi-hourglass-split'},
-      {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', 
-       desc: '(Использование / Потенциал)', icon: 'bi-cpu'}
+      {title: 'ROI', value: roi, unit: '%', desc: '(Чистая прибыль / Капитал)', icon: 'bi-piggy-bank'},
+      {title: 'Окупаемость', value: paybackOrders, unit: 'заказов', desc: 'Заказы для возврата вложений', icon: 'bi-arrow-repeat'},
+      {title: 'Чистая маржа', value: netMargin, unit: '%', desc: '(Чистая прибыль / Выручка)', icon: 'bi-graph-up'},
+      {title: 'Валовая маржа', value: grossMargin, unit: '%', desc: '(Валовая прибыль / Выручка)', icon: 'bi-graph-up-arrow'},
+      {title: 'Выручка в час', value: revenuePerHour, unit: '₽/ч', desc: '(Выручка / Часы печати)', icon: 'bi-speedometer'},
+      {title: 'Прибыль в час', value: profitPerHour, unit: '₽/ч', desc: '(Чистая прибыль / Часы печати)', icon: 'bi-speedometer2'},
+      {title: 'Средний чек', value: avgOrderRevenue, unit: '₽', desc: '(Выручка / Заказы)', icon: 'bi-receipt'},
+      {title: 'Прибыль / заказ', value: avgOrderProfit, unit: '₽', desc: '(Чистая прибыль / Заказы)', icon: 'bi-box-seam'},
+      {title: 'Часов на заказ', value: avgPrintHoursPerOrder, unit: 'ч', desc: 'Среднее время печати', icon: 'bi-clock'},
+      {title: 'Материал / заказ', value: avgMaterialPerOrder / 1000, unit: 'кг', desc: 'Средний расход', icon: 'bi-bezier', decimals: 3},
+      {title: 'Себестоимость кг', value: costPerKg, unit: '₽/кг', desc: '(Затраты / Материалы)', icon: 'bi-printer'},
+      {title: 'Прибыль / кг', value: netProfitPerKg, unit: '₽/кг', desc: '(Чистая прибыль / Материалы)', icon: 'bi-box'},
+      {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', desc: '(Использование / Потенциал)', icon: 'bi-cpu'},
+      {title: 'Индекс прибыльности', value: profitabilityIndex, unit: '', desc: '(Прибыль + Вложения) / Вложения', icon: 'bi-clipboard-data', decimals: 2}
     ].map(card => `
       <div class="col-md-3 col-sm-6 mb-3">
         <div class="card h-100 shadow-sm">
@@ -4516,7 +4597,7 @@ ensureIconsLoaded();
             <div class="d-flex align-items-center">
               <i class="bi ${card.icon} fs-3 text-primary me-3"></i>
               <div>
-                <h5 class="mb-0">${formatNumber(card.value, 1)}${card.unit}</h5>
+                <h5 class="mb-0">${formatNumber(card.value, card.decimals ?? 1)}${card.unit}</h5>
                 <small class="text-muted">${card.title}</small>
               </div>
             </div>
@@ -4542,11 +4623,12 @@ ensureIconsLoaded();
             </div>
             <div class="col-md-4">
               <h6>Материалы:</h6>
-              <p class="mb-1">Глобальные: <strong>${formatCurrency(capital.globalMats)}</strong></p>
+              <p class="mb-1">Сумма: <strong>${formatCurrency(capital.materialsCost)}</strong></p>
+              <p class="mb-1">Вес: <strong>${formatNumber(capital.materialsWeight, 2)} кг</strong></p>
             </div>
             <div class="col-md-4">
               <h6>Дополнительно:</h6>
-              <p class="mb-1">Глобальные: <strong>${formatCurrency(capital.globalAdds)}</strong></p>
+              <p class="mb-1">Сумма: <strong>${formatCurrency(capital.additionalCost)}</strong></p>
             </div>
           </div>
           <div class="alert alert-primary mt-3 mb-0">
@@ -4595,10 +4677,37 @@ ensureIconsLoaded();
                 <h3 class="text-center ${netProfit >= 0 ? 'text-success' : 'text-danger'}">
                   ${formatCurrency(netProfit)}
                 </h3>
+          </div>
+        </div>
+      </div>
+
+          <div class="row mb-4">
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>EBITDA</h6>
+                <h3 class="text-center">${formatCurrency(ebitda)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Безубыточность</h6>
+                <h3 class="text-center">${formatCurrency(breakEvenRevenue)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Дельта до безуб.</h6>
+                <h3 class="text-center ${revenueGap <= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(revenueGap)}</h3>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="border p-3 rounded">
+                <h6>Износ принтеров</h6>
+                <h3 class="text-center">${formatNumber(depreciationRate,1)}%</h3>
               </div>
             </div>
           </div>
-          
+
           <div class="row">
             <div class="col-md-6">
               <div class="card mb-3">
@@ -4606,22 +4715,44 @@ ensureIconsLoaded();
                   <h6>Детализация расходов</h6>
                   <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between">
+                      <span>Материалы:</span>
+                      <span>${formatCurrency(totalMaterialCost)} (${formatNumber(costStructure.material,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Электричество:</span>
+                      <span>${formatCurrency(totalElectricityCost)} (${formatNumber(costStructure.electricity,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Оператор:</span>
+                      <span>${formatCurrency(totalOperatorExpenses)} (${formatNumber(costStructure.operator,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Моделирование:</span>
+                      <span>${formatCurrency(totalModelingCost)} (${formatNumber(costStructure.modeling,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Доставка:</span>
+                      <span>${formatCurrency(totalShippingCost)} (${formatNumber(costStructure.shipping,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Доп. расходы:</span>
+                      <span>${formatCurrency(totalAdditionalCost)} (${formatNumber(costStructure.additional,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Амортизация:</span>
+                      <span>${formatCurrency(totalPrinterCost)} (${formatNumber(costStructure.amortization,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Обслуживание:</span>
+                      <span>${formatCurrency(totalMaintenanceCost)} (${formatNumber(costStructure.maintenance,1)}%)</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
                       <span>Налоги:</span>
                       <span>${formatCurrency(totalTax)}</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
-                      <span>Расходы на оператора:</span>
-                      <span>${formatCurrency(totalOperatorExpenses)}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Расходы на моделирование:</span>
-                      <span>${formatCurrency(ordersAnalysis.totalModelingCost)}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
                       <span>Окупаемость (прибыль - вложения):</span>
-                      <span class="${payback >= 0 ? 'text-success' : 'text-danger'}">
-                        ${formatCurrency(payback)}
-                      </span>
+                      <span class="${paybackAbs >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(paybackAbs)}</span>
                     </li>
                   </ul>
                 </div>
@@ -4632,28 +4763,28 @@ ensureIconsLoaded();
                 <div class="card-body">
                   <h6>Эффективность</h6>
                   <div class="progress mb-2" style="height: 25px">
-                    <div class="progress-bar" role="progressbar" 
-                         style="width: ${Math.min(100, profitability)}%" 
-                         aria-valuenow="${profitability}" 
-                         aria-valuemin="0" 
+                    <div class="progress-bar" role="progressbar"
+                         style="width: ${Math.min(100, netMargin)}%"
+                         aria-valuenow="${netMargin}"
+                         aria-valuemin="0"
                          aria-valuemax="100">
-                      Рентабельность: ${formatNumber(profitability, 1)}%
+                      Чистая маржа: ${formatNumber(netMargin, 1)}%
                     </div>
                   </div>
                   <div class="progress mb-2" style="height: 25px">
-                    <div class="progress-bar bg-success" role="progressbar" 
-                         style="width: ${Math.min(100, marginPercent)}%" 
-                         aria-valuenow="${marginPercent}" 
-                         aria-valuemin="0" 
+                    <div class="progress-bar bg-success" role="progressbar"
+                         style="width: ${Math.min(100, grossMargin)}%"
+                         aria-valuenow="${grossMargin}"
+                         aria-valuemin="0"
                          aria-valuemax="100">
-                      Маржинальность: ${formatNumber(marginPercent, 1)}%
+                      Валовая маржа: ${formatNumber(grossMargin, 1)}%
                     </div>
                   </div>
                   <div class="progress" style="height: 25px">
-                    <div class="progress-bar bg-info" role="progressbar" 
-                         style="width: ${Math.min(100, printerUtilization)}%" 
-                         aria-valuenow="${printerUtilization}" 
-                         aria-valuemin="0" 
+                    <div class="progress-bar bg-info" role="progressbar"
+                         style="width: ${Math.min(100, printerUtilization)}%"
+                         aria-valuenow="${printerUtilization}"
+                         aria-valuemin="0"
                          aria-valuemax="100">
                       Загрузка: ${formatNumber(printerUtilization, 1)}%
                     </div>
@@ -4702,7 +4833,7 @@ ensureIconsLoaded();
         <div class="col-md-6">
           <div class="card shadow-sm h-100">
             <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-printer me-2"></i>Затраты по принтерам</h6>
+              <h6 class="mb-0"><i class="bi bi-printer me-2"></i>Показатели по принтерам</h6>
             </div>
             <div class="card-body p-0">
               <div class="table-responsive">
@@ -4711,8 +4842,9 @@ ensureIconsLoaded();
                     <tr>
                       <th>Принтер</th>
                       <th class="text-end">Время</th>
-                      <th class="text-end">Амортизация</th>
-                      <th class="text-end">₽/час</th>
+                      <th class="text-end">Доход</th>
+                      <th class="text-end">Расходы</th>
+                      <th class="text-end">Прибыль</th>
                       <th class="text-end">Моделей</th>
                     </tr>
                   </thead>
@@ -4721,10 +4853,10 @@ ensureIconsLoaded();
                     <tr>
                       <th>Итого</th>
                       <th class="text-end">${formatNumber(ordersAnalysis.totalPrintHours, 1)} ч</th>
-                      <th class="text-end">${formatCurrency(Object.values(printerStats).reduce((sum, p) => sum + p.cost, 0))}</th>
-                      <th class="text-end">${ordersAnalysis.totalPrintHours > 0 ? 
-                        formatCurrency(Object.values(printerStats).reduce((sum, p) => sum + p.cost, 0) / ordersAnalysis.totalPrintHours) : '0.00'} ₽/ч</th>
-                      <th class="text-end">${Object.values(printerStats).reduce((sum, p) => sum + p.prints, 0)}</th>
+                      <th class="text-end">${formatCurrency(totalPrinterRevenue)}</th>
+                      <th class="text-end">${formatCurrency(totalPrinterExpenses)}</th>
+                      <th class="text-end">${formatCurrency(totalPrinterProfit)}</th>
+                      <th class="text-end">${totalPrinterPrints}</th>
                     </tr>
                   </tfoot>
                 </table>
