@@ -4438,7 +4438,8 @@ function onEditCalcHistory(timestamp){
         material: 0,
         maintenance: 0,
         revenue: 0,
-        prints: 0
+        prints: 0,
+        grams: 0
       };
     });
 
@@ -4464,18 +4465,19 @@ function onEditCalcHistory(timestamp){
       order.details?.forEach(printer => {
         const printerId = printer.printerId;
 
-        if (!results.printerStats[printerId]) {
-          results.printerStats[printerId] = {
-            name: printer.printerName,
-            hours: 0,
-            amortization: 0,
-            energy: 0,
-            material: 0,
-            maintenance: 0,
-            revenue: 0,
-            prints: 0
-          };
-        }
+          if (!results.printerStats[printerId]) {
+            results.printerStats[printerId] = {
+              name: printer.printerName,
+              hours: 0,
+              amortization: 0,
+              energy: 0,
+              material: 0,
+              maintenance: 0,
+              revenue: 0,
+              prints: 0,
+              grams: 0
+            };
+          }
 
         printer.linesDetail?.forEach(model => {
           const materialId = model.materialData?.id;
@@ -4494,6 +4496,8 @@ function onEditCalcHistory(timestamp){
               results.materialStats[materialId] = {
                 name: mat ? `${mat.name} (ID: ${mat.id}) | ${mat.manufacturer}` :
                           `${model.matName} | ${model.materialData?.manufacturer || 'N/A'}`,
+                type: mat?.materialType || model.materialData?.materialType || '',
+                manufacturer: mat?.manufacturer || model.materialData?.manufacturer || '',
                 totalGrams: 0,
                 totalCost: 0
               };
@@ -4521,6 +4525,7 @@ function onEditCalcHistory(timestamp){
           ps.maintenance += maintenance;
           ps.revenue += modelRevenue;
           ps.prints++;
+          ps.grams += model.realWeight || 0;
         });
       });
 
@@ -5054,6 +5059,14 @@ function onEditCalcHistory(timestamp){
               <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Цена по материалам (₽/г)</h6>
             </div>
             <div class="card-body">
+              <div class="mb-2">
+                <select id="materialChartGroup" class="form-select form-select-sm w-auto">
+                  <option value="material">Материал</option>
+                  <option value="type">Тип пластика</option>
+                  <option value="typeManuf">Тип+Производитель</option>
+                  <option value="printer">Принтер</option>
+                </select>
+              </div>
               <canvas id="materialPriceChart"></canvas>
             </div>
           </div>
@@ -5087,25 +5100,65 @@ function onEditCalcHistory(timestamp){
   const renderSummaryCharts = (ordersAnalysis) => {
     const matCanvas = document.getElementById('materialPriceChart');
     const clientCanvas = document.getElementById('clientPriceChart');
+
+    const groupSelect = document.getElementById('materialChartGroup');
     if (!matCanvas || !clientCanvas) return;
 
-    const materialLabels = Object.values(ordersAnalysis.materialStats).map(m => m.name);
-    const materialData = Object.values(ordersAnalysis.materialStats).map(m => m.totalGrams > 0 ? m.totalCost / m.totalGrams : 0);
-    if (window.materialChart) window.materialChart.destroy();
-    window.materialChart = new Chart(matCanvas, {
-      type: 'bar',
-      data: {
-        labels: materialLabels,
-        datasets: [{
-          label: '₽/г',
-          data: materialData,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: { scales: { y: { beginAtZero: true } } }
-    });
+    const buildMatData = (group) => {
+      if (group === 'type') {
+        const map = {};
+        Object.values(ordersAnalysis.materialStats).forEach(m => {
+          const key = m.type || 'N/A';
+          if (!map[key]) map[key] = { grams: 0, cost: 0 };
+          map[key].grams += m.totalGrams;
+          map[key].cost += m.totalCost;
+        });
+        const labels = Object.keys(map);
+        const data = labels.map(k => map[k].grams > 0 ? map[k].cost / map[k].grams : 0);
+        return { labels, data };
+      } else if (group === 'typeManuf') {
+        const map = {};
+        Object.values(ordersAnalysis.materialStats).forEach(m => {
+          const key = `${m.type || 'N/A'} | ${m.manufacturer || 'N/A'}`;
+          if (!map[key]) map[key] = { grams: 0, cost: 0 };
+          map[key].grams += m.totalGrams;
+          map[key].cost += m.totalCost;
+        });
+        const labels = Object.keys(map);
+        const data = labels.map(k => map[k].grams > 0 ? map[k].cost / map[k].grams : 0);
+        return { labels, data };
+      } else if (group === 'printer') {
+        const labels = Object.values(ordersAnalysis.printerStats).map(p => p.name);
+        const data = Object.values(ordersAnalysis.printerStats).map(p => p.grams > 0 ? p.revenue / p.grams : 0);
+        return { labels, data };
+      }
+      const labels = Object.values(ordersAnalysis.materialStats).map(m => m.name);
+      const data = Object.values(ordersAnalysis.materialStats).map(m => m.totalGrams > 0 ? m.totalCost / m.totalGrams : 0);
+      return { labels, data };
+    };
+
+    const updateMaterialChart = () => {
+      const group = groupSelect.value;
+      const { labels, data } = buildMatData(group);
+      if (window.materialChart) window.materialChart.destroy();
+      window.materialChart = new Chart(matCanvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '₽/г',
+            data,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    };
+
+    groupSelect.addEventListener('change', updateMaterialChart);
+    updateMaterialChart();
 
     const clientLabels = Object.values(ordersAnalysis.clientStats).map(c => c.name);
     const clientData = Object.values(ordersAnalysis.clientStats).map(c => c.grams > 0 ? c.revenue / c.grams : 0);
@@ -5240,6 +5293,56 @@ async function applyIncomingData(){
 
 </script>
 
+
+<!-- Test correlation form -->
+<div class="container my-4" id="testSection">
+  <h2 class="mb-3">Тест корреляции стоимости</h2>
+  <form id="correlationForm" class="row g-3">
+    <div class="col-md-3">
+      <label for="startWeight" class="form-label">Начальный вес (г)</label>
+      <input type="number" class="form-control" id="startWeight" value="1">
+    </div>
+    <div class="col-md-3">
+      <label for="endWeight" class="form-label">Конечный вес (г)</label>
+      <input type="number" class="form-control" id="endWeight" value="1000">
+    </div>
+    <div class="col-md-3">
+      <label for="startTime" class="form-label">Начальное время (ч)</label>
+      <input type="number" class="form-control" id="startTime" value="1">
+    </div>
+    <div class="col-md-3">
+      <label for="endTime" class="form-label">Конечное время (ч)</label>
+      <input type="number" class="form-control" id="endTime" value="10">
+    </div>
+    <div class="col-md-3">
+      <label for="materialPerKg" class="form-label">Цена материала за кг (₽)</label>
+      <input type="number" class="form-control" id="materialPerKg" value="1000">
+    </div>
+    <div class="col-md-3">
+      <label for="operatorRate" class="form-label">Ставка оператора (₽/ч)</label>
+      <input type="number" class="form-control" id="operatorRate" value="100">
+    </div>
+    <div class="col-md-3">
+      <label for="markupPercent" class="form-label">Наценка (%)</label>
+      <input type="number" class="form-control" id="markupPercent" value="0">
+    </div>
+    <div class="col-md-3">
+      <label for="extraCost" class="form-label">Прочие затраты (₽)</label>
+      <input type="number" class="form-control" id="extraCost" value="0">
+    </div>
+    <div class="col-12">
+      <button type="button" class="btn btn-primary" onclick="generateTestGraphs()">Построить графики</button>
+    </div>
+  </form>
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <canvas id="weightChart"></canvas>
+    </div>
+    <div class="col-md-6">
+      <canvas id="timeChart"></canvas>
+    </div>
+  </div>
+</div>
 
 <!-- Supabase & QR -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -6022,6 +6125,7 @@ function showSpoolmanStatus(type, message) {
   }
 }
 
+
 let testWeightChart, testTimeChart;
 
 function calcTestPrice(weight, time, materialPerKg, operatorRate, markup, extraCost) {
@@ -6059,8 +6163,10 @@ function generateTestGraphs() {
   const weightCtx = document.getElementById('weightChart');
   const timeCtx = document.getElementById('timeChart');
 
+
   if (testWeightChart) testWeightChart.destroy();
   testWeightChart = new Chart(weightCtx, {
+
     type: 'line',
     data: {
       labels: weights,
@@ -6076,6 +6182,7 @@ function generateTestGraphs() {
       scales: { y: { beginAtZero: true } }
     }
   });
+
 
   if (testTimeChart) testTimeChart.destroy();
   testTimeChart = new Chart(timeCtx, {
