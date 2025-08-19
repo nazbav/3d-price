@@ -415,14 +415,20 @@
               <button type="button" class="btn btn-primary" onclick="generateTestGraphs()">Построить графики</button>
             </div>
           </form>
-          <div class="row mt-4">
-            <div class="col-md-6">
-              <canvas id="weightChart"></canvas>
+            <div class="row mt-4">
+              <div class="col-md-6">
+                <canvas id="weightChart"></canvas>
+              </div>
+              <div class="col-md-6">
+                <canvas id="timeChart"></canvas>
+              </div>
             </div>
-            <div class="col-md-6">
-              <canvas id="timeChart"></canvas>
+            <div class="row mt-4">
+              <div class="col-12">
+                <canvas id="combinedChart"></canvas>
+              </div>
             </div>
-          </div>
+            <div id="analytics" class="mt-3"></div>
         </div>
       </div>
     </div>
@@ -6077,7 +6083,7 @@ function showSpoolmanStatus(type, message) {
 }
 
 
-let testWeightChart, testTimeChart;
+let testWeightChart, testTimeChart, testCombinedChart;
 
 function calcTestPrice(weight, time, materialPerKg, operatorRate, markup, extraCost) {
   const materialCost = (materialPerKg / 1000) * weight;
@@ -6113,7 +6119,10 @@ function generateTestGraphs() {
 
   const weightCtx = document.getElementById('weightChart');
   const timeCtx = document.getElementById('timeChart');
+  const combinedCtx = document.getElementById('combinedChart');
+  const analyticsDiv = document.getElementById('analytics');
 
+  const stepLabels = weights.map((_, i) => i);
 
   if (testWeightChart) testWeightChart.destroy();
   testWeightChart = new Chart(weightCtx, {
@@ -6152,6 +6161,47 @@ function generateTestGraphs() {
       scales: { y: { beginAtZero: true } }
     }
   });
+
+  if (testCombinedChart) testCombinedChart.destroy();
+  testCombinedChart = new Chart(combinedCtx, {
+    type: 'line',
+    data: {
+      labels: stepLabels,
+      datasets: [
+        {
+          label: 'Вес (г)',
+          data: weights,
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          tension: 0.1,
+          yAxisID: 'y1'
+        },
+        {
+          label: 'Время (ч)',
+          data: times,
+          borderColor: 'rgba(255, 206, 86, 1)',
+          backgroundColor: 'rgba(255, 206, 86, 0.2)',
+          tension: 0.1,
+          yAxisID: 'y2'
+        }
+      ]
+    },
+    options: {
+      scales: {
+        y1: { type: 'linear', position: 'left', beginAtZero: true },
+        y2: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+
+  const minIndex = prices.indexOf(Math.min(...prices));
+  const maxIndex = prices.indexOf(Math.max(...prices));
+  const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+  analyticsDiv.innerHTML = `
+    <p>Минимальная цена за грамм: ${prices[minIndex].toFixed(2)} ₽ при весе ${weights[minIndex].toFixed(2)} г и времени ${times[minIndex].toFixed(2)} ч.</p>
+    <p>Максимальная цена за грамм: ${prices[maxIndex].toFixed(2)} ₽ при весе ${weights[maxIndex].toFixed(2)} г и времени ${times[maxIndex].toFixed(2)} ч.</p>
+    <p>Средняя цена за грамм: ${avgPrice.toFixed(2)} ₽.</p>
+  `;
 }
 
 // Initialize Spoolman integration
