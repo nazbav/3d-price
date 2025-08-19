@@ -376,6 +376,54 @@
           <button class="btn btn-primary btn-sm d-none" id="summaryApplyBtn">Применить</button>
         </div>
         <div id="summaryContent"></div>
+        <div id="testSection" class="mt-5">
+          <h4 class="mb-3">Тест корреляции стоимости</h4>
+          <form id="correlationForm" class="row g-3">
+            <div class="col-md-3">
+              <label for="startWeight" class="form-label">Начальный вес (г)</label>
+              <input type="number" class="form-control" id="startWeight" value="1">
+            </div>
+            <div class="col-md-3">
+              <label for="endWeight" class="form-label">Конечный вес (г)</label>
+              <input type="number" class="form-control" id="endWeight" value="1000">
+            </div>
+            <div class="col-md-3">
+              <label for="startTime" class="form-label">Начальное время (ч)</label>
+              <input type="number" class="form-control" id="startTime" value="1">
+            </div>
+            <div class="col-md-3">
+              <label for="endTime" class="form-label">Конечное время (ч)</label>
+              <input type="number" class="form-control" id="endTime" value="10">
+            </div>
+            <div class="col-md-3">
+              <label for="materialPerKg" class="form-label">Цена материала за кг (₽)</label>
+              <input type="number" class="form-control" id="materialPerKg" value="1000">
+            </div>
+            <div class="col-md-3">
+              <label for="operatorRate" class="form-label">Ставка оператора (₽/ч)</label>
+              <input type="number" class="form-control" id="operatorRate" value="100">
+            </div>
+            <div class="col-md-3">
+              <label for="markupPercent" class="form-label">Наценка (%)</label>
+              <input type="number" class="form-control" id="markupPercent" value="0">
+            </div>
+            <div class="col-md-3">
+              <label for="extraCost" class="form-label">Прочие затраты (₽)</label>
+              <input type="number" class="form-control" id="extraCost" value="0">
+            </div>
+            <div class="col-12">
+              <button type="button" class="btn btn-primary" onclick="generateTestGraphs()">Построить графики</button>
+            </div>
+          </form>
+          <div class="row mt-4">
+            <div class="col-md-6">
+              <canvas id="weightChart"></canvas>
+            </div>
+            <div class="col-md-6">
+              <canvas id="timeChart"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -5192,6 +5240,7 @@ async function applyIncomingData(){
 
 </script>
 
+
 <!-- Supabase & QR -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -5971,6 +6020,80 @@ function showSpoolmanStatus(type, message) {
       }, 500);
     }, 5000);
   }
+}
+
+let testWeightChart, testTimeChart;
+
+function calcTestPrice(weight, time, materialPerKg, operatorRate, markup, extraCost) {
+  const materialCost = (materialPerKg / 1000) * weight;
+  const operatorCost = operatorRate * time;
+  let total = materialCost + operatorCost + extraCost;
+  if (markup > 0) total *= (1 + markup / 100);
+  return total;
+}
+
+function generateTestGraphs() {
+  const startW = parseFloat(document.getElementById('startWeight').value) || 0;
+  const endW = parseFloat(document.getElementById('endWeight').value) || 0;
+  const startT = parseFloat(document.getElementById('startTime').value) || 0;
+  const endT = parseFloat(document.getElementById('endTime').value) || 0;
+  const matKg = parseFloat(document.getElementById('materialPerKg').value) || 0;
+  const rate = parseFloat(document.getElementById('operatorRate').value) || 0;
+  const markup = parseFloat(document.getElementById('markupPercent').value) || 0;
+  const extra = parseFloat(document.getElementById('extraCost').value) || 0;
+
+  const steps = 20;
+  const weights = [];
+  const times = [];
+  const prices = [];
+
+  for (let i = 0; i <= steps; i++) {
+    const w = startW + (endW - startW) * i / steps;
+    const t = startT + (endT - startT) * i / steps;
+    const total = calcTestPrice(w, t, matKg, rate, markup, extra);
+    weights.push(w);
+    times.push(t);
+    prices.push(w > 0 ? total / w : 0);
+  }
+
+  const weightCtx = document.getElementById('weightChart');
+  const timeCtx = document.getElementById('timeChart');
+
+  if (testWeightChart) testWeightChart.destroy();
+  testWeightChart = new Chart(weightCtx, {
+    type: 'line',
+    data: {
+      labels: weights,
+      datasets: [{
+        label: '₽/г',
+        data: prices,
+        borderColor: 'rgba(54, 162, 235, 1)',
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+
+  if (testTimeChart) testTimeChart.destroy();
+  testTimeChart = new Chart(timeCtx, {
+    type: 'line',
+    data: {
+      labels: times,
+      datasets: [{
+        label: '₽/г',
+        data: prices,
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1
+      }]
+    },
+    options: {
+      scales: { y: { beginAtZero: true } }
+    }
+  });
 }
 
 // Initialize Spoolman integration
