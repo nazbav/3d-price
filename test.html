@@ -376,6 +376,54 @@
           <button class="btn btn-primary btn-sm d-none" id="summaryApplyBtn">Применить</button>
         </div>
         <div id="summaryContent"></div>
+        <div id="testSection" class="mt-5">
+          <h4 class="mb-3">Тест корреляции стоимости</h4>
+          <form id="correlationForm" class="row g-3">
+            <div class="col-md-3">
+              <label for="startWeight" class="form-label">Начальный вес (г)</label>
+              <input type="number" class="form-control" id="startWeight" value="1">
+            </div>
+            <div class="col-md-3">
+              <label for="endWeight" class="form-label">Конечный вес (г)</label>
+              <input type="number" class="form-control" id="endWeight" value="1000">
+            </div>
+            <div class="col-md-3">
+              <label for="startTime" class="form-label">Начальное время (ч)</label>
+              <input type="number" class="form-control" id="startTime" value="1">
+            </div>
+            <div class="col-md-3">
+              <label for="endTime" class="form-label">Конечное время (ч)</label>
+              <input type="number" class="form-control" id="endTime" value="10">
+            </div>
+            <div class="col-md-3">
+              <label for="materialPerKg" class="form-label">Цена материала за кг (₽)</label>
+              <input type="number" class="form-control" id="materialPerKg" value="1000">
+            </div>
+            <div class="col-md-3">
+              <label for="operatorRate" class="form-label">Ставка оператора (₽/ч)</label>
+              <input type="number" class="form-control" id="operatorRate" value="100">
+            </div>
+            <div class="col-md-3">
+              <label for="markupPercent" class="form-label">Наценка (%)</label>
+              <input type="number" class="form-control" id="markupPercent" value="0">
+            </div>
+            <div class="col-md-3">
+              <label for="extraCost" class="form-label">Прочие затраты (₽)</label>
+              <input type="number" class="form-control" id="extraCost" value="0">
+            </div>
+            <div class="col-12">
+              <button type="button" class="btn btn-primary" onclick="generateTestGraphs()">Построить графики</button>
+            </div>
+          </form>
+          <div class="row mt-4">
+            <div class="col-md-6">
+              <canvas id="weightChart"></canvas>
+            </div>
+            <div class="col-md-6">
+              <canvas id="timeChart"></canvas>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -5245,6 +5293,7 @@ async function applyIncomingData(){
 
 </script>
 
+
 <!-- Test correlation form -->
 <div class="container my-4" id="testSection">
   <h2 class="mb-3">Тест корреляции стоимости</h2>
@@ -6076,6 +6125,9 @@ function showSpoolmanStatus(type, message) {
   }
 }
 
+
+let testWeightChart, testTimeChart;
+
 function calcTestPrice(weight, time, materialPerKg, operatorRate, markup, extraCost) {
   const materialCost = (materialPerKg / 1000) * weight;
   const operatorCost = operatorRate * time;
@@ -6111,8 +6163,10 @@ function generateTestGraphs() {
   const weightCtx = document.getElementById('weightChart');
   const timeCtx = document.getElementById('timeChart');
 
-  if (window.weightChart) window.weightChart.destroy();
-  window.weightChart = new Chart(weightCtx, {
+
+  if (testWeightChart) testWeightChart.destroy();
+  testWeightChart = new Chart(weightCtx, {
+
     type: 'line',
     data: {
       labels: weights,
@@ -6129,8 +6183,9 @@ function generateTestGraphs() {
     }
   });
 
-  if (window.timeChart) window.timeChart.destroy();
-  window.timeChart = new Chart(timeCtx, {
+
+  if (testTimeChart) testTimeChart.destroy();
+  testTimeChart = new Chart(timeCtx, {
     type: 'line',
     data: {
       labels: times,
