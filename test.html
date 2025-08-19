@@ -6,6 +6,7 @@
   <title>Калькулятор 3D-печати (TEST)</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { margin: 0; padding: 0; }totalWeight
     .container { margin-top: 20px; margin-bottom: 20px; }
@@ -4396,6 +4397,7 @@ function onEditCalcHistory(timestamp){
     completedOrders.forEach(order => {
       results.totalRevenue += order.total || 0;
       let orderCost = 0;
+      let orderGrams = 0;
 
       // Расчет налогов
       if (order.taxAmount !== undefined) {
@@ -4435,6 +4437,7 @@ function onEditCalcHistory(timestamp){
           const maintenance = model.costMaintenance || 0;
           const modelRevenue = model.subTotalModel || 0;
           const hours = model.hours || 0;
+          orderGrams += model.realWeight || 0;
 
           if (materialId) {
             // Статистика по материалам
@@ -4485,11 +4488,12 @@ function onEditCalcHistory(timestamp){
       // Статистика по клиентам
       const clientName = order.clientName || '(Не указан)';
       if (!results.clientStats[clientName]) {
-        results.clientStats[clientName] = { name: clientName, revenue: 0, cost: 0, orders: 0 };
+        results.clientStats[clientName] = { name: clientName, revenue: 0, cost: 0, grams: 0, orders: 0 };
       }
       const cs = results.clientStats[clientName];
       cs.revenue += order.total || 0;
       cs.cost += orderCost;
+      cs.grams += orderGrams;
       cs.orders += 1;
     });
 
@@ -4549,6 +4553,8 @@ function onEditCalcHistory(timestamp){
       avgMaterialPerOrder: completedOrdersCount > 0 ? totalGrams / completedOrdersCount : 0,
       costPerKg: totalGrams > 0 ? totalCost / (totalGrams / 1000) : 0,
       netProfitPerKg: totalGrams > 0 ? netProfit / (totalGrams / 1000) : 0,
+      avgCostPerGram: totalGrams > 0 ? totalCost / totalGrams : 0,
+      avgRevenuePerGram: totalGrams > 0 ? totalRevenue / totalGrams : 0,
       printerUtilization: appData.printers.length > 0 ?
         (totalPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0,
       costStructure: {
@@ -4606,6 +4612,8 @@ function onEditCalcHistory(timestamp){
       avgMaterialPerOrder,
       costPerKg,
       netProfitPerKg,
+      avgCostPerGram,
+      avgRevenuePerGram,
       printerUtilization,
       costStructure,
       ebitda,
@@ -4677,6 +4685,8 @@ function onEditCalcHistory(timestamp){
       {title: 'Материал / заказ', value: avgMaterialPerOrder / 1000, unit: 'кг', desc: 'Средний расход', icon: 'bi-bezier', decimals: 3},
       {title: 'Себестоимость кг', value: costPerKg, unit: '₽/кг', desc: '(Затраты / Материалы)', icon: 'bi-printer'},
       {title: 'Прибыль / кг', value: netProfitPerKg, unit: '₽/кг', desc: '(Чистая прибыль / Материалы)', icon: 'bi-box'},
+      {title: 'Себестоимость / г', value: avgCostPerGram, unit: '₽/г', desc: '(Затраты / Материалы)', icon: 'bi-currency-ruble', decimals: 2},
+      {title: 'Выручка / г', value: avgRevenuePerGram, unit: '₽/г', desc: '(Выручка / Материалы)', icon: 'bi-cash-stack', decimals: 2},
       {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', desc: '(Использование / Потенциал)', icon: 'bi-cpu'},
       {title: 'Индекс прибыльности', value: profitabilityIndex, unit: '', desc: '(Прибыль + Вложения) / Вложения', icon: 'bi-clipboard-data', decimals: 2}
     ].map(card => `
@@ -4989,6 +4999,28 @@ function onEditCalcHistory(timestamp){
           </div>
         </div>
       </div>
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Цена по материалам (₽/г)</h6>
+            </div>
+            <div class="card-body">
+              <canvas id="materialPriceChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Цена по клиентам (₽/г)</h6>
+            </div>
+            <div class="card-body">
+              <canvas id="clientPriceChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- KPI -->
       <div class="card shadow-sm">
@@ -5004,6 +5036,48 @@ function onEditCalcHistory(timestamp){
     </div>`;
   };
 
+  const renderSummaryCharts = (ordersAnalysis) => {
+    const matCanvas = document.getElementById('materialPriceChart');
+    const clientCanvas = document.getElementById('clientPriceChart');
+    if (!matCanvas || !clientCanvas) return;
+
+    const materialLabels = Object.values(ordersAnalysis.materialStats).map(m => m.name);
+    const materialData = Object.values(ordersAnalysis.materialStats).map(m => m.totalGrams > 0 ? m.totalCost / m.totalGrams : 0);
+    if (window.materialChart) window.materialChart.destroy();
+    window.materialChart = new Chart(matCanvas, {
+      type: 'bar',
+      data: {
+        labels: materialLabels,
+        datasets: [{
+          label: '₽/г',
+          data: materialData,
+          backgroundColor: 'rgba(54, 162, 235, 0.5)',
+          borderColor: 'rgba(54, 162, 235, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    const clientLabels = Object.values(ordersAnalysis.clientStats).map(c => c.name);
+    const clientData = Object.values(ordersAnalysis.clientStats).map(c => c.grams > 0 ? c.revenue / c.grams : 0);
+    if (window.clientChart) window.clientChart.destroy();
+    window.clientChart = new Chart(clientCanvas, {
+      type: 'bar',
+      data: {
+        labels: clientLabels,
+        datasets: [{
+          label: '₽/г',
+          data: clientData,
+          backgroundColor: 'rgba(75, 192, 192, 0.5)',
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+  };
+
   // Выполнение расчетов
   const capital = calculateCapitalInvestments();
   const ordersAnalysis = analyzeCompletedOrders(from, to);
@@ -5012,6 +5086,7 @@ function onEditCalcHistory(timestamp){
   // Рендеринг результата
   const summaryContent = document.getElementById("summaryContent");
   summaryContent.innerHTML = generateHTML(capital, ordersAnalysis, kpis);
+  renderSummaryCharts(ordersAnalysis);
 }
 
 function parseIncomingLinkParams(params){
