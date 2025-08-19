@@ -4451,12 +4451,14 @@ function onEditCalcHistory(timestamp){
                 type: mat?.materialType || model.materialData?.materialType || '',
                 manufacturer: mat?.manufacturer || model.materialData?.manufacturer || '',
                 totalGrams: 0,
-                totalCost: 0
+                totalCost: 0,
+                totalRevenue: 0
               };
             }
 
             results.materialStats[materialId].totalGrams += model.realWeight || 0;
             results.materialStats[materialId].totalCost += materialCost;
+            results.materialStats[materialId].totalRevenue += modelRevenue;
           }
 
           // Глобальные суммы
@@ -5011,13 +5013,17 @@ function onEditCalcHistory(timestamp){
               <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Цена по материалам (₽/г)</h6>
             </div>
             <div class="card-body">
-              <div class="mb-2">
-                <select id="materialChartGroup" class="form-select form-select-sm w-auto">
+              <div class="d-flex align-items-center mb-2">
+                <select id="materialChartGroup" class="form-select form-select-sm w-auto me-2">
                   <option value="material">Материал</option>
                   <option value="type">Тип пластика</option>
                   <option value="typeManuf">Тип+Производитель</option>
                   <option value="printer">Принтер</option>
                 </select>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="materialPriceMode">
+                  <label class="form-check-label" for="materialPriceMode">По заказам</label>
+                </div>
               </div>
               <canvas id="materialPriceChart"></canvas>
             </div>
@@ -5054,38 +5060,57 @@ function onEditCalcHistory(timestamp){
     const clientCanvas = document.getElementById('clientPriceChart');
 
     const groupSelect = document.getElementById('materialChartGroup');
+    const modeSwitch = document.getElementById('materialPriceMode');
     if (!matCanvas || !clientCanvas) return;
 
     const buildMatData = (group) => {
+      const useRevenue = modeSwitch.checked;
       if (group === 'type') {
         const map = {};
         Object.values(ordersAnalysis.materialStats).forEach(m => {
           const key = m.type || 'N/A';
-          if (!map[key]) map[key] = { grams: 0, cost: 0 };
+          if (!map[key]) map[key] = { grams: 0, cost: 0, revenue: 0 };
           map[key].grams += m.totalGrams;
           map[key].cost += m.totalCost;
+          map[key].revenue += m.totalRevenue || 0;
         });
         const labels = Object.keys(map);
-        const data = labels.map(k => map[k].grams > 0 ? map[k].cost / map[k].grams : 0);
+        const data = labels.map(k => {
+          const entry = map[k];
+          const value = useRevenue ? entry.revenue : entry.cost;
+          return entry.grams > 0 ? value / entry.grams : 0;
+        });
         return { labels, data };
       } else if (group === 'typeManuf') {
         const map = {};
         Object.values(ordersAnalysis.materialStats).forEach(m => {
           const key = `${m.type || 'N/A'} | ${m.manufacturer || 'N/A'}`;
-          if (!map[key]) map[key] = { grams: 0, cost: 0 };
+          if (!map[key]) map[key] = { grams: 0, cost: 0, revenue: 0 };
           map[key].grams += m.totalGrams;
           map[key].cost += m.totalCost;
+          map[key].revenue += m.totalRevenue || 0;
         });
         const labels = Object.keys(map);
-        const data = labels.map(k => map[k].grams > 0 ? map[k].cost / map[k].grams : 0);
+        const data = labels.map(k => {
+          const entry = map[k];
+          const value = useRevenue ? entry.revenue : entry.cost;
+          return entry.grams > 0 ? value / entry.grams : 0;
+        });
         return { labels, data };
       } else if (group === 'printer') {
         const labels = Object.values(ordersAnalysis.printerStats).map(p => p.name);
-        const data = Object.values(ordersAnalysis.printerStats).map(p => p.grams > 0 ? p.revenue / p.grams : 0);
+        const data = Object.values(ordersAnalysis.printerStats).map(p => {
+          const cost = p.material + p.amortization + p.energy + p.maintenance;
+          const value = useRevenue ? p.revenue : cost;
+          return p.grams > 0 ? value / p.grams : 0;
+        });
         return { labels, data };
       }
       const labels = Object.values(ordersAnalysis.materialStats).map(m => m.name);
-      const data = Object.values(ordersAnalysis.materialStats).map(m => m.totalGrams > 0 ? m.totalCost / m.totalGrams : 0);
+      const data = Object.values(ordersAnalysis.materialStats).map(m => {
+        const value = useRevenue ? (m.totalRevenue || 0) : m.totalCost;
+        return m.totalGrams > 0 ? value / m.totalGrams : 0;
+      });
       return { labels, data };
     };
 
@@ -5110,6 +5135,7 @@ function onEditCalcHistory(timestamp){
     };
 
     groupSelect.addEventListener('change', updateMaterialChart);
+    modeSwitch.addEventListener('change', updateMaterialChart);
     updateMaterialChart();
 
     const clientLabels = Object.values(ordersAnalysis.clientStats).map(c => c.name);
