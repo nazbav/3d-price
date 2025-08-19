@@ -5026,6 +5026,7 @@ function onEditCalcHistory(timestamp){
                 </div>
               </div>
               <canvas id="materialPriceChart"></canvas>
+              <div id="materialPriceStats" class="mt-2 small text-muted"></div>
             </div>
           </div>
         </div>
@@ -5035,7 +5036,21 @@ function onEditCalcHistory(timestamp){
               <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Цена по клиентам (₽/г)</h6>
             </div>
             <div class="card-body">
+              <div class="d-flex align-items-center mb-2">
+                <select id="clientChartGroup" class="form-select form-select-sm w-auto me-2">
+                  <option value="client">Клиент</option>
+                  <option value="material">Материал</option>
+                  <option value="type">Тип пластика</option>
+                  <option value="typeManuf">Тип+Производитель</option>
+                  <option value="printer">Принтер</option>
+                </select>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="clientPriceMode">
+                  <label class="form-check-label" for="clientPriceMode">По заказам</label>
+                </div>
+              </div>
               <canvas id="clientPriceChart"></canvas>
+              <div id="clientPriceStats" class="mt-2 small text-muted"></div>
             </div>
           </div>
         </div>
@@ -5061,7 +5076,27 @@ function onEditCalcHistory(timestamp){
 
     const groupSelect = document.getElementById('materialChartGroup');
     const modeSwitch = document.getElementById('materialPriceMode');
+    const clientGroupSelect = document.getElementById('clientChartGroup');
+    const clientModeSwitch = document.getElementById('clientPriceMode');
+    const matStatsDiv = document.getElementById('materialPriceStats');
+    const clientStatsDiv = document.getElementById('clientPriceStats');
     if (!matCanvas || !clientCanvas) return;
+
+    const calcStats = (arr) => {
+      const sorted = arr.slice().sort((a, b) => a - b);
+      const n = sorted.length;
+      if (!n) return { min: 0, max: 0, avg: 0, median: 0 };
+      const sum = sorted.reduce((a, b) => a + b, 0);
+      const avg = sum / n;
+      const median = n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+      return { min: sorted[0], max: sorted[n - 1], avg, median };
+    };
+
+    const renderStats = (el, arr) => {
+      if (!el) return;
+      const { min, max, avg, median } = calcStats(arr);
+      el.textContent = `мин: ${min.toFixed(2)}, медиана: ${median.toFixed(2)}, среднее: ${avg.toFixed(2)}, макс: ${max.toFixed(2)}`;
+    };
 
     const buildMatData = (group) => {
       const useRevenue = modeSwitch.checked;
@@ -5132,29 +5167,93 @@ function onEditCalcHistory(timestamp){
         },
         options: { scales: { y: { beginAtZero: true } } }
       });
+      renderStats(matStatsDiv, data);
+    };
+    const buildClientData = (group) => {
+      const useRevenue = clientModeSwitch.checked;
+      if (group === 'client') {
+        const labels = Object.values(ordersAnalysis.clientStats).map(c => c.name);
+        const data = Object.values(ordersAnalysis.clientStats).map(c => {
+          const value = useRevenue ? c.revenue : c.cost;
+          return c.grams > 0 ? value / c.grams : 0;
+        });
+        return { labels, data };
+      } else if (group === 'type') {
+        const map = {};
+        Object.values(ordersAnalysis.materialStats).forEach(m => {
+          const key = m.type || 'N/A';
+          if (!map[key]) map[key] = { grams: 0, cost: 0, revenue: 0 };
+          map[key].grams += m.totalGrams;
+          map[key].cost += m.totalCost;
+          map[key].revenue += m.totalRevenue || 0;
+        });
+        const labels = Object.keys(map);
+        const data = labels.map(k => {
+          const entry = map[k];
+          const value = useRevenue ? entry.revenue : entry.cost;
+          return entry.grams > 0 ? value / entry.grams : 0;
+        });
+        return { labels, data };
+      } else if (group === 'typeManuf') {
+        const map = {};
+        Object.values(ordersAnalysis.materialStats).forEach(m => {
+          const key = `${m.type || 'N/A'} | ${m.manufacturer || 'N/A'}`;
+          if (!map[key]) map[key] = { grams: 0, cost: 0, revenue: 0 };
+          map[key].grams += m.totalGrams;
+          map[key].cost += m.totalCost;
+          map[key].revenue += m.totalRevenue || 0;
+        });
+        const labels = Object.keys(map);
+        const data = labels.map(k => {
+          const entry = map[k];
+          const value = useRevenue ? entry.revenue : entry.cost;
+          return entry.grams > 0 ? value / entry.grams : 0;
+        });
+        return { labels, data };
+      } else if (group === 'printer') {
+        const labels = Object.values(ordersAnalysis.printerStats).map(p => p.name);
+        const data = Object.values(ordersAnalysis.printerStats).map(p => {
+          const cost = p.material + p.amortization + p.energy + p.maintenance;
+          const value = useRevenue ? p.revenue : cost;
+          return p.grams > 0 ? value / p.grams : 0;
+        });
+        return { labels, data };
+      }
+      const labels = Object.values(ordersAnalysis.materialStats).map(m => m.name);
+      const data = Object.values(ordersAnalysis.materialStats).map(m => {
+        const value = useRevenue ? (m.totalRevenue || 0) : m.totalCost;
+        return m.totalGrams > 0 ? value / m.totalGrams : 0;
+      });
+      return { labels, data };
+    };
+
+    const updateClientChart = () => {
+      const group = clientGroupSelect.value;
+      const { labels, data } = buildClientData(group);
+      if (window.clientChart) window.clientChart.destroy();
+      window.clientChart = new Chart(clientCanvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '₽/г',
+            data,
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+      renderStats(clientStatsDiv, data);
     };
 
     groupSelect.addEventListener('change', updateMaterialChart);
     modeSwitch.addEventListener('change', updateMaterialChart);
+    clientGroupSelect.addEventListener('change', updateClientChart);
+    clientModeSwitch.addEventListener('change', updateClientChart);
     updateMaterialChart();
-
-    const clientLabels = Object.values(ordersAnalysis.clientStats).map(c => c.name);
-    const clientData = Object.values(ordersAnalysis.clientStats).map(c => c.grams > 0 ? c.revenue / c.grams : 0);
-    if (window.clientChart) window.clientChart.destroy();
-    window.clientChart = new Chart(clientCanvas, {
-      type: 'bar',
-      data: {
-        labels: clientLabels,
-        datasets: [{
-          label: '₽/г',
-          data: clientData,
-          backgroundColor: 'rgba(75, 192, 192, 0.5)',
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: { scales: { y: { beginAtZero: true } } }
-    });
+    updateClientChart();
   };
 
   // Выполнение расчетов
