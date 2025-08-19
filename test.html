@@ -4390,7 +4390,8 @@ function onEditCalcHistory(timestamp){
         material: 0,
         maintenance: 0,
         revenue: 0,
-        prints: 0
+        prints: 0,
+        grams: 0
       };
     });
 
@@ -4416,18 +4417,19 @@ function onEditCalcHistory(timestamp){
       order.details?.forEach(printer => {
         const printerId = printer.printerId;
 
-        if (!results.printerStats[printerId]) {
-          results.printerStats[printerId] = {
-            name: printer.printerName,
-            hours: 0,
-            amortization: 0,
-            energy: 0,
-            material: 0,
-            maintenance: 0,
-            revenue: 0,
-            prints: 0
-          };
-        }
+          if (!results.printerStats[printerId]) {
+            results.printerStats[printerId] = {
+              name: printer.printerName,
+              hours: 0,
+              amortization: 0,
+              energy: 0,
+              material: 0,
+              maintenance: 0,
+              revenue: 0,
+              prints: 0,
+              grams: 0
+            };
+          }
 
         printer.linesDetail?.forEach(model => {
           const materialId = model.materialData?.id;
@@ -4446,6 +4448,8 @@ function onEditCalcHistory(timestamp){
               results.materialStats[materialId] = {
                 name: mat ? `${mat.name} (ID: ${mat.id}) | ${mat.manufacturer}` :
                           `${model.matName} | ${model.materialData?.manufacturer || 'N/A'}`,
+                type: mat?.materialType || model.materialData?.materialType || '',
+                manufacturer: mat?.manufacturer || model.materialData?.manufacturer || '',
                 totalGrams: 0,
                 totalCost: 0
               };
@@ -4473,6 +4477,7 @@ function onEditCalcHistory(timestamp){
           ps.maintenance += maintenance;
           ps.revenue += modelRevenue;
           ps.prints++;
+          ps.grams += model.realWeight || 0;
         });
       });
 
@@ -5006,6 +5011,14 @@ function onEditCalcHistory(timestamp){
               <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Цена по материалам (₽/г)</h6>
             </div>
             <div class="card-body">
+              <div class="mb-2">
+                <select id="materialChartGroup" class="form-select form-select-sm w-auto">
+                  <option value="material">Материал</option>
+                  <option value="type">Тип пластика</option>
+                  <option value="typeManuf">Тип+Производитель</option>
+                  <option value="printer">Принтер</option>
+                </select>
+              </div>
               <canvas id="materialPriceChart"></canvas>
             </div>
           </div>
@@ -5039,25 +5052,65 @@ function onEditCalcHistory(timestamp){
   const renderSummaryCharts = (ordersAnalysis) => {
     const matCanvas = document.getElementById('materialPriceChart');
     const clientCanvas = document.getElementById('clientPriceChart');
+
+    const groupSelect = document.getElementById('materialChartGroup');
     if (!matCanvas || !clientCanvas) return;
 
-    const materialLabels = Object.values(ordersAnalysis.materialStats).map(m => m.name);
-    const materialData = Object.values(ordersAnalysis.materialStats).map(m => m.totalGrams > 0 ? m.totalCost / m.totalGrams : 0);
-    if (window.materialChart) window.materialChart.destroy();
-    window.materialChart = new Chart(matCanvas, {
-      type: 'bar',
-      data: {
-        labels: materialLabels,
-        datasets: [{
-          label: '₽/г',
-          data: materialData,
-          backgroundColor: 'rgba(54, 162, 235, 0.5)',
-          borderColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 1
-        }]
-      },
-      options: { scales: { y: { beginAtZero: true } } }
-    });
+    const buildMatData = (group) => {
+      if (group === 'type') {
+        const map = {};
+        Object.values(ordersAnalysis.materialStats).forEach(m => {
+          const key = m.type || 'N/A';
+          if (!map[key]) map[key] = { grams: 0, cost: 0 };
+          map[key].grams += m.totalGrams;
+          map[key].cost += m.totalCost;
+        });
+        const labels = Object.keys(map);
+        const data = labels.map(k => map[k].grams > 0 ? map[k].cost / map[k].grams : 0);
+        return { labels, data };
+      } else if (group === 'typeManuf') {
+        const map = {};
+        Object.values(ordersAnalysis.materialStats).forEach(m => {
+          const key = `${m.type || 'N/A'} | ${m.manufacturer || 'N/A'}`;
+          if (!map[key]) map[key] = { grams: 0, cost: 0 };
+          map[key].grams += m.totalGrams;
+          map[key].cost += m.totalCost;
+        });
+        const labels = Object.keys(map);
+        const data = labels.map(k => map[k].grams > 0 ? map[k].cost / map[k].grams : 0);
+        return { labels, data };
+      } else if (group === 'printer') {
+        const labels = Object.values(ordersAnalysis.printerStats).map(p => p.name);
+        const data = Object.values(ordersAnalysis.printerStats).map(p => p.grams > 0 ? p.revenue / p.grams : 0);
+        return { labels, data };
+      }
+      const labels = Object.values(ordersAnalysis.materialStats).map(m => m.name);
+      const data = Object.values(ordersAnalysis.materialStats).map(m => m.totalGrams > 0 ? m.totalCost / m.totalGrams : 0);
+      return { labels, data };
+    };
+
+    const updateMaterialChart = () => {
+      const group = groupSelect.value;
+      const { labels, data } = buildMatData(group);
+      if (window.materialChart) window.materialChart.destroy();
+      window.materialChart = new Chart(matCanvas, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '₽/г',
+            data,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    };
+
+    groupSelect.addEventListener('change', updateMaterialChart);
+    updateMaterialChart();
 
     const clientLabels = Object.values(ordersAnalysis.clientStats).map(c => c.name);
     const clientData = Object.values(ordersAnalysis.clientStats).map(c => c.grams > 0 ? c.revenue / c.grams : 0);
