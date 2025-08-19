@@ -415,14 +415,12 @@
               <button type="button" class="btn btn-primary" onclick="generateTestGraphs()">Построить графики</button>
             </div>
           </form>
-          <div class="row mt-4">
-            <div class="col-md-6">
-              <canvas id="weightChart"></canvas>
+            <div class="row mt-4">
+              <div class="col-12">
+                <canvas id="combinedChart"></canvas>
+              </div>
             </div>
-            <div class="col-md-6">
-              <canvas id="timeChart"></canvas>
-            </div>
-          </div>
+            <div id="analytics" class="mt-3"></div>
         </div>
       </div>
     </div>
@@ -5083,6 +5081,26 @@ function onEditCalcHistory(timestamp){
         </div>
       </div>
 
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card shadow-sm h-100">
+            <div class="card-header">
+              <h6 class="mb-0"><i class="bi bi-graph-up"></i> Динамика цены по пластикам (₽/г)</h6>
+            </div>
+            <div class="card-body">
+              <div class="mb-2">
+                <select id="materialTrendGroup" class="form-select form-select-sm w-auto">
+                  <option value="material">Материал</option>
+                  <option value="type">Тип пластика</option>
+                  <option value="typeManuf">Тип+Производитель</option>
+                </select>
+              </div>
+              <canvas id="materialTrendChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- KPI -->
       <div class="card shadow-sm">
         <div class="card-header">
@@ -5100,9 +5118,11 @@ function onEditCalcHistory(timestamp){
   const renderSummaryCharts = (ordersAnalysis) => {
     const matCanvas = document.getElementById('materialPriceChart');
     const clientCanvas = document.getElementById('clientPriceChart');
+    const trendCanvas = document.getElementById('materialTrendChart');
 
     const groupSelect = document.getElementById('materialChartGroup');
-    if (!matCanvas || !clientCanvas) return;
+    const trendGroupSelect = document.getElementById('materialTrendGroup');
+    if (!matCanvas || !clientCanvas || !trendCanvas) return;
 
     const buildMatData = (group) => {
       if (group === 'type') {
@@ -5159,6 +5179,81 @@ function onEditCalcHistory(timestamp){
 
     groupSelect.addEventListener('change', updateMaterialChart);
     updateMaterialChart();
+
+    const buildTrendData = (group) => {
+      const completed = appData.calcHistory.filter(o =>
+        (o.orderStatus === 'done' || o.orderStatus === 'paid'))
+        .sort((a, b) => {
+          const ta = a.timestamp || (a.dateStr ? parseHistoryDate(a.dateStr).getTime() : 0);
+          const tb = b.timestamp || (b.dateStr ? parseHistoryDate(b.dateStr).getTime() : 0);
+          return ta - tb;
+        });
+      const labels = completed.map(o => {
+        const ts = o.timestamp || (o.dateStr ? parseHistoryDate(o.dateStr).getTime() : 0);
+        return new Date(ts).toLocaleDateString();
+      });
+      const series = {};
+      completed.forEach((order, idx) => {
+        const map = {};
+        order.details?.forEach(pr => {
+          pr.linesDetail?.forEach(model => {
+            const mat = model.materialData || {};
+            const grams = model.realWeight || 0;
+            const cost = model.costMaterial || 0;
+            const type = mat.materialType || model.materialData?.materialType || '';
+            const manuf = mat.manufacturer || model.materialData?.manufacturer || '';
+            let key, label;
+            if (group === 'type') {
+              key = label = type || 'N/A';
+            } else if (group === 'typeManuf') {
+              key = label = `${type || 'N/A'} | ${manuf || 'N/A'}`;
+            } else {
+              key = mat.id;
+              label = mat.name ? `${mat.name} | ${manuf}` : (model.matName || 'N/A');
+            }
+            if (!map[key]) map[key] = { label, cost: 0, grams: 0 };
+            map[key].cost += cost;
+            map[key].grams += grams;
+          });
+        });
+        Object.values(map).forEach(m => {
+          if (!series[m.label]) series[m.label] = Array(completed.length).fill(null);
+          series[m.label][idx] = m.grams > 0 ? m.cost / m.grams : null;
+        });
+      });
+      return { labels, series };
+    };
+
+    const updateTrendChart = () => {
+      const group = trendGroupSelect.value;
+      const { labels, series } = buildTrendData(group);
+      const colors = [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 206, 86, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)',
+        'rgba(255, 159, 64, 1)',
+        'rgba(199, 199, 199, 1)'
+      ];
+      const datasets = Object.entries(series).map(([label, data], i) => ({
+        label,
+        data,
+        borderColor: colors[i % colors.length],
+        backgroundColor: colors[i % colors.length],
+        tension: 0.1,
+        spanGaps: true
+      }));
+      if (window.materialTrendChart) window.materialTrendChart.destroy();
+      window.materialTrendChart = new Chart(trendCanvas, {
+        type: 'line',
+        data: { labels, datasets },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    };
+
+    trendGroupSelect.addEventListener('change', updateTrendChart);
+    updateTrendChart();
 
     const clientLabels = Object.values(ordersAnalysis.clientStats).map(c => c.name);
     const clientData = Object.values(ordersAnalysis.clientStats).map(c => c.grams > 0 ? c.revenue / c.grams : 0);
@@ -6077,7 +6172,7 @@ function showSpoolmanStatus(type, message) {
 }
 
 
-let testWeightChart, testTimeChart;
+let testCombinedChart;
 
 function calcTestPrice(weight, time, materialPerKg, operatorRate, markup, extraCost) {
   const materialCost = (materialPerKg / 1000) * weight;
@@ -6111,47 +6206,80 @@ function generateTestGraphs() {
     prices.push(w > 0 ? total / w : 0);
   }
 
-  const weightCtx = document.getElementById('weightChart');
-  const timeCtx = document.getElementById('timeChart');
+  const combinedCtx = document.getElementById('combinedChart');
+  const analyticsDiv = document.getElementById('analytics');
 
+  const stepLabels = weights.map((_, i) => i);
 
-  if (testWeightChart) testWeightChart.destroy();
-  testWeightChart = new Chart(weightCtx, {
-
+  if (testCombinedChart) testCombinedChart.destroy();
+  testCombinedChart = new Chart(combinedCtx, {
     type: 'line',
     data: {
-      labels: weights,
-      datasets: [{
-        label: '₽/г',
-        data: prices,
-        borderColor: 'rgba(54, 162, 235, 1)',
-        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-        tension: 0.1
-      }]
+      labels: stepLabels,
+      datasets: [
+        {
+          label: 'Вес (г)',
+          data: weights,
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          tension: 0.1,
+          yAxisID: 'y1'
+        },
+        {
+          label: 'Время (ч)',
+          data: times,
+          borderColor: 'rgba(255, 206, 86, 1)',
+          backgroundColor: 'rgba(255, 206, 86, 0.2)',
+          tension: 0.1,
+          yAxisID: 'y2'
+        }
+      ]
     },
     options: {
-      scales: { y: { beginAtZero: true } }
+      scales: {
+        y1: { type: 'linear', position: 'left', beginAtZero: true },
+        y2: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false } }
+      }
     }
   });
 
+  const minIndex = prices.indexOf(Math.min(...prices));
+  const maxIndex = prices.indexOf(Math.max(...prices));
+  const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+  const sortedPrices = [...prices].sort((a, b) => a - b);
+  const medianPrice = sortedPrices[Math.floor(sortedPrices.length / 2)] || 0;
+  const p25Price = sortedPrices[Math.floor(sortedPrices.length * 0.25)] || 0;
+  const p75Price = sortedPrices[Math.floor(sortedPrices.length * 0.75)] || 0;
+  const stdPrice = Math.sqrt(prices.reduce((sum, p) => sum + Math.pow(p - avgPrice, 2), 0) / prices.length);
+  const priceSpread = prices[maxIndex] - prices[minIndex];
+  const minWeight = Math.min(...weights);
+  const maxWeight = Math.max(...weights);
+  const minTime = Math.min(...times);
+  const maxTime = Math.max(...times);
+  const avgWeight = weights.reduce((sum, w) => sum + w, 0) / weights.length;
+  const avgTime = times.reduce((sum, t) => sum + t, 0) / times.length;
+  const covWT = weights.reduce((sum, w, i) => sum + (w - avgWeight) * (times[i] - avgTime), 0) / weights.length;
+  const stdWeight = Math.sqrt(weights.reduce((sum, w) => sum + Math.pow(w - avgWeight, 2), 0) / weights.length);
+  const stdTime = Math.sqrt(times.reduce((sum, t) => sum + Math.pow(t - avgTime, 2), 0) / times.length);
+  const corrWT = stdWeight && stdTime ? covWT / (stdWeight * stdTime) : 0;
+  const avgSpeed = (maxTime - minTime) ? (maxWeight - minWeight) / (maxTime - minTime) : 0;
 
-  if (testTimeChart) testTimeChart.destroy();
-  testTimeChart = new Chart(timeCtx, {
-    type: 'line',
-    data: {
-      labels: times,
-      datasets: [{
-        label: '₽/г',
-        data: prices,
-        borderColor: 'rgba(75, 192, 192, 1)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.1
-      }]
-    },
-    options: {
-      scales: { y: { beginAtZero: true } }
-    }
-  });
+  analyticsDiv.innerHTML = `
+    <ul>
+      <li>Минимальная цена за грамм: ${prices[minIndex].toFixed(2)} ₽ при весе ${weights[minIndex].toFixed(2)} г и времени ${times[minIndex].toFixed(2)} ч.</li>
+      <li>Максимальная цена за грамм: ${prices[maxIndex].toFixed(2)} ₽ при весе ${weights[maxIndex].toFixed(2)} г и времени ${times[maxIndex].toFixed(2)} ч.</li>
+      <li>Средняя цена за грамм: ${avgPrice.toFixed(2)} ₽.</li>
+      <li>Медианная цена за грамм: ${medianPrice.toFixed(2)} ₽.</li>
+      <li>Стандартное отклонение цены: ${stdPrice.toFixed(2)} ₽.</li>
+      <li>Разброс цены (max - min): ${priceSpread.toFixed(2)} ₽.</li>
+      <li>Диапазон веса: ${minWeight.toFixed(2)} – ${maxWeight.toFixed(2)} г.</li>
+      <li>Диапазон времени: ${minTime.toFixed(2)} – ${maxTime.toFixed(2)} ч.</li>
+      <li>Цена за грамм (25-й перцентиль): ${p25Price.toFixed(2)} ₽.</li>
+      <li>Цена за грамм (75-й перцентиль): ${p75Price.toFixed(2)} ₽.</li>
+      <li>Корреляция веса и времени: ${corrWT.toFixed(2)}</li>
+      <li>Средняя скорость печати: ${avgSpeed.toFixed(2)} г/ч.</li>
+    </ul>
+  `;
 }
 
 // Initialize Spoolman integration
