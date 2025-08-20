@@ -513,6 +513,10 @@
             <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
             <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
           </div>
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="calcOperatorReject">
+            <label class="form-check-label" for="calcOperatorReject">Учесть ставку оператора для бракованных моделей</label>
+          </div>
           <div class="mb-3">
             <label for="calcDowntimeCost" class="form-label">Стоимость минуты простоя (₽/мин):</label>
             <input type="number" step="0.01" id="calcDowntimeCost" class="form-control" />
@@ -952,6 +956,7 @@ function migrateOldData(obj){
   if(typeof obj.calcSettings.downtimeCost !== 'number') obj.calcSettings.downtimeCost = 0;
   if(typeof obj.calcSettings.preparationRate !== 'number') obj.calcSettings.preparationRate = 0;
   if(typeof obj.calcSettings.preparationTime !== 'number') obj.calcSettings.preparationTime = 0;
+  if(typeof obj.calcSettings.includeOperatorForRejects !== 'boolean') obj.calcSettings.includeOperatorForRejects = false;
 
   if (!obj.counters) {
     obj.counters = {
@@ -1469,7 +1474,8 @@ let appData = {
     modelingCost: 0,
     downtimeCost: 0,
     preparationRate: 0,
-    preparationTime: 0
+    preparationTime: 0,
+    includeOperatorForRejects: false
   },
   labelSettings: {
   companyName: "Компания",
@@ -1533,6 +1539,7 @@ function initAll(){
   document.getElementById("summaryApplyBtn").addEventListener("click", renderSummary);
   onSummaryPeriodChange();
   document.getElementById("calcOperatorRate").value = appData.calcSettings.operatorRate || "";
+  document.getElementById("calcOperatorReject").checked = appData.calcSettings.includeOperatorForRejects || false;
   document.getElementById("calcDowntimeCost").value = appData.calcSettings.downtimeCost || "";
   document.getElementById("calcPreparationRate").value = appData.calcSettings.preparationRate || "";
   document.getElementById("calcPreparationTime").value = appData.calcSettings.preparationTime ? formatTimeForDisplay(appData.calcSettings.preparationTime) : "";
@@ -2372,6 +2379,7 @@ function addModelRow(printerId, modelData) {
     {val:"new", text:"Новая"},
     {val:"inprogress", text:"Печать"},
     {val:"done", text:"Готова"},
+    {val:"reject", text:"Брак"},
     {val:"canceled", text:"Отменена"}
   ];
   const optsStatus = statuses.map(s =>
@@ -2469,6 +2477,7 @@ function onCalculateAll() {
   const downtimeRate = parseFloat(document.getElementById("calcDowntimeCost").value) || 0;
   const prepRate = parseFloat(document.getElementById("calcPreparationRate").value) || 0;
   const prepTime = handleTimeInput({target:{value: document.getElementById("calcPreparationTime").value}});
+  const includeOpRejects = document.getElementById("calcOperatorReject").checked;
     let orderId = document.getElementById("calcOrderId").value.trim();
     let existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
     if (!orderId) {
@@ -2494,6 +2503,7 @@ function onCalculateAll() {
   
   // Сохранение настроек расчёта
   appData.calcSettings.operatorRate = opRate;
+  appData.calcSettings.includeOperatorForRejects = includeOpRejects;
   appData.calcSettings.workHoursDay = whDay;
   appData.calcSettings.costKwh = cKwh;
   appData.calcSettings.taxPercent = tPercent;
@@ -2545,14 +2555,19 @@ function onCalculateAll() {
   let detailsByPrinter = [];
   let sumWithoutTax = 0;
   let finalTimeAllPrinters = 0;
+  let finalOpTimeAllPrinters = 0;
   let maxPrinterTime = 0;
+  let maxOpPrinterTime = 0;
   let totalCoolingMinutes = 0;
+  let totalRejectHours = 0;
+  let totalRejectWeight = 0;
   
   appData.printers.forEach(pr => {
     const table = document.getElementById(`calcModelsTable_${pr.id}`);
     if (!table) return;
     
     let prTime = 0;
+    let prOpTime = 0;
     let prCostNoTax = 0;
     let lines = [];
     const rows = table.querySelectorAll("tbody tr");
@@ -2567,8 +2582,13 @@ function onCalculateAll() {
       const w = parseFloat(inpW.value) || 0;
       const mid = selM.value;
       if (!mid || h <= 0 || w <= 0) return;
-      
+
+      const status = selStatus.value || "new";
       prTime += h;
+      if (status !== "reject" || includeOpRejects) prOpTime += h;
+      if (status === "reject") {
+        totalRejectHours += h;
+      }
       
       const mat = getAllMaterialsForPrinter(pr.id).find(x => String(x.id) === String(mid));
       if (!mat) return;
@@ -2578,6 +2598,9 @@ function onCalculateAll() {
       const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
       const costPrinterPart = h * costPH;
       const realW = w;
+      if (status === "reject") {
+        totalRejectWeight += realW;
+      }
       // Агрегируем потребление для данного материала
       materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
       
@@ -2618,8 +2641,10 @@ function onCalculateAll() {
     
     if (parallelMode === "no") {
       finalTimeAllPrinters += prTime;
+      finalOpTimeAllPrinters += prOpTime;
     } else {
       if (prTime > maxPrinterTime) maxPrinterTime = prTime;
+      if (prOpTime > maxOpPrinterTime) maxOpPrinterTime = prOpTime;
     }
     
     sumWithoutTax += prCostNoTax;
@@ -2644,7 +2669,7 @@ function onCalculateAll() {
   }
   
   const totalCoolingHours = totalCoolingMinutes / 60;
-  let baseOperatorTime = (parallelMode === "yes") ? maxPrinterTime : finalTimeAllPrinters;
+  let baseOperatorTime = (parallelMode === "yes") ? maxOpPrinterTime : finalOpTimeAllPrinters;
   let finalTimeOperator = baseOperatorTime + prepTime + totalCoolingHours;
   const operatorWorkCost = baseOperatorTime * opRate;
   const downtimeCost = totalCoolingMinutes * downtimeRate;
@@ -2980,7 +3005,9 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     nalogReceipts: Array.isArray(lastCalcFullData.nalogReceipts)
       ? lastCalcFullData.nalogReceipts.map(r=>({uuid:r.uuid, canceled:!!r.canceled}))
       : [],
-    nalogReceiptUuid: lastCalcFullData.receiptUuid || null
+    nalogReceiptUuid: lastCalcFullData.receiptUuid || null,
+    rejectHours: totalRejectHours,
+    rejectWeight: totalRejectWeight
   };
   if (existingIndex !== -1) {
     appData.calcHistory[existingIndex] = newEntry;
@@ -3419,6 +3446,7 @@ function saveCalcSettings(){
   appData.labelSettings.printLabels = document.getElementById("printLabelsCheckbox").checked;
   appData.labelSettings.costPerLabel = parseFloat(document.getElementById("labelCostInput").value) || 0;
   appData.calcSettings.operatorRate = parseFloat(document.getElementById("calcOperatorRate").value) || 0;
+  appData.calcSettings.includeOperatorForRejects = document.getElementById("calcOperatorReject").checked;
   appData.calcSettings.downtimeCost = parseFloat(document.getElementById("calcDowntimeCost").value) || 0;
   appData.calcSettings.preparationRate = parseFloat(document.getElementById("calcPreparationRate").value) || 0;
   appData.calcSettings.costKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
@@ -4374,6 +4402,8 @@ function onEditCalcHistory(timestamp){
       totalMaterialCost: 0,
       totalPrinterCost: 0,
       totalMaintenanceCost: 0,
+      totalRejectHours: 0,
+      totalRejectGrams: 0,
       materialStats: {},
       printerStats: {},
       clientStats: {},
@@ -4391,7 +4421,9 @@ function onEditCalcHistory(timestamp){
         maintenance: 0,
         revenue: 0,
         prints: 0,
-        grams: 0
+        grams: 0,
+        rejectHours: 0,
+        rejectGrams: 0
       };
     });
 
@@ -4427,19 +4459,29 @@ function onEditCalcHistory(timestamp){
               maintenance: 0,
               revenue: 0,
               prints: 0,
-              grams: 0
+              grams: 0,
+              rejectHours: 0,
+              rejectGrams: 0
             };
           }
 
         printer.linesDetail?.forEach(model => {
-          const materialId = model.materialData?.id;
-          const materialCost = model.costMaterial || 0;
-          const amortization = model.costPrinterPart || 0;
-          const electric = model.costElectric || 0;
-          const maintenance = model.costMaintenance || 0;
-          const modelRevenue = model.subTotalModel || 0;
-          const hours = model.hours || 0;
-          orderGrams += model.realWeight || 0;
+        const materialId = model.materialData?.id;
+        const materialCost = model.costMaterial || 0;
+        const amortization = model.costPrinterPart || 0;
+        const electric = model.costElectric || 0;
+        const maintenance = model.costMaintenance || 0;
+        const modelRevenue = model.subTotalModel || 0;
+        const hours = model.hours || 0;
+        const status = model.status;
+        const ps = results.printerStats[printerId];
+        orderGrams += model.realWeight || 0;
+        if (status === 'reject') {
+          results.totalRejectHours += hours;
+          results.totalRejectGrams += model.realWeight || 0;
+          ps.rejectHours += hours;
+          ps.rejectGrams += model.realWeight || 0;
+        }
 
           if (materialId) {
             // Статистика по материалам
@@ -4471,7 +4513,6 @@ function onEditCalcHistory(timestamp){
           results.totalPrintHours += hours;
 
           // Статистика по принтерам
-          const ps = results.printerStats[printerId];
           ps.hours += hours;
           ps.amortization += amortization;
           ps.energy += electric;
@@ -4599,6 +4640,8 @@ function onEditCalcHistory(timestamp){
       totalAdditionalCost,
       totalPrinterCost,
       totalMaintenanceCost,
+      totalRejectHours,
+      totalRejectGrams,
       materialStats,
       printerStats,
       clientStats
@@ -4695,7 +4738,9 @@ function onEditCalcHistory(timestamp){
       {title: 'Себестоимость / г', value: avgCostPerGram, unit: '₽/г', desc: '(Затраты / Материалы)', icon: 'bi-currency-ruble', decimals: 2},
       {title: 'Выручка / г', value: avgRevenuePerGram, unit: '₽/г', desc: '(Выручка / Материалы)', icon: 'bi-cash-stack', decimals: 2},
       {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', desc: '(Использование / Потенциал)', icon: 'bi-cpu'},
-      {title: 'Индекс прибыльности', value: profitabilityIndex, unit: '', desc: '(Прибыль + Вложения) / Вложения', icon: 'bi-clipboard-data', decimals: 2}
+      {title: 'Индекс прибыльности', value: profitabilityIndex, unit: '', desc: '(Прибыль + Вложения) / Вложения', icon: 'bi-clipboard-data', decimals: 2},
+      {title: 'Брак (ч)', value: totalRejectHours, unit: 'ч', desc: 'Время бракованных моделей', icon: 'bi-x-circle'},
+      {title: 'Брак (кг)', value: totalRejectGrams / 1000, unit: 'кг', desc: 'Вес бракованных моделей', icon: 'bi-exclamation-triangle', decimals: 3}
     ].map(card => `
       <div class="col-md-3 col-sm-6 mb-3">
         <div class="card h-100 shadow-sm">
