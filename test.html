@@ -301,22 +301,15 @@
       </div>
       <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
       <div class="row mb-3">
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label for="calcShipping" class="form-label">Упаковка/Доставка (₽):</label>
           <input type="number" step="1" id="calcShipping" class="form-control" />
         </div>
-        <div class="col-md-3">
-          <label for="calcModelingCost" class="form-label">Стоимость моделирования (₽):</label>
-          <div class="input-group">
-            <input type="number" step="0.01" id="calcModelingCost" class="form-control" />
-            <button class="btn btn-outline-secondary" type="button" onclick="openModelingCalculatorModal()">📊</button>
-          </div>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label for="calcStartDate" class="form-label">Дата начала:</label>
           <input type="date" id="calcStartDate" class="form-control" />
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
           <label for="calcParallelPrinting" class="form-label">Учёт параллельной печати?</label>
           <select id="calcParallelPrinting" class="form-select">
             <option value="no">Нет</option>
@@ -324,8 +317,7 @@
           </select>
         </div>
       </div>
-     
-		<div class="row mb-3">
+      <div class="row mb-3">
         <div class="col-md-3">
           <label for="calcMarkupPercent" class="form-label">Наценка (%):</label>
           <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
@@ -343,9 +335,30 @@
           <input type="text" id="calcPreparationTime" class="form-control" onblur="this.value = formatTimeForDisplay(handleTimeInput({target:{value:this.value}}))" />
         </div>
       </div>
+      <div class="row mb-3">
+        <div class="col-12">
+          <label class="form-label">Услуги:</label>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered" id="customServicesTable">
+              <thead>
+                <tr>
+                  <th>Вкл.</th>
+                  <th>Название</th>
+                  <th>Стоимость за ед.</th>
+                  <th>Кол-во</th>
+                  <th>Тип</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <button class="btn btn-sm btn-primary" onclick="addCustomService()">Добавить услугу</button>
+        </div>
+      </div>
       <hr/>
       <div id="calcPrintersContainer"></div>
-	<div class="d-flex mt-3" style="justify-content: space-between;">
+        <div class="d-flex mt-3" style="justify-content: space-between;">
         <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
         <button class="btn btn-secondary ms-2" onclick="startNewCalculation()">Новый расчёт</button>
       </div>
@@ -1470,12 +1483,11 @@ let appData = {
     parallelPrinting: "no",
     markupPercent: 0,
     discountPercent: 0,
-    modelingRate: 500,
-    modelingCost: 0,
     downtimeCost: 0,
     preparationRate: 0,
     preparationTime: 0,
-    includeOperatorForRejects: false
+    includeOperatorForRejects: false,
+    customServices: []
   },
   labelSettings: {
   companyName: "Компания",
@@ -1509,6 +1521,8 @@ function loadFromLocalStorage(){
         delete appData.labelSettings.paymentInfo;
       }
       if(!('bankDetails' in appData.labelSettings)) appData.labelSettings.bankDetails = '';
+      if(!appData.calcSettings) appData.calcSettings = {};
+      if(!Array.isArray(appData.calcSettings.customServices)) appData.calcSettings.customServices = [];
     }
   } catch(e){}
 }
@@ -1531,6 +1545,7 @@ function initAll(){
   renderGlobalAdditionalTable();
   renderClientsTable();
   renderCalcPrinters();
+  renderCustomServicesTable();
   renderHistoryTable();
   updateHistoryStats();
   renderSummary();
@@ -1547,7 +1562,6 @@ function initAll(){
   document.getElementById("calcCostKwh").value = appData.calcSettings.costKwh || "";
   document.getElementById("calcTaxPercent").value = appData.calcSettings.taxPercent || "";
   document.getElementById("calcShipping").value = appData.calcSettings.shipping || "";
-  document.getElementById("calcModelingCost").value = appData.calcSettings.modelingCost || 0;
   document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
   document.getElementById("calcParallelPrinting").value = appData.calcSettings.parallelPrinting || "no";
   document.getElementById("calcMarkupPercent").value = appData.calcSettings.markupPercent || 0;
@@ -2264,6 +2278,53 @@ function onDeleteGlobalAdditional(id){
   renderSummary();
 }
 
+/* Функции для кастомных услуг */
+function renderCustomServicesTable(){
+  const tb = document.querySelector('#customServicesTable tbody');
+  if(!tb) return;
+  tb.innerHTML='';
+  (appData.calcSettings.customServices||[]).forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input type="checkbox" ${s.use?'checked':''} onchange="updateService('${s.id}','use',this.checked)"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${s.name}" onchange="updateService('${s.id}','name',this.value)"></td>
+      <td><input type="number" step="0.01" class="form-control form-control-sm" value="${s.cost}" onchange="updateService('${s.id}','cost',this.value)"></td>
+      <td><input type="number" step="0.01" class="form-control form-control-sm" value="${s.qty}" onchange="updateService('${s.id}','qty',this.value)"></td>
+      <td>
+        <select class="form-select form-select-sm" onchange="updateService('${s.id}','mode',this.value)">
+          <option value="per_unit" ${s.mode==='per_unit'?'selected':''}>за единицу</option>
+          <option value="per_service" ${s.mode==='per_service'?'selected':''}>за услугу</option>
+          <option value="per_hour" ${s.mode==='per_hour'?'selected':''}>за час</option>
+        </select>
+      </td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteCustomService('${s.id}')">Удалить</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function addCustomService(){
+  if(!Array.isArray(appData.calcSettings.customServices)) appData.calcSettings.customServices=[];
+  appData.calcSettings.customServices.push({id:getNextId('services'),name:'',cost:0,qty:1,mode:'per_service',use:true});
+  saveToLocalStorage();
+  renderCustomServicesTable();
+}
+
+function deleteCustomService(id){
+  appData.calcSettings.customServices=(appData.calcSettings.customServices||[]).filter(s=>String(s.id)!==String(id));
+  saveToLocalStorage();
+  renderCustomServicesTable();
+}
+
+function updateService(id,field,value){
+  const s=(appData.calcSettings.customServices||[]).find(x=>String(x.id)===String(id));
+  if(!s) return;
+  if(field==='cost'||field==='qty') s[field]=parseFloat(value)||0;
+  else if(field==='use') s[field]=value;
+  else s[field]=value;
+  saveToLocalStorage();
+}
+
 /* Функции для клиентов */
 function renderClientsTable(){
   const tb = document.querySelector("#clientsTable tbody");
@@ -2468,7 +2529,6 @@ function onCalculateAll() {
   const cKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
   const tPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
   const ship = parseFloat(document.getElementById("calcShipping").value) || 0;
-  const modelingCost = parseFloat(document.getElementById("calcModelingCost").value) || 0;
   const sDate = document.getElementById("calcStartDate").value;
   const parallelMode = document.getElementById("calcParallelPrinting").value;
   const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
@@ -2478,6 +2538,18 @@ function onCalculateAll() {
   const prepRate = parseFloat(document.getElementById("calcPreparationRate").value) || 0;
   const prepTime = handleTimeInput({target:{value: document.getElementById("calcPreparationTime").value}});
   const includeOpRejects = document.getElementById("calcOperatorReject").checked;
+  const servicesArr = appData.calcSettings.customServices || [];
+  let servicesTotal = 0;
+  const servicesUsed = [];
+  servicesArr.forEach(s=>{
+    if(!s.use) return;
+    const cost=parseFloat(s.cost)||0;
+    const qty=parseFloat(s.qty)||0;
+    let total=0;
+    if(s.mode==='per_service') total=cost; else total=cost*qty;
+    servicesTotal+=total;
+    servicesUsed.push({id:s.id,name:s.name,cost:cost,qty:qty,mode:s.mode,use:true,total});
+  });
     let orderId = document.getElementById("calcOrderId").value.trim();
     let existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
     if (!orderId) {
@@ -2508,7 +2580,6 @@ function onCalculateAll() {
   appData.calcSettings.costKwh = cKwh;
   appData.calcSettings.taxPercent = tPercent;
   appData.calcSettings.shipping = ship;
-  appData.calcSettings.modelingCost = modelingCost;
   appData.calcSettings.startDate = sDate;
   appData.calcSettings.parallelPrinting = parallelMode;
   appData.calcSettings.markupPercent = markupPercent;
@@ -2706,11 +2777,11 @@ function onCalculateAll() {
   }
 
   
-  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost + modelingCost;
-
+  let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost;
   if (markupPercent > 0) {
     subtotal *= (1 + markupPercent / 100);
   }
+  subtotal += servicesTotal;
   const totalBeforeDiscount = subtotal / (1 - tPercent / 100);
   const taxAmount = totalBeforeDiscount - subtotal;
   let finalSum = totalBeforeDiscount;
@@ -2733,8 +2804,12 @@ function onCalculateAll() {
   htmlRes += `Подготовка: ${formatTimeForDisplay(prepTime)} ч. (${safeFixed(preparationCost)} ₽)<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
-  htmlRes += `Стоимость моделирования: ${safeFixed(modelingCost)} ₽<br/>`;
   htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
+  if(servicesUsed.length>0){
+    htmlRes += `Услуги:<br/>`;
+    servicesUsed.forEach(s=>{htmlRes += `${s.name}: ${safeFixed(s.total)} ₽<br/>`;});
+    htmlRes += `Итого услуги: ${safeFixed(servicesTotal)} ₽<br/>`;
+  }
   htmlRes += `Подитог: ${safeFixed(subtotal)} ₽<br/>`;
   htmlRes += `Общий налог (${tPercent}%): ${safeFixed(taxAmount)} ₽<br/>`;
  
@@ -2790,7 +2865,8 @@ if(discountPercent > 0){
       modelsHtml: summaryModels,
       qr: qrDataUrl,
       paymentInfo: appData.labelSettings.bankDetails,
-      modelingCost: modelingCost > 0 ? safeFixed(modelingCost) : null
+      services: servicesUsed,
+      servicesTotal: safeFixed(servicesTotal)
     });
   });
   if (warnings.length > 0) {
@@ -2927,7 +3003,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     totalHours: finalTimeOperator,
     taxPercent: tPercent,
     shipping: ship,
-    modelingCost: modelingCost,
+    services: servicesUsed,
+    servicesTotal,
     detailsByPrinter,
     costKwh: cKwh,
     operatorRate: opRate,
@@ -2967,6 +3044,7 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
   }
 
   lastCalcFullData.totalLabelsCost = totalLabelsCost;
+  lastCalcFullData.servicesTotal = servicesTotal;
 
   const dtStr = new Date().toLocaleString("ru-RU");
   const newEntry = {
@@ -2981,7 +3059,8 @@ if ((d.linesDetail.length === 0 || !d.linesDetail) && d.printerTime <= 0) {
     totalHours: finalTimeOperator,
     taxPercent: tPercent,
     shipping: ship,
-    modelingCost: modelingCost,
+    services: servicesUsed,
+    servicesTotal,
     operatorRate: opRate,
     costKwh: cKwh,
     totalOperatorCost: totalOperatorCost,
@@ -3059,15 +3138,11 @@ function calculateModelingCost() {
   }
   
   const totalCost = rate * time * complexity;
-  
+
   // Сохраняем настройки
   appData.calcSettings.modelingRate = rate;
-  appData.calcSettings.modelingCost = totalCost;
   saveToLocalStorage();
-  
-  // Заполняем поле в калькуляторе
-  document.getElementById('calcModelingCost').value = totalCost.toFixed(2);
-  
+
   // Закрываем модальное окно
   const modal = bootstrap.Modal.getInstance(document.getElementById('modelingCalculatorModal'));
   modal.hide();
@@ -3739,7 +3814,7 @@ function buildSummaryCardHtml(data){
     <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
     <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
     <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
-    ${data.modelingCost && data.modelingCost > 0 ? `<div class="info-item"><span class="label">Стоимость моделирования:<\/span><span class="value">${data.modelingCost} ₽<\/span></div>` : ''}
+    ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${s.total} ₽<\/span></div>`).join('') + `<div class="info-item"><span class="label">Итого услуги:<\/span><span class="value">${data.servicesTotal} ₽<\/span></div>` : ''}
     <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
     <div class="info-item"><span class="label">Цена за 1 грамм:<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
     ${data.paymentInfo ? `<div class="info-item"><span class="label">Оплата:<\/span><span class="value">${data.paymentInfo}<\/span></div>` : ''}
@@ -4280,14 +4355,15 @@ function onEditCalcHistory(timestamp){
   document.getElementById("calcCostKwh").value = it.costKwh || "";
   document.getElementById("calcTaxPercent").value = it.taxPercent || "";
   document.getElementById("calcShipping").value = it.shipping || "";
-  document.getElementById("calcModelingCost").value = it.modelingCost || 0;
   document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
   document.getElementById("calcParallelPrinting").value = it.parallelMode || "no";
   document.getElementById("calcMarkupPercent").value = it.markupPercent || 0;
   document.getElementById("calcDiscountPercent").value = it.discountPercent || 0;
   document.getElementById("calcFinalCost").value = it.realTotal || '';
   toggleFinalFields(it.orderStatus || 'new');
-  
+  appData.calcSettings.customServices = it.services ? it.services.map(s=>({...s})) : [];
+  renderCustomServicesTable();
+
   if(it.calcData){
     for(const printerId in it.calcData){
       const table = document.getElementById(`calcModelsTable_${printerId}`);
@@ -4396,7 +4472,7 @@ function onEditCalcHistory(timestamp){
       totalPrintHours: 0,
       totalElectricityCost: 0,
       totalOperatorExpenses: 0,
-      totalModelingCost: 0,
+      totalServiceCost: 0,
       totalShippingCost: 0,
       totalAdditionalCost: 0,
       totalMaterialCost: 0,
@@ -4442,8 +4518,8 @@ function onEditCalcHistory(timestamp){
       // Учет расходов на оператора
       results.totalOperatorExpenses += order.totalOperatorCost || 0;
 
-      // Учет расходов на моделирование
-      results.totalModelingCost += order.modelingCost || 0;
+      // Учет расходов на услуги
+      results.totalServiceCost += order.servicesTotal || 0;
 
       // Обработка деталей заказа
       order.details?.forEach(printer => {
@@ -4527,7 +4603,7 @@ function onEditCalcHistory(timestamp){
       // Глобальные расходы
       const addCost = order.globalAdditional?.sumGlobalAdd || 0;
       const shipping = order.shipping || 0;
-      const globalCosts = addCost + shipping + (order.totalOperatorCost || 0) + (order.modelingCost || 0);
+      const globalCosts = addCost + shipping + (order.totalOperatorCost || 0) + (order.servicesTotal || 0);
       results.totalAdditionalCost += addCost;
       results.totalShippingCost += shipping;
       results.totalCost += globalCosts;
@@ -4557,7 +4633,7 @@ function onEditCalcHistory(timestamp){
       totalPrintHours,
       totalElectricityCost,
       totalOperatorExpenses,
-      totalModelingCost,
+      totalServiceCost,
       totalShippingCost,
       totalAdditionalCost,
       totalMaterialCost,
@@ -4609,7 +4685,7 @@ function onEditCalcHistory(timestamp){
         material: totalCost > 0 ? (totalMaterialCost / totalCost) * 100 : 0,
         electricity: totalCost > 0 ? (totalElectricityCost / totalCost) * 100 : 0,
         operator: totalCost > 0 ? (totalOperatorExpenses / totalCost) * 100 : 0,
-        modeling: totalCost > 0 ? (totalModelingCost / totalCost) * 100 : 0,
+        services: totalCost > 0 ? (totalServiceCost / totalCost) * 100 : 0,
         shipping: totalCost > 0 ? (totalShippingCost / totalCost) * 100 : 0,
         additional: totalCost > 0 ? (totalAdditionalCost / totalCost) * 100 : 0,
         amortization: totalCost > 0 ? (totalPrinterCost / totalCost) * 100 : 0,
@@ -4633,7 +4709,7 @@ function onEditCalcHistory(timestamp){
       totalTax,
       totalCost,
       totalOperatorExpenses,
-      totalModelingCost,
+      totalServiceCost,
       totalElectricityCost,
       totalMaterialCost,
       totalShippingCost,
@@ -4878,8 +4954,8 @@ function onEditCalcHistory(timestamp){
                       <span>${formatCurrency(totalOperatorExpenses)} (${formatNumber(costStructure.operator,1)}%)</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
-                      <span>Моделирование:</span>
-                      <span>${formatCurrency(totalModelingCost)} (${formatNumber(costStructure.modeling,1)}%)</span>
+                      <span>Услуги:</span>
+                      <span>${formatCurrency(totalServiceCost)} (${formatNumber(costStructure.services,1)}%)</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                       <span>Доставка:</span>
