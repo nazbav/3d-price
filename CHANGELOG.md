@@ -1,0 +1,95 @@
+- fixed initialization when printers array missing in localStorage
+- added saveBrandingSettings and saveCalcSettings
+- ensured arrays exist for materials, expenses, clients, history
+- updated settings saving to persist work hours, operator rate, kWh cost and tax
+- introduced settings hub with branding, calculation and cloud export sections
+- implemented search and sort for all tables plus date filter in history
+- added clients entity with quick add option during calculation
+- unified global materials and expenses with printer mapping
+- added migrateOldData to convert legacy configs during import
+- applied short alphanumeric UUIDs for printers, models and orders
+- fixed material selection when editing history by listing zero balance items
+- display order code in history table and calculation results
+- run migrateOldData when loading from localStorage to upgrade existing configs
+- added project wiki and AGENTS.md with contribution guidelines
+- clarified requirement to update CHANGELOG, FEATURE_LIST and TEST_CHANGE_LOG in AGENTS.md
+- unified material profile storage and updated sync_orca.py to import profiles without creating materials
+- added modal to map deleted printers when loading history
+- removed automatic creation of printers from history; unresolved printers must be added manually or via import
+- materials can now link existing Orca profiles from the global list
+- printer mapping table shows model name and supports bulk assignment
+- deleting a printer now triggers the mapping dialog if history references it
+- README updated with note about printer reassignment dialog
+- sync_orca.py skips machine configs for unknown printers; add devices in advance
+- removed temporary printer cleanup logic after disabling auto creation
+- material profile editor shows all profiles in dropdown for любого материала
+- removed printer mapping feature; history now keeps original IDs
+- fixed showMultiPrompt promise wrapper to prevent script errors
+- expanded AGENTS.md with detailed Ubuntu console testing steps
+- importing models via link now matches materials by print profile; modal selection if multiple
+- removed Orca material settings modal; added simple profile linking and global profile manager
+- fixed findMaterialByName to handle printers without material lists
+- added missing "Применить" button in material profile link modal to avoid null event handler
+- profile link handlers now check element existence, fixing error when importing a new model
+- fixed Orca printer fields not displaying due to data-inited check
+- менеджер профилей Orca теперь позволяет только импорт JSON, просмотр связей и удаление профилей
+- materials table shows linked Orca profiles; profile lookup is case-insensitive and link modal warns when list empty
+- removed printer detail view; materials table highlights color with readable text
+- sync_orca.py preserves user printers when merging machine configs, preventing accidental deletion
+- fixed Orca printer fields not displaying due to data-inited check
+- fixed missing closing tag in material modal causing Orca profile windows not to show
+- printer profiles stored globally with unique IDs; manager available via "Профили принтеров"
+- removed импорт и скачивание профилей из интерфейса
+- sync_orca.py выдаёт раздел printerProfiles и связывает их с принтерами
+- sync_orca.py предлагает интерактивное назначение профилей и избегает дубликатов
+- интерактив sync_orca спрашивает об изменении только когда профили уже связаны
+- в менеджере профилей можно переназначать профиль другому принтеру
+- fixed material profile lookup when importing models via link; handles numeric IDs
+- added ability to upload model thumbnails via icon in table; PNG resized to 140x110 and stored as base64
+- fixed printer detail calculations which broke due to added thumbnail column
+- added drag-and-drop support for gcode files in test.html to autofill model data
+- added button to download a combined label for all models at once in test.html
+- added option to download a stylish summary card with order info and model tiles
+- summary card now shows total plastic weight and final cost; model cards use 'Требуется' for hours
+- fixed ReferenceError in onCalculateAll when generating summary card
+- summary result now renders as a compact card with order info and model tiles
+- added 'New calculation' button to clear models and main order fields
+- added discount field with old price strikeout and final cost override for completed orders
+- added 'New calculation' button to reset calculator form
+- thumbnail upload now crops the image to fit 140x110 and compresses it to JPEG for smaller size
+- добавлена кнопка отправки чека в систему Мой Налог
+- раздел настроек «Мой Налог» позволяет сохранить токен и проверить статус
+- добавлена кнопка формирования счёта через сервис Мой Налог
+
+- улучшены сообщения об успехе и ошибках при отправке чека и счёта в "Мой Налог"
+- раздел «Мой Налог» позволяет войти по телефону и СМС, автоматически сохраняя токен
+
+- исправлена ошибка дублирования переменной phone
+- исправлена синтаксическая ошибка в блоке DOMContentLoaded (убрана опциональная цепочка для старых браузеров)
+- интеграция с сервисом «Мой Налог» переведена на новые адреса API и поддержку refresh‑токена
+- добавлена константа `MY_NALOG_API`, SMS‑проверка использует версию API v2
+- вход по SMS упрощён: пароль больше не требуется, поле удалено из настроек
+- исправлен формат запроса к API «Мой Налог»: при отправке чека и счёта добавлены поля client и ignoreMaxTotalIncomeRestriction
+- устранены двойные срабатывания кнопок при скачивании отчёта и отправке чека
+- итоговая карточка преобразована в счёт с выводом реквизитов для оплаты
+- в настройках брендинга появилось поле "Реквизиты для оплаты"
+- после успешной отправки чека заказ получает статус «Оплачен» и в результатах отображается ссылка на чек
+- добавлен выбор способа оплаты (по реквизитам или СБП) и генерация QR-кода в счёте для выбранного варианта
+- исправлена ошибка ReferenceError при расчёте (переменная existingIndex)
+- убраны дублирующиеся обработчики кнопок в разделе «Мой Налог»
+- поле реквизитов уточнено как "Банковские реквизиты (р/с)"
+- QR-код для СБП формируется по корректному адресу
+- при выборе СБП QR-код в счёте ведёт на чат поддержки
+- при необходимости можно принудительно перегенерировать чек по запросу
+- все сформированные чеки хранятся в заказе, предыдущие помечаются красным
+- удалён выбор метода оплаты, QR-код всегда ведёт на чат поддержки
+- поле банковских реквизитов изменено на многострочное
+
+- оплаченные заказы учитываются в итоговой статистике как завершённые
+- в таблице истории расчётов выводится ссылка на чек при его наличии
+- появилась возможность отменить последний чек через кнопку «Отменить чек»
+- предыдущий чек автоматически отменяется при повторной отправке; отменённые ссылки выделяются красным
+- переработана интеграция со Spoolman: приоритет импорта данных из Spoolman как основного источника
+- убрано создание external_id в Spoolman при экспорте; локальная система использует spoolman_id для связи
+- экспорт в Spoolman помечен как устаревший; синхронизация теперь работает через импорт из Spoolman
+- обновлена логика обнаружения дубликатов для работы с новым подходом на основе spoolman_id

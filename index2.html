@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <!-- Адаптив для мобильных -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+  <title>Калькулятор 3D-печати (расширенный, мобильная адаптация)</title>
+  
+  <!-- Bootstrap 5 (CSS) -->
+  <link 
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" 
+    rel="stylesheet"
+  />
+
+  <style>
+    /* Основные отступы и стили */
+    body {
+      /* Вместо фиксированных отступов используем bootstrap-классы или небольшие отступы. */
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .nav-tabs .nav-link.active {
+      font-weight: bold;
+    }
+    .small-text {
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .footer {
+      margin-top: 40px;
+      font-size: 0.9rem;
+      border-top: 1px solid var(--bs-border-color);
+      padding-top: 10px;
+    }
+    table td, 
+    table th {
+      vertical-align: middle;
+      white-space: nowrap; /* Можно убрать перенос слов в ячейках */
+    }
+    .btn-group-sm > .btn {
+      font-size: 0.8rem;
+      padding: 2px 6px;
+      margin-left: 2px;
+    }
+    
+    thead th {
+      background-color: var(--bs-table-bg) !important;
+      color: var(--bs-body-color) !important;
+    }
+
+    /* Тёмная тема: заголовок таблицы */
+    [data-bs-theme="dark"] thead th {
+      background-color: var(--bs-dark-bg-subtle) !important;
+      color: var(--bs-light) !important;
+    }
+
+    /* Пример простого медиа-запроса, чтобы при узких экранах блоки могли переноситься. */
+    @media (max-width: 576px) {
+      .d-flex {
+        flex-wrap: wrap !important;
+      }
+      .d-flex > * {
+        margin-top: .5rem; /* Небольшой отступ между элементами при переносе */
+      }
+      /* Можно также уменьшить шрифт заголовка, например:
+      h1 {
+        font-size: 1.5rem;
+      }
+      */
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Шапка с переключателем темы -->
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="my-4">Калькулятор стоимости 3D-печати</h1>
+    <div class="d-flex gap-2">
+      <a href="https://github.com/nazbav/3d-price/blob/main/README.md" class="btn btn-outline-primary" target="_blank">README</a>
+      <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
+    </div>
+  </div>
+
+  <!-- Навигационные вкладки -->
+  <ul class="nav nav-tabs" id="mainTab" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active" id="printers-tab" data-bs-toggle="tab"
+              data-bs-target="#printers" type="button" role="tab" aria-controls="printers" 
+              aria-selected="true">
+        Принтеры
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="materials-tab" data-bs-toggle="tab" 
+              data-bs-target="#materials" type="button" role="tab" aria-controls="materials" 
+              aria-selected="false">
+        Материалы
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="additional-tab" data-bs-toggle="tab"
+              data-bs-target="#additional" type="button" role="tab" 
+              aria-controls="additional" aria-selected="false">
+        Доп. расходы
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="calculate-tab" data-bs-toggle="tab"
+              data-bs-target="#calculate" type="button" role="tab"
+              aria-controls="calculate" aria-selected="false">
+        Калькулятор
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="importexport-tab" data-bs-toggle="tab"
+              data-bs-target="#importexport" type="button" role="tab"
+              aria-controls="importexport" aria-selected="false">
+        Импорт/Экспорт JSON
+      </button>
+    </li>
+  </ul>
+
+  <!-- Содержимое вкладок -->
+  <div class="tab-content" id="mainTabContent">
+
+    <!-- Вкладка Принтеры -->
+    <div class="tab-pane fade show active" id="printers" role="tabpanel" aria-labelledby="printers-tab">
+      <div class="mt-4">
+        <h3>Список принтеров</h3>
+        <p class="small-text">
+          Укажите название, стоимость (с учётом запчастей, расходников и т.д.), за сколько часов планируется окупить, 
+          а также мощность (Вт) и стоимость обслуживания (руб/час).
+        </p>
+
+        <button class="btn btn-primary btn-sm mb-3" onclick="onAddPrinter()">Добавить принтер</button>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover" id="printersTable">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Стоимость (₽)</th>
+                <th>Часы окупаемости</th>
+                <th>Мощность (Вт)</th>
+                <th>Обслуживание (₽/ч)</th>
+                <th style="width: 140px;">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Заполняется скриптом -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка Материалы -->
+    <div class="tab-pane fade" id="materials" role="tabpanel" aria-labelledby="materials-tab">
+      <div class="mt-4">
+        <h3>Список материалов</h3>
+        <p class="small-text">
+          Укажите тип материала, стоимость за 1 кг, сколько кг есть в наличии, а также % на брак (отход).
+        </p>
+        <button class="btn btn-primary btn-sm mb-3" onclick="onAddMaterial()">Добавить материал</button>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover" id="materialsTable">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Тип материала</th>
+                <th>Стоимость за кг (₽)</th>
+                <th>Кол-во (кг)</th>
+                <th>Отход (%)</th>
+                <th style="width: 140px;">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Заполняется скриптом -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка Доп. расходы -->
+    <div class="tab-pane fade" id="additional" role="tabpanel" aria-labelledby="additional-tab">
+      <div class="mt-4">
+        <h3>Дополнительные расходы</h3>
+        <p class="small-text">
+          Укажите расходы на обслуживание и хранение: контейнеры, адгезив, сушилка, фильтры, 
+          а также любые иные траты (например, «тестовая печать»).
+          Их сумма при расчёте будет «размазываться» по часам печати (по выбранному принтеру).
+        </p>
+        <button class="btn btn-primary btn-sm mb-3" onclick="onAddAdditional()">Добавить</button>
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover" id="additionalTable">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Описание</th>
+                <th>Стоимость (₽)</th>
+                <th style="width: 120px;">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Заполняется скриптом -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка Калькулятор -->
+    <div class="tab-pane fade" id="calculate" role="tabpanel" aria-labelledby="calculate-tab">
+      <div class="row my-4">
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="calcPrinter">Выберите принтер:</label>
+          <select class="form-select" id="calcPrinter"></select>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label" for="calcMaterial">Выберите материал:</label>
+          <select class="form-select" id="calcMaterial"></select>
+        </div>
+      </div>
+
+      <div class="row my-2">
+        <div class="col-md-4 mb-3">
+          <label for="calcHours" class="form-label">Время печати (часов):</label>
+          <input type="number" id="calcHours" class="form-control" step="0.1" placeholder="Напр. 10" />
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="calcWeight" class="form-label">Вес изделия (грамм):</label>
+          <input type="number" id="calcWeight" class="form-control" placeholder="Напр. 100" />
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="calcOperatorRate" class="form-label">
+            Ставка оператора (₽/час):
+          </label>
+          <input type="number" id="calcOperatorRate" class="form-control" placeholder="Напр. 200" />
+        </div>
+      </div>
+
+      <hr/>
+      <h5>Прочие настройки</h5>
+      <div class="row my-2">
+        <div class="col-md-4 mb-3">
+          <label for="calcWorkHoursDay" class="form-label">
+            Рабочих часов в день:
+          </label>
+          <input type="number" id="calcWorkHoursDay" class="form-control" placeholder="Напр. 8" />
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="calcStartDate" class="form-label">
+            Дата начала:
+          </label>
+          <input type="date" id="calcStartDate" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="calcCostKwh" class="form-label">
+            Цена 1 кВт⋅ч (₽):
+          </label>
+          <input type="number" step="0.01" id="calcCostKwh" class="form-control" placeholder="Напр. 6" />
+        </div>
+      </div>
+
+      <div class="row my-2">
+        <div class="col-md-4 mb-3">
+          <label for="calcShipping" class="form-label">
+            Доставка/Упаковка (₽):
+          </label>
+          <input type="number" step="1" id="calcShipping" class="form-control" placeholder="Напр. 200" />
+        </div>
+        <div class="col-md-4 mb-3">
+          <label for="calcTaxPercent" class="form-label">
+            Налог (%):
+          </label>
+          <input type="number" step="1" id="calcTaxPercent" class="form-control" placeholder="Напр. 6" />
+        </div>
+      </div>
+
+      <div class="my-2">
+        <button id="btnCalculate" class="btn btn-success" onclick="onCalculate()">
+          Рассчитать
+        </button>
+      </div>
+
+      <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
+    </div>
+
+    <!-- Вкладка Импорт/Экспорт JSON -->
+    <div class="tab-pane fade" id="importexport" role="tabpanel" aria-labelledby="importexport-tab">
+      <div class="mt-4">
+        <h3>Экспорт данных в JSON</h3>
+        <p>
+          Нажмите на кнопку, чтобы выгрузить все текущие настройки (принтеры, материалы, доп. расходы) 
+          и параметры калькулятора в виде JSON.
+        </p>
+        <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
+        <textarea 
+          id="exportArea" 
+          class="form-control mt-2" 
+          rows="5" 
+          placeholder="Здесь появится экспортированный JSON"></textarea>
+      </div>
+      <hr />
+      <div class="mt-4">
+        <h3>Импорт данных из JSON</h3>
+        <p>
+          Вставьте JSON в поле ниже и нажмите «Импортировать». 
+          Текущие данные будут заменены данными из JSON.
+        </p>
+        <textarea 
+          id="importArea" 
+          class="form-control" 
+          rows="5" 
+          placeholder="{ ... }"></textarea>
+        <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Нижняя часть -->
+  <div class="footer">
+    <p class="mb-1">
+      Все данные автоматически сохраняются в вашем браузере (LocalStorage) при любых изменениях.
+    </p>
+    <p class="mb-0">
+      При необходимости вы можете сбросить настройки, импортировав пустой JSON или очистив LocalStorage вручную.
+    </p>
+  </div>
+
+  <!-- Ссылка на первую версию -->
+  <div class="mt-4">
+    <a href="index1.html"><h6>Первая версия калькулятора (тык)</h6></a>
+    <a href="index3.html"><h6>Третья версия калькулятора (тык)</h6></a>
+    <p><span style="text-decoration:line-through">©</span>2025 Ничьи права не защищены.</p>
+  </div>
+
+</div>
+
+<!-- Bootstrap Bundle (JS + Popper) -->
+<script 
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js">
+</script>
+
+<script>
+
+// Ключ для хранения темы в LocalStorage
+const THEME_STORAGE_KEY = "themePreference";
+
+// Функция установки темы
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-bs-theme", theme);
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  document.getElementById("themeToggle").innerText = theme === "dark" ? "☀️ Светлая тема" : "🌙 Темная тема";
+}
+
+// Переключение темы при клике
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const currentTheme = document.documentElement.getAttribute("data-bs-theme");
+  const newTheme = currentTheme === "dark" ? "light" : "dark";
+  setTheme(newTheme);
+});
+
+// Устанавливаем тему при загрузке страницы
+const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) || "light";
+setTheme(savedTheme);
+
+/** ========================================================
+ *   1. Структура данных и LocalStorage
+ * =========================================================
+ */
+
+// Ключ для localStorage
+const STORAGE_KEY = 'ThreeDPrintCalc_FullFactors_v1';
+
+// Основная структура:
+let appData = {
+  printers: [
+    {
+      id: 1,
+      name: "Ender 3 v3 se",
+      cost: 20000,
+      hoursToRecoup: 500,
+      power: 350,
+      maintCostHour: 5
+    },
+    {
+      id: 2,
+      name: "FlashForge Adventurer 5M",
+      cost: 35000,
+      hoursToRecoup: 500,
+      power: 350,
+      maintCostHour: 5
+    }
+  ],
+  materials: [
+    {
+      id: 1,
+      name: "HIPS",
+      costPerKg: 700,
+      availableKg: 1,
+      wastePercent: 1
+    },
+    {
+      id: 2,
+      name: "ABS",
+      costPerKg: 800,
+      availableKg: 2,
+      wastePercent: 5
+    },
+    {
+      id: 3,
+      name: "PLA",
+      costPerKg: 1500,
+      availableKg: 1,
+      wastePercent: 1
+    },
+    {
+      id: 4,
+      name: "PET-G",
+      costPerKg: 800,
+      availableKg: 4,
+      wastePercent: 3
+    }
+  ],
+  additional: [
+    {
+      id: 2,
+      description: "Контейнеры для хранения пластика",
+      cost: 2000
+    }
+  ],
+  calcSettings: {
+    operatorRate: 5,
+    workHoursDay: 3,
+    startDate: "2025-01-22",
+    costKwh: 1,
+    shipping: 10,
+    taxPercent: 3
+  }
+};
+
+function saveToLocalStorage() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+function loadFromLocalStorage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const obj = JSON.parse(saved);
+      if (obj) {
+        appData = obj;
+      }
+    }
+  } catch (err) {
+    console.warn('Ошибка загрузки из localStorage:', err);
+  }
+}
+
+/** ========================================================
+ *   2. Отрисовка (рендер) таблиц + CRUD-операции
+ * =========================================================
+ */
+function renderAllTables() {
+  renderPrintersTable();
+  renderMaterialsTable();
+  renderAdditionalTable();
+}
+
+/** ------------------ Принтеры ------------------ */
+function renderPrintersTable() {
+  const tbody = document.querySelector('#printersTable tbody');
+  tbody.innerHTML = '';
+  
+  appData.printers.forEach((printer) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${printer.id}<\/td>
+      <td>${printer.name}<\/td>
+      <td>${printer.cost}<\/td>
+      <td>${printer.hoursToRecoup}<\/td>
+      <td>${printer.power}<\/td>
+      <td>${printer.maintCostHour}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditPrinter(${printer.id})">Редактировать<\/button>
+          <button class="btn btn-danger" onclick="onDeletePrinter(${printer.id})">Удалить<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function onAddPrinter() {
+  const newId = Date.now();
+  const newPrinter = {
+    id: newId,
+    name: 'Новый принтер',
+    cost: 0,
+    hoursToRecoup: 500,
+    power: 0,
+    maintCostHour: 0
+  };
+  appData.printers.push(newPrinter);
+  saveToLocalStorage();
+  renderPrintersTable();
+}
+
+function onEditPrinter(id) {
+  const printer = appData.printers.find(p => p.id === id);
+  if (!printer) return;
+
+  const name = prompt('Название принтера:', printer.name);
+  if (name === null) return;
+  const cost = prompt('Стоимость (руб):', printer.cost);
+  if (cost === null) return;
+  const hours = prompt('Часы окупаемости:', printer.hoursToRecoup);
+  if (hours === null) return;
+  const power = prompt('Мощность (Вт):', printer.power);
+  if (power === null) return;
+  const maint = prompt('Обслуживание (руб/ч):', printer.maintCostHour);
+  if (maint === null) return;
+
+  printer.name = name;
+  printer.cost = parseFloat(cost) || 0;
+  printer.hoursToRecoup = parseFloat(hours) || 1;
+  printer.power = parseFloat(power) || 0;
+  printer.maintCostHour = parseFloat(maint) || 0;
+
+  saveToLocalStorage();
+  renderPrintersTable();
+}
+
+function onDeletePrinter(id) {
+  if (!confirm('Удалить принтер с id=' + id + '?')) return;
+  appData.printers = appData.printers.filter(p => p.id !== id);
+  saveToLocalStorage();
+  renderPrintersTable();
+}
+
+/** ------------------ Материалы ------------------ */
+function renderMaterialsTable() {
+  const tbody = document.querySelector('#materialsTable tbody');
+  tbody.innerHTML = '';
+  
+  appData.materials.forEach((mat) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${mat.id}<\/td>
+      <td>${mat.name}<\/td>
+      <td>${mat.costPerKg}<\/td>
+      <td>${mat.availableKg}<\/td>
+      <td>${mat.wastePercent}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditMaterial(${mat.id})">Редактировать<\/button>
+          <button class="btn btn-danger" onclick="onDeleteMaterial(${mat.id})">Удалить<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function onAddMaterial() {
+  const newId = Date.now();
+  const newMat = {
+    id: newId,
+    name: 'Новый материал',
+    costPerKg: 0,
+    availableKg: 0,
+    wastePercent: 0
+  };
+  appData.materials.push(newMat);
+  saveToLocalStorage();
+  renderMaterialsTable();
+}
+
+function onEditMaterial(id) {
+  const mat = appData.materials.find(m => m.id === id);
+  if (!mat) return;
+
+  const name = prompt('Тип материала:', mat.name);
+  if (name === null) return;
+  const cost = prompt('Стоимость за кг:', mat.costPerKg);
+  if (cost === null) return;
+  const kg = prompt('Количество (кг):', mat.availableKg);
+  if (kg === null) return;
+  const waste = prompt('Отход (%):', mat.wastePercent);
+  if (waste === null) return;
+
+  mat.name = name;
+  mat.costPerKg = parseFloat(cost) || 0;
+  mat.availableKg = parseFloat(kg) || 0;
+  mat.wastePercent = parseFloat(waste) || 0;
+
+  saveToLocalStorage();
+  renderMaterialsTable();
+}
+
+function onDeleteMaterial(id) {
+  if (!confirm('Удалить материал с id=' + id + '?')) return;
+  appData.materials = appData.materials.filter(m => m.id !== id);
+  saveToLocalStorage();
+  renderMaterialsTable();
+}
+
+/** ------------------ Доп. расходы ------------------ */
+function renderAdditionalTable() {
+  const tbody = document.querySelector('#additionalTable tbody');
+  tbody.innerHTML = '';
+
+  appData.additional.forEach((item) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${item.id}<\/td>
+      <td>${item.description}<\/td>
+      <td>${item.cost}<\/td>
+      <td>
+        <div class="btn-group-sm">
+          <button class="btn btn-secondary" onclick="onEditAdditional(${item.id})">Редактировать<\/button>
+          <button class="btn btn-danger" onclick="onDeleteAdditional(${item.id})">Удалить<\/button>
+        <\/div>
+      <\/td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function onAddAdditional() {
+  const newId = Date.now();
+  const newItem = {
+    id: newId,
+    description: 'Новая статья расходов',
+    cost: 0
+  };
+  appData.additional.push(newItem);
+  saveToLocalStorage();
+  renderAdditionalTable();
+}
+
+function onEditAdditional(id) {
+  const item = appData.additional.find(a => a.id === id);
+  if (!item) return;
+
+  const desc = prompt('Описание:', item.description);
+  if (desc === null) return;
+  const cost = prompt('Стоимость (₽):', item.cost);
+  if (cost === null) return;
+
+  item.description = desc;
+  item.cost = parseFloat(cost) || 0;
+
+  saveToLocalStorage();
+  renderAdditionalTable();
+}
+
+function onDeleteAdditional(id) {
+  if (!confirm('Удалить статью расходов с id=' + id + '?')) return;
+  appData.additional = appData.additional.filter(a => a.id !== id);
+  saveToLocalStorage();
+  renderAdditionalTable();
+}
+
+/** ========================================================
+ *   3. Калькулятор (учёт оператора, графика, электричества, etc.)
+ * =========================================================
+ */
+function fillCalcSelects() {
+  // Принтеры
+  const selPrinter = document.getElementById('calcPrinter');
+  selPrinter.innerHTML = '';
+  appData.printers.forEach((p) => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    selPrinter.appendChild(opt);
+  });
+
+  // Материалы
+  const selMaterial = document.getElementById('calcMaterial');
+  selMaterial.innerHTML = '';
+  appData.materials.forEach((m) => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    selMaterial.appendChild(opt);
+  });
+
+  // Заполним поля из calcSettings
+  document.getElementById('calcOperatorRate').value = appData.calcSettings.operatorRate || '';
+  document.getElementById('calcWorkHoursDay').value = appData.calcSettings.workHoursDay || '';
+  document.getElementById('calcStartDate').value = appData.calcSettings.startDate || '';
+  document.getElementById('calcCostKwh').value = appData.calcSettings.costKwh || '';
+  document.getElementById('calcShipping').value = appData.calcSettings.shipping || '';
+  document.getElementById('calcTaxPercent').value = appData.calcSettings.taxPercent || '';
+}
+
+function onCalculate() {
+  // Считываем все поля:
+  const rate = parseFloat(document.getElementById('calcOperatorRate').value) || 0;
+  const whDay = parseFloat(document.getElementById('calcWorkHoursDay').value) || 8;
+  const startDateVal = document.getElementById('calcStartDate').value;
+  const costKwh = parseFloat(document.getElementById('calcCostKwh').value) || 0;
+  const shippingCost = parseFloat(document.getElementById('calcShipping').value) || 0;
+  const taxPercent = parseFloat(document.getElementById('calcTaxPercent').value) || 0;
+
+  // Сохраняем их в appData:
+  appData.calcSettings.operatorRate = rate;
+  appData.calcSettings.workHoursDay = whDay;
+  appData.calcSettings.startDate = startDateVal;
+  appData.calcSettings.costKwh = costKwh;
+  appData.calcSettings.shipping = shippingCost;
+  appData.calcSettings.taxPercent = taxPercent;
+  saveToLocalStorage();
+
+  // Берём выбор принтера/материала
+  const printerId = parseInt(document.getElementById('calcPrinter').value, 10);
+  const materialId = parseInt(document.getElementById('calcMaterial').value, 10);
+  const hours = parseFloat(document.getElementById('calcHours').value) || 0;
+  const grams = parseFloat(document.getElementById('calcWeight').value) || 0;
+
+  const printer = appData.printers.find((p) => p.id === printerId);
+  const material = appData.materials.find((m) => m.id === materialId);
+
+  if (!printer || !material) {
+    alert('Пожалуйста, выберите принтер и материал.');
+    return;
+  }
+
+  /** 1) Амортизация принтера */
+  let costPerHourPrinter = 0;
+  if (printer.hoursToRecoup && printer.hoursToRecoup > 0) {
+    costPerHourPrinter = printer.cost / printer.hoursToRecoup;
+  } else {
+    costPerHourPrinter = printer.cost;
+  }
+  const costPrinterPart = hours * costPerHourPrinter;
+
+  /** 2) Оплата оператора */
+  const costOperatorPart = hours * rate;
+
+  /** 3) Материал (с учётом % отхода) */
+  const realGrams = grams * (1 + (material.wastePercent / 100));
+  const costPerGram = (material.costPerKg / 1000);
+  const costMaterialPart = realGrams * costPerGram;
+
+  /** 4) Доп. расходы (пропорционально часам печати) */
+  const sumAdditional = appData.additional.reduce((acc, x) => acc + x.cost, 0);
+  let costAdditionalPart = 0;
+  if (printer.hoursToRecoup > 0) {
+    const costPerHourAdditional = sumAdditional / printer.hoursToRecoup;
+    costAdditionalPart = costPerHourAdditional * hours;
+  }
+
+  /** 5) Электричество: 
+   *   (мощность Вт / 1000) кВт * (время ч) * (цена за кВт⋅ч)
+   */
+  const costElectric = (printer.power / 1000) * hours * costKwh;
+
+  /** 6) Износ/обслуживание принтера (maintCostHour) */
+  const costMaintenance = printer.maintCostHour * hours;
+
+  /** 7) Упаковка/доставка (фиксированная) */
+  const costShipping = shippingCost;
+
+  /** Сумма без учёта налога */
+  const subTotal = 
+        costPrinterPart
+      + costOperatorPart
+      + costMaterialPart
+      + costAdditionalPart
+      + costElectric
+      + costMaintenance
+      + costShipping;
+
+  /** 8) Налог (например, 6% для самозанятых/УСН) */
+  const costTax = subTotal * (taxPercent / 100);
+
+  /** Итого */
+  const total = subTotal + costTax;
+
+  /** Расчёт рабочих дней */
+  let daysNeeded = 0;
+  if (whDay > 0) {
+    daysNeeded = Math.ceil(hours / whDay);
+  }
+  let finishDateStr = '';
+  if (startDateVal) {
+    try {
+      const startD = new Date(startDateVal);
+      startD.setDate(startD.getDate() + daysNeeded);
+      finishDateStr = startD.toLocaleDateString('ru-RU');
+    } catch (err) {
+      console.error('Ошибка даты:', err);
+    }
+  }
+
+  /** Вывод результата */
+  const elRes = document.getElementById('calcResult');
+  elRes.style.display = 'block';
+
+  elRes.innerHTML = `
+    <strong>Результат расчёта:<\/strong><br/>
+    Принтер: ${printer.name}<br/>
+    Материал: ${material.name}<br/>
+    Время печати: ${hours} ч.<br/>
+    Вес изделия (г): ${grams}, 
+      с учётом брака (${material.wastePercent}%) = ${realGrams.toFixed(2)} г.<br/>
+    <hr/>
+    Сумма без налога: ${subTotal.toFixed(2)} ₽<br/>
+    Налог (${taxPercent}%): ${costTax.toFixed(2)} ₽<br/>
+    <strong>Итого: ${total.toFixed(2)} ₽<\/strong><br/><br/>
+  `;
+
+  
+  if (daysNeeded > 0) {
+    elRes.innerHTML += `
+      При ${whDay} рабочих часах в день, понадобится ~${daysNeeded} дн.<br/>
+    `;
+    if (finishDateStr) {
+      elRes.innerHTML += `Ориентировочная дата окончания: ${finishDateStr}<br/>`;
+    }
+  }
+  
+   elRes.innerHTML += `
+     <hr/>
+    <strong>Разбивка затрат (без налога):<\/strong><br/>
+    - Амортизация принтера: ${costPrinterPart.toFixed(2)} ₽<br/>
+    - Оплата оператора: ${costOperatorPart.toFixed(2)} ₽<br/>
+    - Материал: ${costMaterialPart.toFixed(2)} ₽<br/>
+    - Доп. расходы (по часу): ${costAdditionalPart.toFixed(2)} ₽<br/>
+    - Электроэнергия: ${costElectric.toFixed(2)} ₽<br/>
+    - Обслуживание принтера: ${costMaintenance.toFixed(2)} ₽<br/>
+    - Упаковка/доставка: ${costShipping.toFixed(2)} ₽<br/><br/>
+  `;
+
+}
+
+/** ========================================================
+ *   4. Импорт/Экспорт JSON
+ * =========================================================
+ */
+function onExportJson() {
+  const jsonStr = JSON.stringify(appData, null, 2);
+  document.getElementById('exportArea').value = jsonStr;
+}
+
+function onImportJson() {
+  const jsonStr = document.getElementById('importArea').value.trim();
+  if (!jsonStr) {
+    if (confirm('Поле JSON пустое. Это приведёт к сбросу данных к значениям по умолчанию. Продолжить?')) {
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+    return;
+  }
+
+  try {
+    const obj = JSON.parse(jsonStr);
+    appData = obj;
+    saveToLocalStorage();
+    renderAllTables();
+    fillCalcSelects();
+    alert('Импорт успешно выполнен.');
+  } catch (err) {
+    alert('Ошибка импорта JSON: ' + err);
+  }
+}
+
+/** ========================================================
+ *   Инициализация
+ * =========================================================
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Загружаем из localStorage
+  loadFromLocalStorage();
+
+  // Отрисовываем таблицы
+  renderAllTables();
+
+  // Заполняем селекты на вкладке "Калькулятор"
+  fillCalcSelects();
+});
+</script>
+
+</body>
+</html>
