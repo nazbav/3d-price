@@ -151,13 +151,6 @@
       </button>
     </li>
 
-<!--     <li class="nav-item">
-      <button class="nav-link" id="importexport-tab" data-bs-toggle="tab"
-              data-bs-target="#importexportPane" type="button" role="tab"
-              aria-controls="importexportPane" aria-selected="false">
-        Импорт/Экспорт
-      </button>
-    </li> -->
 
   </ul>
 
@@ -456,28 +449,7 @@
         </div>
       </div>
     </div>
-
-    <!-- Импорт/Экспорт -->
-<!-- <div class="tab-pane fade" id="importexportPane" role="tabpanel" aria-labelledby="importexport-tab">
-        <div class="mt-4">
-<h3>Экспорт данных</h3>
-
-    <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
-    <button class="btn btn-info" id="downloadJsonFileBtn">Скачать JSON файл</button>
-    <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
-    <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
-
-  <hr>
-  <div class="mt-4">
-    <h3>Импорт данных</h3>
-    <textarea id="importArea" class="form-control" rows="5"></textarea>
-    <input type="file" id="importJsonFile" class="form-control mt-2" accept=".json">
-    <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
-    <button class="btn btn-info mt-2" onclick="importFromFile()">Импорт из файла</button>
-    <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
-  </div>
-</div>
-  </div>  -->
+	  
   </div>
     <!-- Настройки -->
 <div class="tab-pane fade" id="settingsPane" role="tabpanel" aria-labelledby="settings-tab">
@@ -607,7 +579,7 @@
     <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
     <p class="mb-0">Для сброса можно импортировать пустой JSON или очистить LocalStorage вручную.</p>
     <a href="index2.html"><h6>Простая версия калькулятора (тык)</h6></a>
-    <p class="mt-3"><span style="text-decoration:line-through">©</span>2025. Ничьи права не защищены. Сделано при участии ИИ</p>
+    <p class="mt-3"><span style="text-decoration:line-through">©</span>2025.</p>
   </div>
 </div>
 
@@ -1274,19 +1246,16 @@ function showMaterialSelectionForGcode(fileName, thumbnail, materialOptions) {
     body.innerHTML = '';
     document.getElementById('multiPromptTitle').textContent = 'Выберите материал для модели';
     
-    // Create container for model info
     const modelInfoDiv = document.createElement('div');
     modelInfoDiv.className = 'mb-3 p-3 border rounded bg-light';
-    
-    // Add thumbnail if available
+
     if (thumbnail) {
       const thumbImg = document.createElement('img');
       thumbImg.src = `data:image/png;base64,${thumbnail}`;
       thumbImg.style.cssText = 'width: 80px; height: 80px; object-fit: contain; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; display: block;';
       modelInfoDiv.appendChild(thumbImg);
     }
-    
-    // Add filename
+
     const fileNameDiv = document.createElement('div');
     fileNameDiv.innerHTML = `<strong>Файл:</strong> ${fileName}`;
     fileNameDiv.className = 'mb-2';
@@ -1294,7 +1263,6 @@ function showMaterialSelectionForGcode(fileName, thumbnail, materialOptions) {
     
     body.appendChild(modelInfoDiv);
     
-    // Add material selection
     const materialDiv = document.createElement('div');
     materialDiv.className = 'mb-2';
     
@@ -1305,14 +1273,12 @@ function showMaterialSelectionForGcode(fileName, thumbnail, materialOptions) {
     const select = document.createElement('select');
     select.className = 'form-select';
     select.id = 'mp_materialId';
-    
-    // Add default option
+
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
     defaultOption.textContent = '-- Выберите материал --';
     select.appendChild(defaultOption);
-    
-    // Add material options
+
     materialOptions.forEach(opt => {
       const option = document.createElement('option');
       option.value = opt.value;
@@ -1506,7 +1472,6 @@ function loadFromLocalStorage(){
     if(s){
       const p = JSON.parse(s);
       if(p) appData = migrateOldData(p);
-      // ensure arrays exist
       if(!Array.isArray(appData.printers)) appData.printers = [];
       if(!Array.isArray(appData.materials)) appData.materials = [];
       if(!Array.isArray(appData.materialProfiles)) appData.materialProfiles = [];
@@ -1532,7 +1497,6 @@ function saveToLocalStorage(){
 function initAll(){
   loadFromLocalStorage();
   
-  // Validate and auto-normalize IDs if validation fails
   const validationResult = validateUniqueIds(appData);
   if (!validationResult.success) {
     console.log("ID validation failed, auto-normalizing:", validationResult.errors);
@@ -1625,35 +1589,30 @@ async function parseGcodeText(text) {
   let plateNameFound = false;
   let plateName = '';
   let afterExecStart = false, afterExecEnd = false, inConfig = false, inThumb = false;
-  let thumbnailFound = false; // Flag to track if we already found a thumbnail
+  let thumbnailFound = false;
   let linesAfterExecStart = 0;
   
   for (let raw of lines) {
     const line = raw.trim();
     
-    // Parse model code
     if (line.startsWith('; MODEL_CODE:')) {
       code = line.split(':')[1].trim();
       continue;
     }
 
-    // Track EXECUTABLE_BLOCK_START to count lines for plate_name
     if (line === '; EXECUTABLE_BLOCK_START') {
       afterExecStart = true;
       continue;
     }
-    
-    // Handle executable block end
+
     if (line === '; EXECUTABLE_BLOCK_END') {
       afterExecEnd = true;
       continue;
     }
 
-    // Count lines after EXECUTABLE_BLOCK_START for plate_name search
     if (afterExecStart && !plateNameFound && linesAfterExecStart < 50) {
       linesAfterExecStart++;
-      
-      // Search for plate_name
+
       if (line.includes('plate_name=')) {
         const match = line.match(/plate_name=\s*([^;]+)/);
         if (match && match[1]) {
@@ -1662,8 +1621,7 @@ async function parseGcodeText(text) {
         }
       }
     }
-    
-    // Handle thumbnail blocks - only process the first one
+
     if (line.startsWith('; THUMBNAIL_BLOCK_START')) {
       continue;
     }
@@ -1682,8 +1640,7 @@ async function parseGcodeText(text) {
       }
       continue;
     }
-    
-    // Process thumbnail data only for the first thumbnail
+
     if (inThumb && thumbnailFound) {
       if (line.startsWith(';')) {
         thumb += line.slice(1).trim();
@@ -1693,12 +1650,10 @@ async function parseGcodeText(text) {
       continue;
     }
     
-    // Handle THUMBNAIL_BLOCK_END
     if (line.startsWith('; THUMBNAIL_BLOCK_END')) {
       continue;
     }
-    
-    // Handle config blocks - they can appear anywhere in the file
+
     if (line === '; CONFIG_BLOCK_START') {
       inConfig = true;
       continue;
@@ -1708,8 +1663,7 @@ async function parseGcodeText(text) {
       inConfig = false;
       continue;
     }
-    
-    // Parse config parameters - now independent of EXECUTABLE_BLOCK position
+
     if (inConfig) {
       if (line.includes('printer_settings_id') && line.includes('=')) {
         printer = line.split('=')[1].replace(/"/g, '').trim();
@@ -1717,8 +1671,7 @@ async function parseGcodeText(text) {
         matProfile = line.split('=')[1].replace(/"/g, '').trim();
       }
     }
-    
-    // Parse printing time and weight - now independent of EXECUTABLE_BLOCK position
+
     if (line.startsWith('; estimated printing time') && line.includes('=')) {
       timeStr = line.split('=')[1].trim();
     }
@@ -1726,17 +1679,14 @@ async function parseGcodeText(text) {
       weight = line.split('=')[1].trim();
     }
   }
-  
-  // Generate code if not found
+
   if (!code) code = getNextId('gcodeModels');
-  
-  // Use plate_name if found
+
   const modelName = plateNameFound ? plateName : code;
   
   return { code, modelName, timeStr, weight, printer, matProfile, thumb };
 }
 
-// Update the addModelFromGcode function to use the new modelName
 async function addModelFromGcode(parsed){
   const pr = await resolvePrinterForLink(parsed.printer);
   if(!pr){
@@ -1746,7 +1696,7 @@ async function addModelFromGcode(parsed){
   const mid = await resolveMaterialIdByProfile(parsed.matProfile);
   addModelRow(pr.id, {
     id: parsed.code,
-    name: parsed.modelName || parsed.code, // Use the parsed modelName or fall back to code
+    name: parsed.modelName || parsed.code,
     thumbnail: parsed.thumb,
     status: 'new',
     hours: parseTimeFromLink(parsed.timeStr),
@@ -1755,20 +1705,17 @@ async function addModelFromGcode(parsed){
   });
 }
 
-// Update file drop handler to use the model name from parsed data
 function setupGcodeDrop() {
   window.addEventListener('dragover', e => {
-    e.preventDefault(); // Allow drop
+    e.preventDefault();
   });
 
   window.addEventListener('drop', async e => {
     e.preventDefault();
 
-    // Find the target printer table
     let printerId = null;
     let target = e.target;
 
-    // Traverse up the DOM tree to find a table with ID like "calcModelsTable_123"
     while (target && !printerId) {
       if (target.id && target.id.startsWith('calcModelsTable_')) {
         printerId = target.id.split('_')[1];
@@ -1782,7 +1729,6 @@ function setupGcodeDrop() {
       return;
     }
 
-    // Process G-code files
     const files = Array.from(e.dataTransfer.files).filter(f => 
       f.name.toLowerCase().endsWith('.gcode')
     );
@@ -1792,10 +1738,8 @@ function setupGcodeDrop() {
       const parsed = await parseGcodeText(txt);
       let mid = await resolveMaterialIdByProfile(parsed.matProfile);
 
-      // Get the model name from parsed data or use file name without extension
       const modelName = parsed.modelName || f.name.replace(/\.gcode$/i, '');
 
-      // If no material found, prompt user to select from all available materials
       if (!mid) {
         const materialOptions = appData.materials.map(m => ({
           value: String(m.id),
@@ -1808,7 +1752,6 @@ function setupGcodeDrop() {
           if (result && result.materialId) {
             mid = result.materialId;
           } else {
-            // User cancelled, skip this file
             continue;
           }
         } else {
@@ -3484,10 +3427,8 @@ function onImportJson(){
     const obj = JSON.parse(s);
     appData = migrateOldData(obj);
     
-    // Normalize imported data (this handles both numeric conversion and sequential assignment)
     normalizeIds(appData);
-    
-    // Validate and alert if issues were found and fixed
+
     const validationResult = validateUniqueIds(appData);
     let alertMessage = "Импорт выполнен.";
     
@@ -3970,7 +3911,7 @@ async function sendMyNalogReceipt(){
         if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
         lastCalcFullData.nalogReceipts.push({uuid:data.approvedReceiptUuid,canceled:false});
         
-        // Save to localStorage after all updates are complete
+
         saveToLocalStorage();
         if(idx!==-1){
           renderHistoryTable();
@@ -5491,9 +5432,6 @@ async function applyIncomingData(){
 
 </script>
 
-
-
-<!-- Supabase & QR -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -5654,7 +5592,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 const SPOOLMAN_CONFIG_KEY = "spoolman_config";
 
-// Configuration management
 function getSpoolmanConfig() {
   const configStr = localStorage.getItem(SPOOLMAN_CONFIG_KEY);
   if (!configStr) return { enabled: false, url: '', autoSync: false, lastSync: null };
@@ -5690,7 +5627,6 @@ function populateSpoolmanUIFromConfig() {
   }
 }
 
-// API interaction
 async function spoolmanApiRequest(endpoint, method = 'GET', body = null) {
   const config = getSpoolmanConfig();
   if (!config.enabled || !config.url) {
@@ -5718,7 +5654,7 @@ async function spoolmanApiRequest(endpoint, method = 'GET', body = null) {
       throw new Error(`API error (${response.status}): ${errorText}`);
     }
 
-    if (response.status === 204) return null; // No content
+    if (response.status === 204) return null;
 
     const responseData = await response.json();
     console.log(`Response from ${endpoint}:`, responseData);
@@ -5729,12 +5665,10 @@ async function spoolmanApiRequest(endpoint, method = 'GET', body = null) {
   }
 }
 
-// Get all filaments from Spoolman
 async function fetchSpoolmanFilaments() {
   return await spoolmanApiRequest('filament');
 }
 
-// Get all spools from Spoolman
 async function fetchSpoolmanSpools() {
   return await spoolmanApiRequest('spool');
 }
@@ -5742,26 +5676,22 @@ async function fetchSpoolmanSpools() {
 function prepareExtraForSpoolman(extra) {
   const prepared = {};
   for (const [key, value] of Object.entries(extra)) {
-    // Convert value to JSON string
     prepared[key] = JSON.stringify(value);
   }
   return prepared;
 }
 	
 function mapSpoolmanToMaterial(spool, filament) {
-  // Parse extra fields properly
   let extraFields = {};
   if (spool.extra) {
     for (const [key, value] of Object.entries(spool.extra)) {
       try {
-        // First, try to parse the value as JSON
         if (typeof value === 'string') {
-          // Handle double-quoted strings like "\"value\""
+
           if (value.startsWith('"') && value.endsWith('"')) {
-            // Remove the outer quotes and parse
             extraFields[key] = JSON.parse(value);
           } else {
-            // Direct value or already parsed JSON
+        
             extraFields[key] = value;
           }
         } else {
@@ -5769,19 +5699,19 @@ function mapSpoolmanToMaterial(spool, filament) {
         }
       } catch (e) {
         console.log(`Error parsing extra field ${key}:`, e);
-        extraFields[key] = value; // Keep as is if parsing fails
+        extraFields[key] = value; 
       }
     }
   }
 
   return {
     id: getNextId('materials'),
-    materialType: filament.material || '', // Новое поле
+    materialType: filament.material || '',
     name:  filament.vendor?.name+'- '+filament.name || spool.comment || `${filament.material || 'Unknown'} (${spool.id})`,
     costPerKg: spool.price || 0,
-    balance: spool.remaining_weight ? spool.remaining_weight / 1000 : 0, // Convert g to kg
+    balance: spool.remaining_weight ? spool.remaining_weight / 1000 : 0, 
     declaredWeight: spool.initial_weight ? spool.initial_weight / 1000 :
-            (filament.weight ? filament.weight / 1000 : 1), // Convert g to kg
+            (filament.weight ? filament.weight / 1000 : 1),
     manufacturer: filament.vendor?.name ,
     productionDate: spool.lot_nr || '',
     printers: [],
@@ -5792,8 +5722,6 @@ function mapSpoolmanToMaterial(spool, filament) {
   };
 }
 
-
-// Import all materials from Spoolman - PRIMARY SYNC METHOD
 async function importAllMaterialsFromSpoolman(statusCallback) {
   const config = getSpoolmanConfig();
   if (!config.enabled || !config.url) {
@@ -5802,30 +5730,24 @@ async function importAllMaterialsFromSpoolman(statusCallback) {
 
   try {
     statusCallback('Connecting to Spoolman...');
-    // Test connection
     await spoolmanApiRequest('info');
 
     statusCallback('Fetching data from Spoolman...');
     const filaments = await fetchSpoolmanFilaments();
     const spools = await fetchSpoolmanSpools();
-
-    // Create mapping of filament IDs to filaments
     const filamentMap = {};
     filaments.forEach(filament => {
       filamentMap[filament.id] = filament;
     });
 
-    // Map to our material format and add to app data
     const importedMaterials = [];
     const updatedMaterials = [];
     const errors = [];
 
-    // Only import non-archived spools
     const activeSpools = spools.filter(spool => !spool.archived);
 
     statusCallback(`Processing ${activeSpools.length} spools...`);
 
-    // Track existing materials by their Spoolman IDs to avoid duplicates
     const existingBySpoolmanId = {};
     appData.materials.forEach(material => {
       if (material.spoolmanSpoolId) {
@@ -5835,7 +5757,6 @@ async function importAllMaterialsFromSpoolman(statusCallback) {
 
     for (const spool of activeSpools) {
       try {
-        // Make sure we have a valid filament
         if (!spool.filament) {
           errors.push(`Spool ${spool.id} has no valid filament reference`);
           continue;
@@ -5847,23 +5768,18 @@ async function importAllMaterialsFromSpoolman(statusCallback) {
           continue;
         }
 
-        // Check if we already have this material
         const existingMaterial = existingBySpoolmanId[spool.id];
 
         if (existingMaterial) {
-          // Update existing material with fresh data from Spoolman
           const updatedData = mapSpoolmanToMaterial(spool, filament);
 
-          // Preserve local-only fields
           updatedData.id = existingMaterial.id;
           updatedData.printers = existingMaterial.printers || [];
           updatedData.profileIds = existingMaterial.profileIds || [];
 
-          // Update the existing material
           Object.assign(existingMaterial, updatedData);
           updatedMaterials.push(existingMaterial);
         } else {
-          // Create new material from Spoolman data
           const material = mapSpoolmanToMaterial(spool, filament);
           appData.materials.push(material);
           importedMaterials.push(material);
@@ -5896,7 +5812,6 @@ async function importAllMaterialsFromSpoolman(statusCallback) {
   }
 }
 
-// Update spool usage in Spoolman when material is used in the calculator
 async function updateSpoolUsageInSpoolman(materialId, usedWeight) {
   const material = appData.materials.find(m => String(m.id) === String(materialId));
   if (!material || !material.spoolmanSpoolId) {
@@ -5907,10 +5822,9 @@ async function updateSpoolUsageInSpoolman(materialId, usedWeight) {
   try {
     console.log(`Updating Spoolman spool ${material.spoolmanSpoolId} with used weight: ${usedWeight}kg`);
     await spoolmanApiRequest(`spool/${material.spoolmanSpoolId}/use`, 'PUT', {
-      use_weight: usedWeight * 1000 // Convert kg to g for Spoolman API
+      use_weight: usedWeight * 1000
     });
 
-    // Update local material balance
     material.balance -= usedWeight;
     if (material.balance < 0) material.balance = 0;
 
@@ -5918,11 +5832,9 @@ async function updateSpoolUsageInSpoolman(materialId, usedWeight) {
     console.log(`Successfully updated usage for spool ${material.spoolmanSpoolId}`);
   } catch (error) {
     console.error('Failed to update spool usage in Spoolman:', error);
-    // Continue without stopping execution - we've already updated local data
   }
 }
 
-// Test Spoolman connection
 async function testSpoolmanConnection(url) {
   try {
     const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
@@ -5943,24 +5855,20 @@ async function testSpoolmanConnection(url) {
   }
 }
 
-// Hook into material usage tracking
 function hookMaterialUsage() {
   const originalCalculateAll = window.onCalculateAll;
   window.onCalculateAll = function() {
-    // Call original function
     const result = originalCalculateAll.apply(this, arguments);
 
-    // Track material usage if Spoolman integration is enabled
     const config = getSpoolmanConfig();
     if (config.enabled && config.autoSync && lastCalcFullData) {
-      // Look through all printer details and find material usage
       const materialUsage = {};
 
       lastCalcFullData.detailsByPrinter.forEach(printer => {
         printer.linesDetail.forEach(model => {
           if (model.materialData && model.materialData.id) {
             const materialId = model.materialData.id;
-            const usedWeight = (model.realWeight || 0) / 1000; // Convert g to kg
+            const usedWeight = (model.realWeight || 0) / 1000; 
 
             if (!materialUsage[materialId]) materialUsage[materialId] = 0;
             materialUsage[materialId] += usedWeight;
@@ -5968,7 +5876,6 @@ function hookMaterialUsage() {
         });
       });
 
-      // Update Spoolman for each material
       Object.keys(materialUsage).forEach(materialId => {
         updateSpoolUsageInSpoolman(materialId, materialUsage[materialId]);
       });
@@ -5978,7 +5885,6 @@ function hookMaterialUsage() {
   };
 }
 
-// UI Functions
 function createSpoolmanSettingsUI() {
   const config = getSpoolmanConfig();
 
@@ -6140,7 +6046,6 @@ curl -vk -X OPTIONS https://127.0.0.1/api/v1/info \
   `;
 }
 
-// Set up event handlers
 function setupSpoolmanUI() {
   document.getElementById('saveSpoolmanSettingsBtn').addEventListener('click', function() {
     const config = {
@@ -6187,13 +6092,11 @@ function setupSpoolmanUI() {
     }
   });
 
-  // Keep the export button but show deprecation message
   document.getElementById('syncToSpoolmanBtn').addEventListener('click', async function() {
     const result = await syncAllMaterialsToSpoolman();
     showSpoolmanStatus('warning', result.message);
   });
 
-  // Add button to clean up duplicates
   if (document.getElementById('clearSpoolmanDuplicatesBtn')) {
     document.getElementById('clearSpoolmanDuplicatesBtn').addEventListener('click', function() {
       clearSpoolmanDuplicates();
@@ -6201,16 +6104,12 @@ function setupSpoolmanUI() {
   }
 }
 
-// Clean up duplicate materials that reference the same Spoolman spool
 function clearSpoolmanDuplicates() {
   showSpoolmanStatus('info', 'Поиск и удаление дубликатов...');
 
   try {
-    // Track materials by their Spoolman spool ID
     const materialsBySpoolmanId = {};
     const duplicates = [];
-
-    // Group materials by Spoolman spool ID
     appData.materials.forEach(material => {
       if (material.spoolmanSpoolId) {
         const spoolId = material.spoolmanSpoolId;
@@ -6223,10 +6122,8 @@ function clearSpoolmanDuplicates() {
       }
     });
 
-    // Find duplicates (where multiple materials reference the same Spoolman spool)
     for (const [spoolId, materials] of Object.entries(materialsBySpoolmanId)) {
       if (materials.length > 1) {
-        // Keep the first one, mark the rest for deletion
         console.log(`Found ${materials.length} materials referencing Spoolman spool ${spoolId}`);
         for (let i = 1; i < materials.length; i++) {
           duplicates.push(materials[i]);
@@ -6234,12 +6131,9 @@ function clearSpoolmanDuplicates() {
       }
     }
 
-    // Remove duplicates from appData.materials
     if (duplicates.length > 0) {
-      // Create a set of duplicate IDs for faster lookup
       const duplicateIds = new Set(duplicates.map(m => m.id));
 
-      // Filter out duplicates
       appData.materials = appData.materials.filter(m => !duplicateIds.has(m.id));
 
       saveToLocalStorage();
@@ -6274,9 +6168,7 @@ function showSpoolmanStatus(type, message) {
   }
 }
 
-// Initialize Spoolman integration
 function initSpoolmanIntegration() {
-  // Create settings tab content for Spoolman
   const spoolmanTab = document.createElement('div');
   spoolmanTab.className = 'tab-pane fade';
   spoolmanTab.id = 'spoolmanPane';
@@ -6288,13 +6180,11 @@ function initSpoolmanIntegration() {
     </div>
   `;
 
-  // Add tab content to main tab container
   const tabContent = document.getElementById('mainTabContent');
   if (tabContent) {
     tabContent.appendChild(spoolmanTab);
   }
 
-  // Add tab navigation item
   const tabNav = document.getElementById('mainTab');
   if (tabNav) {
     const tabItem = document.createElement('li');
@@ -6310,8 +6200,6 @@ function initSpoolmanIntegration() {
   }
 
   saveToLocalStorage();
-
-  // Hook into material usage tracking
   hookMaterialUsage();
   
   // Заполняем форму существующими значениями из localStorage
@@ -6320,12 +6208,9 @@ function initSpoolmanIntegration() {
   }, 200);
 }
 
-// Set up event listeners when document is ready
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     initSpoolmanIntegration();
-
-    // Set up event handlers once the DOM is fully loaded with our new elements
     setTimeout(() => {
       setupSpoolmanUI();
     }, 500);
