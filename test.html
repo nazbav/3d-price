@@ -2684,7 +2684,7 @@ function onCalculateAll() {
   
   const totalCoolingHours = totalCoolingMinutes / 60;
   let baseOperatorTime = (parallelMode === "yes") ? maxOpPrinterTime : finalOpTimeAllPrinters;
-  let finalTimeOperator = baseOperatorTime + prepTime + totalCoolingHours;
+  let finalTimeOperator = baseOperatorTime;// + prepTime + totalCoolingHours
   const operatorWorkCost = baseOperatorTime * opRate;
   const downtimeCost = totalCoolingMinutes * downtimeRate;
   const preparationCost = prepTime * prepRate;
