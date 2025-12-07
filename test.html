@@ -2799,6 +2799,7 @@ if(discountPercent > 0){
       client: clientName || '(Не указан)',
       status: orderStatus,
       totalTime: formatTimeForDisplay(finalTimeOperator) + ' ч',
+	  totalTimeOperator: formatTimeForDisplay(finalTimeOperator+prepTime + totalCoolingHours) + ' ч',
       totalWeight: safeFixed(totalWeight),
       totalCost: safeFixed(finalSum),
       priceOld: discountPercent > 0 ? safeFixed(totalBeforeDiscount) : '',
@@ -3754,6 +3755,7 @@ function buildSummaryCardHtml(data){
     <div class="info-item"><span class="label">Клиент:<\/span><span class="value">${data.client}<\/span></div>
     <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
     <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
+	<div class="info-item"><span class="label">Общее время работы оператора:<\/span><span class="value">${data.totalTimeOperator}<\/span></div>
     <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
     ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${s.total} ₽<\/span></div>`).join('') + `<div class="info-item"><span class="label">Итого услуги:<\/span><span class="value">${data.servicesTotal} ₽<\/span></div>` : ''}
     <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
