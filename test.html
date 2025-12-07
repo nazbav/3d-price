@@ -2684,7 +2684,7 @@ function onCalculateAll() {
   
   const totalCoolingHours = totalCoolingMinutes / 60;
   let baseOperatorTime = (parallelMode === "yes") ? maxOpPrinterTime : finalOpTimeAllPrinters;
-  let finalTimeOperator = baseOperatorTime;// + prepTime + totalCoolingHours
+  let finalTimeOperator = baseOperatorTime;
   const operatorWorkCost = baseOperatorTime * opRate;
   const downtimeCost = totalCoolingMinutes * downtimeRate;
   const preparationCost = prepTime * prepRate;
@@ -2741,7 +2741,7 @@ function onCalculateAll() {
   htmlRes += `Код: ${orderId}<br/>`;
   htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
-  htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч.<br/>`;
+  htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч. (+ ${formatTimeForDisplay(prepTime + totalCoolingHours)} ч.)<br/>`;
   htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽<br/>`;
   htmlRes += `Простой: ${formatTimeForDisplay(totalCoolingHours)} ч. (${safeFixed(downtimeCost)} ₽)<br/>`;
   htmlRes += `Подготовка: ${formatTimeForDisplay(prepTime)} ч. (${safeFixed(preparationCost)} ₽)<br/>`;
