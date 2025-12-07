@@ -2800,6 +2800,14 @@ if(discountPercent > 0){
       status: orderStatus,
       totalTime: formatTimeForDisplay(finalTimeOperator) + ' ч',
 	  totalTimeOperator: formatTimeForDisplay(finalTimeOperator+prepTime + totalCoolingHours) + ' ч',
+	  
+	  totalCoolingHours: formatTimeForDisplay(totalCoolingHours),
+	  downtimeCost: safeFixed(downtimeCost),
+      
+	  prepTime: formatTimeForDisplay(prepTime),
+	  preparationCost: safeFixed(preparationCost),
+      
+		
       totalWeight: safeFixed(totalWeight),
       totalCost: safeFixed(finalSum),
       priceOld: discountPercent > 0 ? safeFixed(totalBeforeDiscount) : '',
@@ -3755,6 +3763,8 @@ function buildSummaryCardHtml(data){
     <div class="info-item"><span class="label">Клиент:<\/span><span class="value">${data.client}<\/span></div>
     <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
     <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
+	<div class="info-item"><span class="label">Время простоя (усадка/подготовка к печати):<\/span><span class="value">${data.totalCoolingHours} ч. (${data.downtimeCost} ₽)<\/span></div>
+	<div class="info-item"><span class="label">Подбор и корр. парам. печати:<\/span><span class="value">${data.prepTime} ч. (${data.preparationCost} ₽)<\/span></div>
 	<div class="info-item"><span class="label">Общее время работы оператора:<\/span><span class="value">${data.totalTimeOperator}<\/span></div>
     <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
     ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${s.total} ₽<\/span></div>`).join('') + `<div class="info-item"><span class="label">Итого услуги:<\/span><span class="value">${data.servicesTotal} ₽<\/span></div>` : ''}
