@@ -2741,10 +2741,10 @@ function onCalculateAll() {
   htmlRes += `Код: ${orderId}<br/>`;
   htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
   htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
-  htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator)} ч. (+ ${formatTimeForDisplay(prepTime + totalCoolingHours)} ч.)<br/>`;
-  htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽<br/>`;
   htmlRes += `Простой: ${formatTimeForDisplay(totalCoolingHours)} ч. (${safeFixed(downtimeCost)} ₽)<br/>`;
   htmlRes += `Подготовка: ${formatTimeForDisplay(prepTime)} ч. (${safeFixed(preparationCost)} ₽)<br/>`;
+  htmlRes += `Общее время оператора: ${formatTimeForDisplay(finalTimeOperator+prepTime + totalCoolingHours)} ч. (${formatTimeForDisplay(finalTimeOperator)} + ${formatTimeForDisplay(prepTime + totalCoolingHours)} ч.)<br/>`;
+  htmlRes += `Стоимость работы оператора: ${safeFixed(totalOperatorCost)} ₽ (${safeFixed(operatorWorkCost)} ₽ + ${safeFixed(downtimeCost)} ₽ + ${safeFixed(preparationCost)} ₽)<br/>`;
   htmlRes += `Наценка: ${markupPercent}%.<br/>`;
   htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
   htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
