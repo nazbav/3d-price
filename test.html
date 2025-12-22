@@ -7,7 +7,43 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        :root {
+            --app-navbar-bg: #f1f3f6;
+            --app-navbar-border: rgba(15, 23, 42, 0.08);
+        }
+
+        [data-bs-theme="dark"] {
+            --app-navbar-bg: #1F2533;
+            --app-navbar-border: rgba(255, 255, 255, 0.12);
+        }
         body { margin: 0; padding: 0; }
+
+        .app-navbar {
+            background: var(--app-navbar-bg);
+            border: 1px solid var(--app-navbar-border);
+            border-radius: 1rem;
+            padding: 1rem 1.5rem;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .app-navbar .navbar-brand {
+            font-weight: 600;
+            font-size: clamp(1.25rem, 2vw, 1.65rem);
+            color: var(--bs-body-color);
+        }
+
+        .app-navbar .navbar-actions {
+            gap: 0.75rem;
+        }
+
+        .app-panel {
+            background: var(--app-navbar-bg);
+            border: 1px solid var(--app-navbar-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
         .container { margin-top: 20px; margin-bottom: 20px; }
         .nav-tabs .nav-link.active { font-weight: bold; }
         .small-text { font-size: 0.9rem; color: #555; }
@@ -31,8 +67,142 @@
             }
         }
         .form-select.form-select-sm { min-width: 120px; }
+
+        #calcClientDropdownWrapper {
+            position: relative;
+        }
+
+        #calcClientDropdownWrapper .dropdown-menu {
+            width: 100%;
+        }
+
+        #calcClientDropdownMenu {
+            max-height: 240px;
+            overflow-y: auto;
+        }
         /* Стили для этикетки */
         .label-preview { border: 1px solid #000; width: 30mm; height: 20mm; padding: 2mm; font-family: sans-serif; }
+
+        .timeline-day-container {
+            border-left: 4px solid rgba(0, 0, 0, 0.1);
+            padding: 0.75rem;
+            margin-bottom: 1.25rem;
+            border-radius: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.015);
+        }
+
+        .timeline-day-current {
+            border-left-color: var(--bs-primary);
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+
+        .timeline-day-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            text-transform: capitalize;
+        }
+
+        .timeline-printer-row {
+            background-color: rgba(0, 0, 0, 0.015);
+            font-weight: 600;
+        }
+
+        .timeline-model-row {
+            background-color: rgba(0, 0, 0, 0.01);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .timeline-model-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: none;
+        }
+
+        .timeline-model-id {
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color);
+            margin-left: 0.35rem;
+            font-weight: normal;
+        }
+
+        .timeline-model-thumb {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            background: #fff;
+        }
+
+        .timeline-slot-current {
+            background-color: var(--bs-warning-bg-subtle) !important;
+            color: var(--bs-warning-text-emphasis);
+            font-weight: 600;
+        }
+        .timeline-break-row {
+            background-color: rgba(255, 193, 7, 0.15);
+            color: var(--bs-body-color);
+            font-style: italic;
+            border-left: 3px solid rgba(255, 193, 7, 0.6);
+        }
+        .timeline-break-row td {
+            border-top: none !important;
+        }
+
+        .timeline-day-summary {
+            margin-top: 0.5rem;
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.4rem;
+            background-color: rgba(255, 193, 7, 0.25);
+            font-weight: 600;
+        }
+
+        [data-bs-theme="dark"] .timeline-day-container {
+            border-left-color: rgba(255, 255, 255, 0.25);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-bs-theme="dark"] .timeline-day-current {
+            background-color: rgba(13, 110, 253, 0.18);
+        }
+
+        [data-bs-theme="dark"] .timeline-printer-row {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-bs-theme="dark"] .timeline-model-row {
+            background-color: rgba(255, 255, 255, 0.04);
+        }
+
+        [data-bs-theme="dark"] .timeline-model-title {
+            color: var(--bs-body-color);
+        }
+
+        [data-bs-theme="dark"] .timeline-model-id {
+            color: var(--bs-secondary-color);
+        }
+
+        [data-bs-theme="dark"] .timeline-model-thumb {
+            border-color: rgba(255, 255, 255, 0.25);
+            background: var(--bs-dark-bg-subtle);
+        }
+
+        [data-bs-theme="dark"] .timeline-slot-current {
+            background-color: rgba(255, 193, 7, 0.45) !important;
+            color: var(--bs-body-color);
+        }
+
+        [data-bs-theme="dark"] .timeline-day-summary {
+            background-color: rgba(255, 193, 7, 0.28);
+        }
+        [data-bs-theme="dark"] .timeline-break-row {
+            background-color: rgba(255, 193, 7, 0.22);
+            border-left-color: rgba(255, 193, 7, 0.85);
+            color: rgba(255,255,255,0.9);
+        }
 
         /* Карточка итогов для клиента */
         .order-summary-card {
@@ -85,13 +255,17 @@
 <body>
 
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center">
-        <h1 class="my-4">Калькулятор 3D-печати (расширенный)</h1>
-        <div class="d-flex gap-2">
-            <a href="https://github.com/nazbav/3d-price/blob/master/README.md" class="btn btn-outline-primary" target="_blank">README</a>
+    <nav class="navbar app-navbar flex-column flex-md-row align-items-start align-items-md-center gap-3"
+         role="navigation">
+        <span class="navbar-brand mb-0">Калькулятор 3D-печати</span>
+        <div class="ms-md-auto d-flex flex-wrap navbar-actions align-items-center mt-2 mt-md-0">
+            <button class="btn btn-outline-primary d-flex align-items-center gap-1" onclick="openSettingsTab()">
+                <span>⚙️</span><span>Настройки</span>
+            </button>
             <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
         </div>
-    </div>
+    </nav>
+    <div class="app-panel">
     <ul class="nav nav-tabs" id="mainTab" role="tablist">
         <li class="nav-item">
             <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
@@ -132,10 +306,10 @@
             <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
                     data-bs-target="#globalAdditionalPane" type="button" role="tab"
                     aria-controls="globalAdditionalPane" aria-selected="false">
-                Общие доп. расходы
+                Накладные расходы
             </button>
         </li>
-        <li class="nav-item">
+        <li class="nav-item d-none">
             <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
                     data-bs-target="#settingsPane" type="button" role="tab"
                     aria-controls="settingsPane" aria-selected="false">
@@ -146,7 +320,7 @@
             <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
                     data-bs-target="#summaryPane" type="button" role="tab"
                     aria-controls="summaryPane" aria-selected="false">
-                Итоги
+                Статистика
             </button>
         </li>
 
@@ -225,10 +399,10 @@
             </div>
         </div>
 
-        <!-- Общие доп. расходы -->
+        <!-- Накладные расходы -->
         <div class="tab-pane fade" id="globalAdditionalPane" role="tabpanel" aria-labelledby="globalAdditional-tab">
             <div class="mt-4">
-                <h3>Общие доп. расходы</h3>
+                <h3>Накладные расходы</h3>
                 <div class="mb-2">
                     <button class="btn btn-primary btn-sm" onclick="onAddGlobalAdditional()">Добавить расход</button>
                     <button class="btn btn-danger btn-sm" onclick="massDelete('globalAdditional')">Массовое удаление</button>
@@ -257,10 +431,15 @@
         <!-- Калькулятор -->
         <div class="tab-pane fade show active" id="calculatePane" role="tabpanel" aria-labelledby="calculate-tab">
             <div class="my-4">
-                <h3>Расчёт стоимости (очередь печати)</h3>
-                <p class="small-text">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+                    <h3 class="mb-2 mb-md-0">Расчёт стоимости (очередь печати)</h3>
+                    <div class="text-muted small">Код заказа: <span class="fw-semibold" id="calcOrderIdText">—</span>
+                    </div>
+                </div>
+                <p class="small-text mb-0">
                     До 10 моделей на каждый принтер. Здесь можно задать название расчёта, имя клиента и статус заказа.
                 </p>
+                <input type="hidden" id="calcOrderId"/>
             </div>
             <div class="row mb-3">
                 <div class="col-md-4">
@@ -269,11 +448,22 @@
                 </div>
                 <div class="col-md-4">
                     <label for="calcClientName" class="form-label">Клиент (ФИО/компания):</label>
-                    <div class="input-group">
-                        <input type="text" id="calcClientName" list="clientsList" class="form-control" placeholder="Иванов Иван" />
-                        <button class="btn btn-outline-secondary" type="button" onclick="quickAddClient()">+</button>
+                    <div class="dropdown w-100" id="calcClientDropdownWrapper">
+                        <div class="input-group">
+                            <input type="text"
+                                   id="calcClientName"
+                                   class="form-control"
+                                   placeholder="Иванов Иван"
+                                   autocomplete="off"
+                                   onfocus="onClientFieldFocus()"
+                                   oninput="onCalcClientInput()"
+                                   onkeydown="onClientFieldKeydown(event)"/>
+                        </div>
+                        <div class="dropdown-menu w-100 p-0" id="calcClientDropdownMenu"></div>
                     </div>
-                    <datalist id="clientsList"></datalist>
+                    <div class="form-text">Можно выбрать клиента из справочника или ввести новое имя вручную. Нажмите
+                        Enter, чтобы добавить нового клиента.
+                    </div>
                 </div>
                 <div class="col-md-4">
                     <label for="calcOrderStatus" class="form-label">Статус заказа:</label>
@@ -288,21 +478,29 @@
             </div>
             <div class="row mb-3">
                 <div class="col-md-4">
-                    <label for="calcOrderId" class="form-label">Код заказа:</label>
-                    <input type="text" id="calcOrderId" class="form-control" readonly />
+                    <label for="calcUrgencyProfile" class="form-label">Срочность заказа:</label>
+                    <select id="calcUrgencyProfile" class="form-select"></select>
+                </div>
+                <div class="col-md-8 d-flex align-items-end">
+                    <div class="small-text" id="calcUrgencySummary"></div>
                 </div>
             </div>
             <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="calcShipping" class="form-label">Упаковка/Доставка (₽):</label>
                     <input type="number" step="1" id="calcShipping" class="form-control" />
                 </div>
-                <div class="col-md-4">
-                    <label for="calcStartDate" class="form-label">Дата начала:</label>
-                    <input type="date" id="calcStartDate" class="form-control" />
+                <div class="col-md-3">
+                    <label for="calcStartDate" class="form-label">Дата и время начала:</label>
+                    <input type="datetime-local" id="calcStartDate" class="form-control"/>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <label for="calcDeadlineDate" class="form-label">Требуемая дата окончания:</label>
+                    <input type="datetime-local" id="calcDeadlineDate" class="form-control"/>
+                    <div class="form-text">Если указана, профиль срочности подбирается автоматически.</div>
+                </div>
+                <div class="col-md-3">
                     <label for="calcParallelPrinting" class="form-label">Учёт параллельной печати?</label>
                     <select id="calcParallelPrinting" class="form-select">
                         <option value="no">Нет</option>
@@ -351,23 +549,26 @@
             </div>
             <hr/>
             <div id="calcPrintersContainer"></div>
-            <div class="d-flex mt-3" style="justify-content: space-between;">
-                <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
-                <button class="btn btn-secondary ms-2" onclick="startNewCalculation()">Новый расчёт</button>
+            <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3 mt-3">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
+                    <button class="btn btn-warning ms-2 me-lg-5" id="downloadSummaryCardBtn" style="display:none">Скачать смету</button>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button class="btn btn-primary" id="sendMyNalogBtn" style="display:none">Отправить чек</button>
+                        <button class="btn btn-danger" id="cancelMyNalogBtn" style="display:none">Отменить чек</button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="startNewCalculation()">Новый расчёт</button>
             </div>
             <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
-            <div class="mt-2">
-                <button class="btn btn-secondary" id="downloadAllLabelsBtn" style="display:none">Скачать все этикетки</button>
-                <button class="btn btn-secondary ms-2" id="downloadSummaryCardBtn" style="display:none">Скачать счёт</button>
-                <button class="btn btn-primary ms-2" id="sendMyNalogBtn" style="display:none">Отправить чек</button>
-                <button class="btn btn-danger ms-2" id="cancelMyNalogBtn" style="display:none">Отменить чек</button>
-            </div>
+
+
         </div>
 
-        <!-- Итоги -->
+        <!-- Статистика -->
         <div class="tab-pane fade" id="summaryPane" role="tabpanel" aria-labelledby="summary-tab">
             <div class="mt-4">
-                <h3>Общий обзор («Итоги»)</h3>
+                <h3>Общий обзор («Статистика»)</h3>
                 <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
                 <div class="d-flex align-items-center mb-3">
                     <select id="summaryPeriod" class="form-select form-select-sm w-auto me-2">
@@ -461,6 +662,9 @@
                     <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Импорт/Экспорт</button>
                     <button class="nav-link" id="spoolman-set-tab" data-bs-toggle="pill" data-bs-target="#spoolmanSet" type="button" role="tab">Spoolman</button>
                     <button class="nav-link" id="nalog-set-tab" data-bs-toggle="pill" data-bs-target="#nalogSet" type="button" role="tab">Мой Налог</button>
+                    <button class="nav-link" id="about-set-tab" data-bs-toggle="pill" data-bs-target="#aboutSet"
+                            type="button" role="tab">О калькуляторе
+                    </button>
                 </div>
             </div>
             <div class="col-md-9">
@@ -480,8 +684,41 @@
                             <textarea id="bankDetailsInput" class="form-control" rows="4"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label for="calcWorkHoursDay" class="form-label">Раб. часов в день:</label>
-                            <input type="number" id="calcWorkHoursDay" class="form-control" />
+                            <label class="form-label">Профили срочности и графиков:</label>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-5">
+                                    <select id="urgencyProfileSelect" class="form-select"></select>
+                                </div>
+                                <div class="col-md-7 text-md-end">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="addUrgencyProfileBtn">Добавить профиль</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="deleteUrgencyProfileBtn">Удалить</button>
+                                </div>
+                            </div>
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Название профиля</label>
+                                    <input type="text" id="urgencyProfileName" class="form-control"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Наценка профиля (%)</label>
+                                    <input type="number" step="1" id="urgencyProfileMarkup" class="form-control"/>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Описание</label>
+                                    <input type="text" id="urgencyProfileDescription" class="form-control"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Рабочий график по дням недели:</label>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#workdayTemplateModal">Автозаполнение дня</button>
+                            </div>
+                            <ul class="nav nav-tabs mb-3" id="operatorWeekTabs" role="tablist"></ul>
+                            <div class="tab-content border rounded p-3" id="operatorWeekContent"></div>
+                            <div class="form-text" id="urgencyScheduleHint"></div>
+                            <div class="form-text">Оставьте строки пустыми, если день нерабочий. Перерывы автоматически проверяются на соответствие ст. 108 и 109 ТК РФ.</div>
+                            <div class="form-text">Используйте кнопку автозаполнения, чтобы быстро задать шаблон (6/8/12 часовые смены, обед и спецперерывы). Изменения вступят в силу после сохранения.</div>
                         </div>
                         <button class="btn btn-primary" onclick="saveBrandingSettings()">Сохранить</button>
                     </div>
@@ -494,6 +731,14 @@
                         <div class="mb-3">
                             <label for="labelCostInput" class="form-label">Стоимость 1 этикетки (₽):</label>
                             <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="printEstimateCheckbox">
+                            <label class="form-check-label" for="printEstimateCheckbox">Учитывать печать сметы</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="estimatePrintCostInput" class="form-label">Стоимость печати сметы (₽):</label>
+                            <input type="number" step="0.01" id="estimatePrintCostInput" class="form-control"/>
                         </div>
                         <div class="mb-3">
                             <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
@@ -551,7 +796,7 @@
                     </div>
                     <div class="tab-pane fade" id="cloudSet" role="tabpanel">
                         <div class="mt-4">
-                            <h3>Облачный экспорт</h3>
+                            <h3>Облачный экспорт (SupaBase, шифрованное хранение данных 5 минут)</h3>
                             <button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
                             <button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
                             <button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
@@ -562,7 +807,6 @@
                             <h3>Экспорт данных</h3>
                             <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
                             <button class="btn btn-info" id="downloadJsonFileBtn">Скачать JSON файл</button>
-                            <button class="btn btn-secondary" onclick="onExportHistory()">Выгрузить историю</button>
                             <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
                         </div>
                         <div class="mt-4">
@@ -571,7 +815,11 @@
                             <input type="file" id="importJsonFile" class="form-control mt-2" accept=".json">
                             <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
                             <button class="btn btn-info mt-2" onclick="importFromFile()">Импорт из файла</button>
-                            <button class="btn btn-secondary mt-2" onclick="onImportHistory()">Загрузить историю</button>
+                            <div class="alert alert-secondary mt-3 mb-0 small">
+                                <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
+                                <p class="mb-0">Чтобы сбросить настройки, импортируйте пустой JSON или очистите
+                                    LocalStorage вручную.</p>
+                            </div>
                         </div>
 
                     </div>
@@ -602,17 +850,102 @@
                         </div>
                         <div id="myNalogStatus" class="small-text"></div>
                     </div>
+                    <div class="tab-pane fade" id="aboutSet" role="tabpanel">
+                        <div class="mt-4">
+                            <h3>О калькуляторе</h3>
+                            <p class="mb-0"> Интерфейс собран на
+                                Bootstrap 5, логика работает на чистом JavaScript без серверной части, данные живут в
+                                LocalStorage прямо в браузере.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+    </div>
+    </div>
 </div>
-<div class="footer" style="text-align:center">
-    <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
-    <p class="mb-0">Для сброса можно импортировать пустой JSON или очистить LocalStorage вручную.</p>
-    <a href="index2.html"><h6>Простая версия калькулятора (тык)</h6></a>
-    <p class="mt-3"><span style="text-decoration:line-through">©</span>2025.</p>
-</div>
+
+<!-- Модальное окно автозаполнения графика -->
+<div class="modal fade" id="workdayTemplateModal" tabindex="-1" aria-labelledby="workdayTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="workdayTemplateModalLabel">Автозаполнение рабочего дня</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="workdayTemplateSelect" class="form-label">Шаблон</label>
+                        <select id="workdayTemplateSelect" class="form-select">
+                            <option value="custom" data-hours="" data-lunch="" data-offset="">Свои параметры</option>
+                            <option value="6h_center" data-hours="6" data-lunch="30" data-offset="180">6 ч · обед 30 мин (по центру)</option>
+                            <option value="8h_classic" data-hours="8" data-lunch="60" data-offset="240">8 ч · обед 1 час</option>
+                            <option value="8h_short" data-hours="8" data-lunch="30" data-offset="270">8 ч · обед 30 мин</option>
+                            <option value="12h_long" data-hours="12" data-lunch="60" data-offset="240">12 ч · обед 1 час</option>
+                            <option value="12h_short" data-hours="12" data-lunch="30" data-offset="360">12 ч · обед 30 мин</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="workdayStartTime" class="form-label">Начало смены</label>
+                        <input type="time" id="workdayStartTime" class="form-control" value="09:00">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="workdayTotalHours" class="form-label">Рабочих часов</label>
+                        <input type="number" step="0.5" min="1" max="16" id="workdayTotalHours" class="form-control" value="8">
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-4">
+                        <label for="workdayLunchStart" class="form-label">Начало обеда</label>
+                        <input type="time" id="workdayLunchStart" class="form-control" value="13:00">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="workdayLunchDuration" class="form-label">Обед, минут</label>
+                        <input type="number" min="30" max="120" step="5" id="workdayLunchDuration" class="form-control" value="60">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="workdaySkipLunch">
+                            <label class="form-check-label" for="workdaySkipLunch">Без отдельного обеда (смены ≤ 4 ч)</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">Спецперерывы (ст.109 ТК РФ)</label>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" id="addSpecialBreakBtn">Добавить перерыв</button>
+                            <button type="button" class="btn btn-outline-secondary" id="addPresetBreaksBtn">+2 × 10 мин</button>
+                        </div>
+                    </div>
+                    <div id="specialBreaksContainer" class="small"></div>
+                    <div class="form-text">Перерывы на обогрев и отдых включаются в рабочее время, но в расписании отображаются отдельными окнами.</div>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">Дни недели для заполнения:</label>
+                    <div class="d-flex flex-wrap gap-2" id="workdayDaysContainer">
+                        <label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" value="1"> Пн</label>
+                        <label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" value="2"> Вт</label>
+                        <label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" value="3"> Ср</label>
+                        <label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" value="4"> Чт</label>
+                        <label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" value="5"> Пт</label>
+                        <label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" value="6"> Сб</label>
+                        <label class="form-check form-check-inline mb-0"><input class="form-check-input" type="checkbox" value="0"> Вс</label>
+                    </div>
+                </div>
+                <div class="alert alert-secondary mt-3 mb-0 small">
+                    <p class="mb-1"><strong>Требования ТК РФ:</strong> обед 30–120 минут обязателен при сменах свыше 4 часов (ст.108), спецперерывы определяются ПВТР и включаются в рабочее время (ст.109).</p>
+                    <p class="mb-0">Шаблоны учитывают примеры для 6/8/12-часовых смен. Применяйте настройки к выбранным дням, затем сохраните раздел «Брендинг».</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-primary" id="applyWorkdayTemplateBtn">Заполнить</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Модальное окно для данных из ссылки -->
@@ -939,6 +1272,8 @@
         if(typeof obj.calcSettings.preparationTime !== 'number') obj.calcSettings.preparationTime = 0;
         if(typeof obj.calcSettings.roundingMode !== 'string') obj.calcSettings.roundingMode = 'none';
         if(typeof obj.calcSettings.includeOperatorForRejects !== 'boolean') obj.calcSettings.includeOperatorForRejects = false;
+        if (typeof obj.calcSettings.includeEstimatePrint !== 'boolean') obj.calcSettings.includeEstimatePrint = false;
+        if (typeof obj.calcSettings.estimatePrintCost !== 'number') obj.calcSettings.estimatePrintCost = 0;
         if(typeof obj.calcSettings.includeAmortization !== 'boolean') obj.calcSettings.includeAmortization = true;
         if(typeof obj.calcSettings.includeRejects !== 'boolean') obj.calcSettings.includeRejects = true;
         if(typeof obj.calcSettings.includeOverheads !== 'boolean') obj.calcSettings.includeOverheads = true;
@@ -1423,6 +1758,66 @@
     }
 
     const STORAGE_KEY = "ThreeDPrintCalc_Extended_v5";
+    const OPERATOR_PERIOD_ROWS = 5;
+    const DEFAULT_OPERATOR_PERIODS = [
+        {start: "10:00", end: "13:00"},
+        {start: "14:00", end: "17:00"}
+    ];
+    const FAST_OPERATOR_PERIODS = [
+        {start: "09:00", end: "13:00"},
+        {start: "13:30", end: "18:30"}
+    ];
+    const RUSH_OPERATOR_PERIODS = [
+        {start: "08:00", end: "14:00"},
+        {start: "14:30", end: "20:30"}
+    ];
+    const DEFAULT_WORKING_DAYS = [1, 2, 3, 4, 5];
+    const WEEKDAY_LABELS = [
+        {value: 1, label: 'Пн'},
+        {value: 2, label: 'Вт'},
+        {value: 3, label: 'Ср'},
+        {value: 4, label: 'Чт'},
+        {value: 5, label: 'Пт'},
+        {value: 6, label: 'Сб'},
+        {value: 0, label: 'Вс'}
+    ];
+    const createScheduleFromPeriods = (periods, workingDays = DEFAULT_WORKING_DAYS) => {
+        const map = {};
+        WEEKDAY_LABELS.forEach(day => {
+            map[day.value] = workingDays.includes(day.value)
+                ? periods.map(p => ({start: p.start, end: p.end}))
+                : [];
+        });
+        return map;
+    };
+    const DEFAULT_URGENCY_PROFILES = [
+        {
+            id: 'standard',
+            title: 'Стандарт',
+            markupPercent: 0,
+            description: 'Обычные сроки, пятидневка',
+            schedule: createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS),
+            workingDays: [...DEFAULT_WORKING_DAYS]
+        },
+        {
+            id: 'fast',
+            title: 'Быстрый',
+            markupPercent: 30,
+            description: 'Ускоренный режим, сокращённый обед',
+            schedule: createScheduleFromPeriods(FAST_OPERATOR_PERIODS),
+            workingDays: [...DEFAULT_WORKING_DAYS]
+        },
+        {
+            id: 'rush',
+            title: 'Срочный',
+            markupPercent: 100,
+            description: 'Работаем 12 часов в сутки, минимальные перерывы',
+            schedule: createScheduleFromPeriods(RUSH_OPERATOR_PERIODS, [1,2,3,4,5,6]),
+            workingDays: [1,2,3,4,5,6]
+        }
+    ];
+    let urgencyProfilesDraft = [];
+    let currentUrgencyProfileId = null;
     let appData = {
         printers: [
             {
@@ -1445,12 +1840,11 @@
         additionalGlobal: [],
         calcSettings: {
             operatorRate: 200,
-            workHoursDay: 8,
-            startDate: "",
             costKwh: 6,
             shipping: 300,
             taxPercent: 6,
             parallelPrinting: "no",
+            deadlineDate: "",
             markupPercent: 0,
             discountPercent: 0,
             downtimeCost: 0,
@@ -1461,14 +1855,25 @@
             includeRejects: true,
             includeOverheads: true,
             ignoreCoolingRejects: false,
-            customServices: []
+            includeEstimatePrint: false,
+            estimatePrintCost: 0,
+            customServices: [],
+            currentUrgencyId: 'standard'
         },
         labelSettings: {
             companyName: "Компания",
             chatLink: "https://t.me/dur",
             bankDetails: "",
             costPerLabel: 0,
-            printLabels: false
+            printLabels: false,
+            urgencyProfiles: DEFAULT_URGENCY_PROFILES.map(p => ({
+                id: p.id,
+                title: p.title,
+                markupPercent: p.markupPercent,
+                description: p.description,
+                schedule: JSON.parse(JSON.stringify(p.schedule)),
+                workingDays: [...p.workingDays]
+            }))
         },
         clients: [],
         calcHistory: []
@@ -1494,7 +1899,38 @@
                     delete appData.labelSettings.paymentInfo;
                 }
                 if(!('bankDetails' in appData.labelSettings)) appData.labelSettings.bankDetails = '';
+                if (!Array.isArray(appData.labelSettings.urgencyProfiles) || !appData.labelSettings.urgencyProfiles.length) {
+                    const legacySchedule = appData.labelSettings.operatorSchedule || createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS);
+                    const legacyWorking = Array.isArray(appData.labelSettings.operatorWorkingDays) && appData.labelSettings.operatorWorkingDays.length
+                        ? appData.labelSettings.operatorWorkingDays
+                        : [...DEFAULT_WORKING_DAYS];
+                    const fallback = {
+                        id: 'standard',
+                        title: 'Стандарт',
+                        markupPercent: 0,
+                        description: 'Обычные сроки, пятидневка',
+                        schedule: Object.keys(legacySchedule).length ? legacySchedule : createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS),
+                        workingDays: legacyWorking
+                    };
+                    const extra = DEFAULT_URGENCY_PROFILES.filter(p => p.id !== 'standard').map(p => ({
+                        id: p.id,
+                        title: p.title,
+                        markupPercent: p.markupPercent,
+                        description: p.description,
+                        schedule: JSON.parse(JSON.stringify(p.schedule)),
+                        workingDays: [...p.workingDays]
+                    }));
+                    appData.labelSettings.urgencyProfiles = [fallback, ...extra];
+                }
+                delete appData.labelSettings.operatorSchedule;
+                delete appData.labelSettings.operatorWorkingDays;
                 if(!appData.calcSettings) appData.calcSettings = {};
+                if(!appData.calcSettings.currentUrgencyId){
+                    const firstProfile = Array.isArray(appData.labelSettings.urgencyProfiles) && appData.labelSettings.urgencyProfiles.length
+                        ? appData.labelSettings.urgencyProfiles[0].id
+                        : 'standard';
+                    appData.calcSettings.currentUrgencyId = firstProfile;
+                }
                 if(!Array.isArray(appData.calcSettings.customServices)) appData.calcSettings.customServices = [];
             }
         } catch(e){}
@@ -1530,12 +1966,15 @@
         document.getElementById("calcDowntimeCost").value = appData.calcSettings.downtimeCost || "";
         document.getElementById("calcPreparationRate").value = appData.calcSettings.preparationRate || "";
         document.getElementById("calcPreparationTime").value = appData.calcSettings.preparationTime ? formatTimeForDisplay(appData.calcSettings.preparationTime) : "";
-        document.getElementById("calcWorkHoursDay").value = appData.calcSettings.workHoursDay || "";
         document.getElementById("calcCostKwh").value = appData.calcSettings.costKwh || "";
         document.getElementById("calcTaxPercent").value = appData.calcSettings.taxPercent || "";
         document.getElementById("calcRoundingMode").value = appData.calcSettings.roundingMode || "none";
         document.getElementById("calcShipping").value = appData.calcSettings.shipping || "";
-        document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
+        ensureCalcStartDate();
+        const deadlineInput = document.getElementById("calcDeadlineDate");
+        if (deadlineInput) {
+            deadlineInput.value = appData.calcSettings.deadlineDate || "";
+        }
         document.getElementById("calcParallelPrinting").value = appData.calcSettings.parallelPrinting || "no";
         document.getElementById("calcMarkupPercent").value = appData.calcSettings.markupPercent || 0;
         document.getElementById("calcDiscountPercent").value = appData.calcSettings.discountPercent || 0;
@@ -1550,6 +1989,12 @@
         document.getElementById("bankDetailsInput").value = appData.labelSettings.bankDetails || "";
         document.getElementById("labelCostInput").value = appData.labelSettings.costPerLabel || 0;
         document.getElementById("printLabelsCheckbox").checked = appData.labelSettings.printLabels || false;
+        document.getElementById("printEstimateCheckbox").checked = appData.calcSettings.includeEstimatePrint || false;
+        document.getElementById("estimatePrintCostInput").value = appData.calcSettings.estimatePrintCost || 0;
+        initUrgencyProfilesDraft();
+        buildOperatorScheduleUI();
+        renderUrgencyProfileOptions();
+        renderCalcUrgencySelect();
     }
 
     // Функции для работы с форматами времени
@@ -1594,6 +2039,503 @@
         m = str.match(/(\d+)m/);
         if(m) return parseInt(m[1],10)/60;
         return parseTimeInput(str);
+    }
+
+    function getTodayIsoDate() {
+        const now = new Date();
+        const tzOffset = now.getTimezoneOffset();
+        const local = new Date(now.getTime() - tzOffset * 60000);
+        return local.toISOString().slice(0, 16);
+    }
+
+    function normalizeDateTimeLocal(value) {
+        if (!value) return getTodayIsoDate();
+        if (value.includes("T")) {
+            return value.slice(0, 16);
+        }
+        return `${value}T08:00`;
+    }
+
+    function parseDateTimeLocalToDate(value) {
+        if (!value) return null;
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return parsed;
+    }
+
+    function ensureCalcStartDate() {
+        const inp = document.getElementById("calcStartDate");
+        if (inp) {
+            inp.value = normalizeDateTimeLocal(inp.value);
+        }
+    }
+
+    function initUrgencyProfilesDraft() {
+        if (Array.isArray(appData.labelSettings.urgencyProfiles) && appData.labelSettings.urgencyProfiles.length) {
+            urgencyProfilesDraft = JSON.parse(JSON.stringify(appData.labelSettings.urgencyProfiles));
+        } else {
+            urgencyProfilesDraft = JSON.parse(JSON.stringify(DEFAULT_URGENCY_PROFILES));
+        }
+        if (!urgencyProfilesDraft.length) {
+            urgencyProfilesDraft = JSON.parse(JSON.stringify(DEFAULT_URGENCY_PROFILES));
+        }
+        currentUrgencyProfileId = urgencyProfilesDraft[0] ? urgencyProfilesDraft[0].id : null;
+    }
+
+    function getEditingProfileById(pid) {
+        return urgencyProfilesDraft.find(p => String(p.id) === String(pid));
+    }
+
+    function renderUrgencyProfileOptions() {
+        const select = document.getElementById('urgencyProfileSelect');
+        if (!select) return;
+        select.innerHTML = '';
+        urgencyProfilesDraft.forEach(profile => {
+            const option = document.createElement('option');
+            option.value = profile.id;
+            const suffix = profile.markupPercent ? ` (+${profile.markupPercent}% )` : '';
+            option.textContent = `${profile.title}${suffix}`;
+            select.appendChild(option);
+        });
+        if (!getEditingProfileById(currentUrgencyProfileId) && urgencyProfilesDraft.length) {
+            currentUrgencyProfileId = urgencyProfilesDraft[0].id;
+        }
+        if (currentUrgencyProfileId) {
+            select.value = currentUrgencyProfileId;
+        }
+        renderCurrentUrgencyMeta();
+        renderOperatorScheduleInputsForProfile(currentUrgencyProfileId);
+    }
+
+    function renderCurrentUrgencyMeta() {
+        const profile = getEditingProfileById(currentUrgencyProfileId);
+        const nameInput = document.getElementById('urgencyProfileName');
+        const markupInput = document.getElementById('urgencyProfileMarkup');
+        const descInput = document.getElementById('urgencyProfileDescription');
+        if (!profile) {
+            if (nameInput) nameInput.value = '';
+            if (markupInput) markupInput.value = '';
+            if (descInput) descInput.value = '';
+            updateUrgencyScheduleHint(null);
+            return;
+        }
+        if (nameInput) nameInput.value = profile.title || '';
+        if (markupInput) markupInput.value = profile.markupPercent || 0;
+        if (descInput) descInput.value = profile.description || '';
+        updateUrgencyScheduleHint(profile);
+    }
+
+    function captureScheduleFromInputs(profileId) {
+        const profile = getEditingProfileById(profileId);
+        if (!profile) return;
+        const scheduleMap = {};
+        WEEKDAY_LABELS.forEach(day => {
+            const rows = [];
+            for (let i = 0; i < OPERATOR_PERIOD_ROWS; i++) {
+                const startInput = document.querySelector(`.operator-period-input[data-day="${day.value}"][data-index="${i}"][data-type="start"]`);
+                const endInput = document.querySelector(`.operator-period-input[data-day="${day.value}"][data-index="${i}"][data-type="end"]`);
+                if (!startInput || !endInput) continue;
+                if (!startInput.value && !endInput.value) continue;
+                rows.push({ start: startInput.value, end: endInput.value });
+            }
+            scheduleMap[day.value] = rows;
+        });
+        profile.schedule = scheduleMap;
+    }
+
+    function renderOperatorScheduleInputsForProfile(profileId) {
+        const profile = getEditingProfileById(profileId);
+        const scheduleMap = profile && profile.schedule ? profile.schedule : {};
+        WEEKDAY_LABELS.forEach(day => {
+            const daySchedule = Array.isArray(scheduleMap[day.value]) ? scheduleMap[day.value] : [];
+            for (let i = 0; i < OPERATOR_PERIOD_ROWS; i++) {
+                const startInput = document.querySelector(`.operator-period-input[data-day="${day.value}"][data-index="${i}"][data-type="start"]`);
+                const endInput = document.querySelector(`.operator-period-input[data-day="${day.value}"][data-index="${i}"][data-type="end"]`);
+                if (!startInput || !endInput) continue;
+                const period = daySchedule[i];
+                startInput.value = period && period.start ? period.start : '';
+                endInput.value = period && period.end ? period.end : '';
+            }
+        });
+        updateUrgencyScheduleHint(profile);
+    }
+
+    function updateUrgencyScheduleHint(profile) {
+        const hint = document.getElementById('urgencyScheduleHint');
+        if (!hint) return;
+        if (!profile) {
+            hint.textContent = '';
+            return;
+        }
+        const summary = buildScheduleSummary(normalizeScheduleMap(profile.schedule || {}));
+        if (!summary.length) {
+            hint.textContent = 'График не задан.';
+            return;
+        }
+        const parts = summary.map(item => `${item.dayLabel}: ${item.windowLabel}`);
+        hint.textContent = `Текущий профиль: ${profile.title || ''}. ${parts.join('; ')}`;
+    }
+
+    function addUrgencyProfile() {
+        captureScheduleFromInputs(currentUrgencyProfileId);
+        const newProfile = {
+            id: `urg_${Date.now()}`,
+            title: 'Новый профиль',
+            markupPercent: 0,
+            description: '',
+            schedule: createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS),
+            workingDays: [...DEFAULT_WORKING_DAYS]
+        };
+        urgencyProfilesDraft.push(newProfile);
+        currentUrgencyProfileId = newProfile.id;
+        renderUrgencyProfileOptions();
+    }
+
+    function deleteCurrentUrgencyProfile() {
+        if (urgencyProfilesDraft.length <= 1) {
+            alert('Должен быть хотя бы один профиль.');
+            return;
+        }
+        const targetId = currentUrgencyProfileId;
+        urgencyProfilesDraft = urgencyProfilesDraft.filter(p => p.id !== targetId);
+        currentUrgencyProfileId = urgencyProfilesDraft[0] ? urgencyProfilesDraft[0].id : null;
+        if (appData.calcSettings.currentUrgencyId === targetId) {
+            appData.calcSettings.currentUrgencyId = currentUrgencyProfileId;
+        }
+        renderUrgencyProfileOptions();
+    }
+
+    function refreshUrgencyProfileSelectLabels() {
+        const select = document.getElementById('urgencyProfileSelect');
+        if (!select) return;
+        Array.from(select.options).forEach(option => {
+            const profile = getEditingProfileById(option.value);
+            if (profile) {
+                const suffix = profile.markupPercent ? ` (+${profile.markupPercent}% )` : '';
+                option.textContent = `${profile.title}${suffix}`;
+            }
+        });
+    }
+
+    function getUrgencyProfileById(pid) {
+        if (!Array.isArray(appData.labelSettings.urgencyProfiles)) return null;
+        return appData.labelSettings.urgencyProfiles.find(p => String(p.id) === String(pid)) || null;
+    }
+
+    function getScheduleMinutesForProfile(profile) {
+        if (!profile) return normalizeScheduleMap({});
+        return normalizeScheduleMap(profile.schedule || {});
+    }
+
+    function buildOperatorScheduleUI() {
+        const tabs = document.getElementById("operatorWeekTabs");
+        const content = document.getElementById("operatorWeekContent");
+        if (!tabs || !content) return;
+        tabs.innerHTML = "";
+        content.innerHTML = "";
+        WEEKDAY_LABELS.forEach((day, idx) => {
+            const li = document.createElement("li");
+            li.className = "nav-item";
+            const btn = document.createElement("button");
+            btn.className = "nav-link" + (idx === 0 ? " active" : "");
+            btn.type = "button";
+            btn.id = `day-tab-${day.value}`;
+            btn.setAttribute("data-bs-toggle", "tab");
+            btn.setAttribute("data-bs-target", `#day-pane-${day.value}`);
+            btn.setAttribute("role", "tab");
+            btn.setAttribute("data-day", String(day.value));
+            btn.textContent = day.label;
+            li.appendChild(btn);
+            tabs.appendChild(li);
+
+            const pane = document.createElement("div");
+            pane.className = "tab-pane fade" + (idx === 0 ? " show active" : "");
+            pane.id = `day-pane-${day.value}`;
+            pane.setAttribute("role", "tabpanel");
+
+            const tableWrapper = document.createElement("div");
+            tableWrapper.className = "table-responsive";
+            const table = document.createElement("table");
+            table.className = "table table-sm align-middle mb-0";
+            table.innerHTML = `
+        <thead>
+          <tr>
+            <th style="width:5%">#</th>
+            <th>Начало</th>
+            <th>Конец</th>
+          </tr>
+        </thead>
+        <tbody></tbody>`;
+            const tbody = table.querySelector("tbody");
+            for (let i = 0; i < OPERATOR_PERIOD_ROWS; i++) {
+                const tr = document.createElement("tr");
+                const tdIndex = document.createElement("td");
+                tdIndex.textContent = i + 1;
+                const tdStart = document.createElement("td");
+                const tdEnd = document.createElement("td");
+                const startInput = document.createElement("input");
+                startInput.type = "time";
+                startInput.className = "form-control operator-period-input";
+                startInput.dataset.day = String(day.value);
+                startInput.dataset.index = String(i);
+                startInput.dataset.type = "start";
+                startInput.step = "300";
+                const endInput = document.createElement("input");
+                endInput.type = "time";
+                endInput.className = "form-control operator-period-input";
+                endInput.dataset.day = String(day.value);
+                endInput.dataset.index = String(i);
+                endInput.dataset.type = "end";
+                endInput.step = "300";
+                tdStart.appendChild(startInput);
+                tdEnd.appendChild(endInput);
+                tr.appendChild(tdIndex);
+                tr.appendChild(tdStart);
+                tr.appendChild(tdEnd);
+                tbody.appendChild(tr);
+            }
+            tableWrapper.appendChild(table);
+            pane.appendChild(tableWrapper);
+            content.appendChild(pane);
+        });
+    }
+
+
+    let workdayLunchOffsetMinutes = 240;
+    let lunchStartManual = false;
+
+    function getActiveScheduleDayValue() {
+        const activeTab = document.querySelector('#operatorWeekTabs .nav-link.active');
+        if (activeTab) {
+            const dayAttr = activeTab.getAttribute('data-day');
+            if (dayAttr !== null) return Number(dayAttr);
+            const target = activeTab.getAttribute('data-bs-target');
+            if (target) {
+                const match = target.match(/day-pane-(\d)/);
+                if (match) return Number(match[1]);
+            }
+        }
+        return WEEKDAY_LABELS[0]?.value ?? 1;
+    }
+
+    function setScheduleForDay(dayValue, segments) {
+        for (let i = 0; i < OPERATOR_PERIOD_ROWS; i++) {
+            const startInput = document.querySelector(`.operator-period-input[data-day="${dayValue}"][data-index="${i}"][data-type="start"]`);
+            const endInput = document.querySelector(`.operator-period-input[data-day="${dayValue}"][data-index="${i}"][data-type="end"]`);
+            if (!startInput || !endInput) continue;
+            if (segments[i]) {
+                startInput.value = minutesToTimeString(segments[i].start);
+                endInput.value = minutesToTimeString(segments[i].end);
+            } else {
+                startInput.value = '';
+                endInput.value = '';
+            }
+        }
+    }
+
+    function clearSpecialBreaks() {
+        const container = document.getElementById('specialBreaksContainer');
+        if (container) container.innerHTML = '';
+    }
+
+    function addSpecialBreakRow(defaultStart = '', defaultDuration = 10) {
+        const container = document.getElementById('specialBreaksContainer');
+        if (!container) return;
+        const row = document.createElement('div');
+        row.className = 'row g-2 align-items-center special-break-row mb-2';
+        row.innerHTML = `
+        <div class="col-md-5">
+            <input type="time" class="form-control form-control-sm special-break-start" value="${defaultStart}">
+        <\/div>
+        <div class="col-md-4">
+            <input type="number" class="form-control form-control-sm special-break-duration" min="5" max="60" step="5" value="${defaultDuration}">
+        <\/div>
+        <div class="col-md-3 text-end">
+            <button type="button" class="btn btn-link text-danger p-0 remove-break-row">&times;<\/button>
+        <\/div>`;
+        container.appendChild(row);
+    }
+
+    function updateLunchStartByOffset() {
+        if (lunchStartManual) return;
+        const skip = document.getElementById('workdaySkipLunch');
+        if (skip && skip.checked) return;
+        const startInput = document.getElementById('workdayStartTime');
+        const lunchInput = document.getElementById('workdayLunchStart');
+        if (!startInput || !lunchInput) return;
+        const startMin = timeStringToMinutes(startInput.value || '');
+        if (Number.isNaN(startMin)) return;
+        const normalized = startMin + workdayLunchOffsetMinutes;
+        if (normalized >= 0 && normalized < 24 * 60) {
+            lunchInput.value = minutesToTimeString(normalized);
+        }
+    }
+
+    function presetWorkdayTemplateModal() {
+        const templateSelect = document.getElementById('workdayTemplateSelect');
+        if (templateSelect) {
+            templateSelect.value = '8h_classic';
+        }
+        const startInput = document.getElementById('workdayStartTime');
+        if (startInput) startInput.value = '09:00';
+        const totalHoursInput = document.getElementById('workdayTotalHours');
+        if (totalHoursInput) totalHoursInput.value = '8';
+        const lunchDurationInput = document.getElementById('workdayLunchDuration');
+        if (lunchDurationInput) {
+            lunchDurationInput.value = '60';
+            lunchDurationInput.disabled = false;
+        }
+        const lunchInput = document.getElementById('workdayLunchStart');
+        if (lunchInput) {
+            lunchInput.value = '13:00';
+            lunchInput.disabled = false;
+        }
+        const skipLunch = document.getElementById('workdaySkipLunch');
+        if (skipLunch) skipLunch.checked = false;
+        workdayLunchOffsetMinutes = 240;
+        lunchStartManual = false;
+        clearSpecialBreaks();
+        const activeDay = getActiveScheduleDayValue();
+        const dayCheckboxes = document.querySelectorAll('#workdayDaysContainer input[type="checkbox"]');
+        dayCheckboxes.forEach(chk => {
+            chk.checked = Number(chk.value) === activeDay;
+        });
+    }
+
+    function gatherSelectedWorkdays() {
+        const boxes = document.querySelectorAll('#workdayDaysContainer input[type="checkbox"]:checked');
+        if (boxes.length) {
+            return Array.from(boxes).map(b => Number(b.value));
+        }
+        return [getActiveScheduleDayValue()];
+    }
+
+    function collectSpecialBreaks(startMinutes, totalWorkMinutes) {
+        const breaks = [];
+        const container = document.getElementById('specialBreaksContainer');
+        if (!container) return breaks;
+        container.querySelectorAll('.special-break-row').forEach(row => {
+            const startField = row.querySelector('.special-break-start');
+            const durationField = row.querySelector('.special-break-duration');
+            if (!startField || !durationField) return;
+            if (!startField.value) return;
+            const s = timeStringToMinutes(startField.value);
+            const d = parseInt(durationField.value, 10);
+            if (Number.isNaN(s) || Number.isNaN(d) || d <= 0) return;
+            breaks.push({start: s, duration: d, label: 'Спецперерыв'});
+        });
+        return breaks;
+    }
+
+    function buildTemplateSegments(startMinutes, totalWorkMinutes, breaks) {
+        const sortedBreaks = breaks.slice().sort((a, b) => a.start - b.start);
+        let cursor = startMinutes;
+        let consumed = 0;
+        const segments = [];
+        for (const br of sortedBreaks) {
+            if (consumed >= totalWorkMinutes) break;
+            if (br.start < cursor) {
+                throw new Error('Перерывы пересекаются или указаны раньше начала смены.');
+            }
+            const available = br.start - cursor;
+            if (available > 0 && consumed < totalWorkMinutes) {
+                const chunk = Math.min(available, totalWorkMinutes - consumed);
+                if (chunk > 0) {
+                    segments.push({start: cursor, end: cursor + chunk});
+                    consumed += chunk;
+                }
+            }
+            cursor = br.start + br.duration;
+        }
+        if (consumed < totalWorkMinutes) {
+            segments.push({start: cursor, end: cursor + (totalWorkMinutes - consumed)});
+            cursor += totalWorkMinutes - consumed;
+            consumed = totalWorkMinutes;
+        }
+        if (!segments.length) {
+            throw new Error('Не удалось сформировать рабочие промежутки.');
+        }
+        return {segments, end: cursor};
+    }
+
+    function applyWorkdayTemplateFromModal() {
+        try {
+            const totalHours = parseFloat(document.getElementById('workdayTotalHours').value) || 0;
+            if (totalHours <= 0) {
+                alert('Укажите длительность смены.');
+                return;
+            }
+            const startValue = document.getElementById('workdayStartTime').value;
+            const startMinutes = timeStringToMinutes(startValue);
+            if (Number.isNaN(startMinutes)) {
+                alert('Укажите корректное время начала.');
+                return;
+            }
+            const skipLunch = document.getElementById('workdaySkipLunch').checked;
+            const lunchDuration = parseInt(document.getElementById('workdayLunchDuration').value, 10) || 0;
+            const totalWorkMinutes = totalHours * 60;
+            const breaks = [];
+            if (!skipLunch) {
+                const lunchStart = timeStringToMinutes(document.getElementById('workdayLunchStart').value);
+                if (Number.isNaN(lunchStart)) {
+                    alert('Укажите время обеда.');
+                    return;
+                }
+                if (lunchStart < startMinutes) {
+                    alert('Обед не может начинаться раньше смены.');
+                    return;
+                }
+                if (lunchStart >= startMinutes + totalWorkMinutes) {
+                    alert('Обед должен попадать в рабочее время.');
+                    return;
+                }
+                if (totalWorkMinutes > 240 && (lunchDuration < 30 || lunchDuration > 120)) {
+                    alert('Обед при сменах >4 ч должен быть 30–120 минут.');
+                    return;
+                }
+                if (lunchDuration > 0) {
+                    breaks.push({start: lunchStart, duration: lunchDuration, label: 'Обед'});
+                }
+            } else if (totalWorkMinutes > 240) {
+                alert('Смена свыше 4 часов требует обеденного перерыва по ст.108 ТК РФ.');
+                return;
+            }
+            const specialBreaks = collectSpecialBreaks(startMinutes, totalWorkMinutes);
+            breaks.push(...specialBreaks);
+            const limit = startMinutes + totalWorkMinutes;
+            const validBreaks = [];
+            for (const br of breaks) {
+                if (br.start < startMinutes) {
+                    alert(`${br.label || 'Перерыв'} начинается раньше смены.`);
+                    return;
+                }
+                if (br.start >= limit) {
+                    continue;
+                }
+                validBreaks.push(br);
+            }
+            const {segments, end} = buildTemplateSegments(startMinutes, totalWorkMinutes, validBreaks);
+            if (end > 24 * 60) {
+                alert('Смена выходит за пределы одних суток. Отрегулируйте параметры.');
+                return;
+            }
+            const days = gatherSelectedWorkdays();
+            if (!days.length) {
+                alert('Выберите хотя бы один день недели.');
+                return;
+            }
+            days.forEach(day => setScheduleForDay(day, segments));
+            const modalEl = document.getElementById('workdayTemplateModal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+            alert('График заполнен. Не забудьте сохранить настройки.');
+        } catch (error) {
+            alert(error.message || 'Не удалось применить шаблон.');
+        }
     }
 
     async function parseGcodeText(text) {
@@ -2307,39 +3249,162 @@
         renderClientOptions();
     }
 
-    function renderClientOptions(){
-        const dl=document.getElementById('clientsList');
-        if(!dl) return;
-        dl.innerHTML='';
-        appData.clients.forEach(c=>{
-            const opt=document.createElement('option');
-            opt.value=c.name;
-            dl.appendChild(opt);
+    function renderClientOptions(filterText) {
+        const menu = document.getElementById('calcClientDropdownMenu');
+        if (!menu) return;
+        const input = document.getElementById('calcClientName');
+        const term = typeof filterText === 'string' ? filterText : (input ? input.value : '');
+        const search = (term || '').toLowerCase();
+        const list = appData.clients.filter(c => {
+            if (!search) return true;
+            const haystack = `${c.name || ''} ${(c.phone || '')} ${(c.links || '')}`.toLowerCase();
+            return haystack.includes(search);
+        });
+        if (!list.length) {
+            menu.innerHTML = `<div class="dropdown-item text-muted small">Нет совпадений. Нажмите Enter, чтобы добавить клиента.</div>`;
+            return;
+        }
+        menu.innerHTML = list.map(c => {
+            const safeName = escapeHtml(c.name || '');
+            const safePhone = escapeHtml(c.phone || '');
+            const phone = c.phone ? `<span class="text-muted small ms-2">${safePhone}</span>` : '';
+            return `<button type="button" class="dropdown-item d-flex justify-content-between align-items-center" onclick="onCalcClientSelect('${c.id}')">
+        <span>${safeName}</span>
+        ${phone}
+      </button>`;
+        }).join('');
+    }
+
+    function getClientById(clientId) {
+        if (!clientId && clientId !== 0) return null;
+        return appData.clients.find(c => String(c.id) === String(clientId)) || null;
+    }
+
+    function findClientByName(name) {
+        if (!name) return null;
+        const lower = name.trim().toLowerCase();
+        return appData.clients.find(c => (c.name || '').trim().toLowerCase() === lower) || null;
+    }
+
+    function escapeHtml(str) {
+        return (str || '').replace(/[&<>"']/g, ch => {
+            switch (ch) {
+                case '&':
+                    return '&amp;';
+                case '<':
+                    return '&lt;';
+                case '>':
+                    return '&gt;';
+                case '"':
+                    return '&quot;';
+                case "'":
+                    return '&#39;';
+                default:
+                    return ch;
+            }
         });
     }
 
-    async function onAddClient(){
-        const vals=await showMultiPrompt('Клиент',[
-            {id:'name',label:'Имя'},
-            {id:'phone',label:'Телефон'},
-            {id:'links',label:'Ссылки'}
+    function getClientDropdownElements() {
+        return {
+            wrapper: document.getElementById('calcClientDropdownWrapper'),
+            menu: document.getElementById('calcClientDropdownMenu')
+        };
+    }
+
+    function showClientDropdown() {
+        const {wrapper, menu} = getClientDropdownElements();
+        if (!wrapper || !menu) return;
+        menu.classList.add('show');
+        wrapper.classList.add('show');
+        clientDropdownVisible = true;
+    }
+
+    function hideClientDropdown() {
+        const {wrapper, menu} = getClientDropdownElements();
+        if (!wrapper || !menu) return;
+        menu.classList.remove('show');
+        wrapper.classList.remove('show');
+        clientDropdownVisible = false;
+    }
+
+    document.addEventListener('click', event => {
+        if (!clientDropdownVisible) return;
+        const {wrapper} = getClientDropdownElements();
+        if (!wrapper) return;
+        if (wrapper.contains(event.target)) return;
+        hideClientDropdown();
+    });
+
+    function onClientFieldFocus() {
+        renderClientOptions();
+        showClientDropdown();
+    }
+
+    async function onClientFieldKeydown(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const value = event.target.value.trim();
+            if (!value) {
+                onCalcClientSelect('');
+                hideClientDropdown();
+                return;
+            }
+            const existing = findClientByName(value);
+            if (existing) {
+                onCalcClientSelect(existing.id);
+                hideClientDropdown();
+            } else {
+                const created = await openClientModalAndSave({name: value});
+                if (created) onCalcClientSelect(created.id);
+            }
+        } else if (event.key === 'Escape') {
+            hideClientDropdown();
+        } else if (event.key === 'Tab') {
+            hideClientDropdown();
+        }
+    }
+
+    async function promptClientData(defaults = {}) {
+        return await showMultiPrompt('Клиент', [
+            {id: 'name', label: 'Имя', value: defaults.name || ''},
+            {id: 'phone', label: 'Телефон', value: defaults.phone || ''},
+            {id: 'links', label: 'Ссылки', value: defaults.links || ''}
         ]);
-        if(!vals) return;
-        appData.clients.push({id:getNextId('clients'),name:vals.name,phone:vals.phone,links:vals.links});
+    }
+
+    async function openClientModalAndSave(defaults = {}) {
+        const vals = await promptClientData(defaults);
+        if (!vals) return null;
+        const normalizedName = (vals.name || '').trim();
+        if (!normalizedName) return null;
+        let client = null;
+        if (defaults.id) {
+            client = getClientById(defaults.id);
+        }
+        if (!client) {
+            client = findClientByName(normalizedName);
+        }
+        if (!client) {
+            client = {id: getNextId('clients')};
+            appData.clients.push(client);
+        }
+        client.name = normalizedName;
+        client.phone = (vals.phone || '').trim();
+        client.links = (vals.links || '').trim();
         saveToLocalStorage();
         renderClientsTable();
+        return client;
+    }
+
+    async function onAddClient() {
+        await openClientModalAndSave();
     }
 
     async function onEditClient(id){
         const c=appData.clients.find(x=>x.id==id);
         if(!c) return;
-        const vals=await showMultiPrompt('Клиент',[{id:'name',label:'Имя',value:c.name},{id:'phone',label:'Телефон',value:c.phone||''},{id:'links',label:'Ссылки',value:c.links||''}]);
-        if(!vals) return;
-        c.name=vals.name;
-        c.phone=vals.phone;
-        c.links=vals.links;
-        saveToLocalStorage();
-        renderClientsTable();
+        await openClientModalAndSave({id: c.id, name: c.name, phone: c.phone || '', links: c.links || ''});
     }
 
     function onDeleteClient(id){
@@ -2349,16 +3414,473 @@
         renderClientsTable();
     }
 
-    function quickAddClient(){
-        const name=document.getElementById('calcClientName').value.trim();
-        if(!name) return;
-        if(!appData.clients.find(c=>c.name===name)){
-            appData.clients.push({id:getNextId('clients'),name});
-            saveToLocalStorage();
-            renderClientsTable();
+    function applyClientSelection(clientId, fallbackName = '') {
+        const input = document.getElementById('calcClientName');
+        let client = null;
+        if (clientId) {
+            client = getClientById(clientId);
         }
-        renderClientOptions();
+        if (!client && fallbackName) {
+            client = findClientByName(fallbackName);
+        }
+        currentCalcClientId = client ? client.id : '';
+        if (input) {
+            input.value = client ? client.name : (fallbackName || '');
+        }
+        renderClientOptions(input ? input.value : '');
     }
+
+    function resetCalcClientSelector() {
+        currentCalcClientId = '';
+        const input = document.getElementById('calcClientName');
+        if (input) input.value = '';
+        renderClientOptions('');
+        hideClientDropdown();
+    }
+
+    function onCalcClientSelect(clientId) {
+        applyClientSelection(clientId || '');
+        hideClientDropdown();
+    }
+
+    function onCalcClientInput() {
+        const input = document.getElementById('calcClientName');
+        if (!input) return;
+        const value = input.value.trim();
+        const client = findClientByName(value);
+        currentCalcClientId = client ? client.id : '';
+        renderClientOptions(value);
+        showClientDropdown();
+    }
+
+    const ORDER_STATUS_LABELS = {
+        new: 'Новый',
+        inprogress: 'В работе',
+        done: 'Завершён',
+        paid: 'Оплачен',
+        canceled: 'Отменён'
+    };
+
+    const MODEL_STATUS_LABELS = {
+        new: 'Новая',
+        inprogress: 'Печать',
+        done: 'Готова',
+        reject: 'Брак',
+        canceled: 'Отменена'
+    };
+
+    const getOrderStatusLabel = (status) => ORDER_STATUS_LABELS[status] || status || '—';
+    const getModelStatusLabel = (status) => MODEL_STATUS_LABELS[status] || status || '—';
+    const getModelQualityLabel = (status) => status === 'reject' ? 'Брак' : '';
+
+    const TIMELINE_STAGE_LABELS = {
+        prep: 'Подготовка',
+        print: 'Печать',
+        cool: 'Остывание'
+    };
+    const TIMELINE_ACTIONS = {
+        prep: 'Подготовить принтер и материал',
+        print: 'Контролировать печать и готовиться к выгрузке',
+        cool: 'Снять модель, освободить стол'
+    };
+    const minutesToDuration = (minutes) => {
+        const hrs = Math.floor(minutes / 60);
+        const mins = Math.round(minutes % 60);
+        if (hrs > 0 && mins > 0) return `${hrs} ч ${mins} мин`;
+        if (hrs > 0) return `${hrs} ч`;
+        return `${mins} мин`;
+    };
+    const minutesToTimeString = (minutes) => {
+        if (Number.isNaN(minutes)) return '';
+        const normalized = ((minutes % (24 * 60)) + (24 * 60)) % (24 * 60);
+        const hrs = Math.floor(normalized / 60);
+        const mins = Math.round(normalized % 60);
+        return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    };
+    const timeStringToMinutes = (value) => {
+        if (!value || !value.includes(":")) return NaN;
+        const [hours, minutes] = value.split(":").map(Number);
+        if (Number.isNaN(hours) || Number.isNaN(minutes)) return NaN;
+        return hours * 60 + minutes;
+    };
+    const formatTimelineTime = (date) => date.toLocaleString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit'
+    });
+    const formatTimeOnly = (date) => date.toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    const normalizeScheduleMap = (schedule) => {
+        const map = {};
+        WEEKDAY_LABELS.forEach(day => {
+            const periods = schedule && Array.isArray(schedule[day.value]) ? schedule[day.value] : [];
+            map[day.value] = periods
+                .map(period => {
+                    const startMin = timeStringToMinutes(period.start);
+                    const endMin = timeStringToMinutes(period.end);
+                    if (Number.isNaN(startMin) || Number.isNaN(endMin) || startMin >= endMin) return null;
+                    return {
+                        start: period.start,
+                        end: period.end,
+                        startMinutes: startMin,
+                        endMinutes: endMin,
+                        startLabel: period.start || minutesToTimeString(startMin),
+                        endLabel: period.end || minutesToTimeString(endMin)
+                    };
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.startMinutes - b.startMinutes);
+        });
+        return map;
+    };
+    const getWorkingDaysSet = (scheduleMap) => {
+        const set = new Set();
+        WEEKDAY_LABELS.forEach(day => {
+            const periods = scheduleMap && Array.isArray(scheduleMap[day.value]) ? scheduleMap[day.value] : [];
+            if (periods.length) {
+                set.add(day.value);
+            }
+        });
+        if (!set.size) {
+            DEFAULT_WORKING_DAYS.forEach(day => set.add(day));
+        }
+        return set;
+    };
+    const hasScheduleWindows = (scheduleMap) => {
+        return Object.values(scheduleMap || {}).some(periods =>
+            Array.isArray(periods) && periods.length > 0
+        );
+    };
+    const getScheduleWindowsForWeekday = (weekday, scheduleMap) => {
+        if (!scheduleMap) return [];
+        const windows = scheduleMap[weekday];
+        return Array.isArray(windows) ? windows : [];
+    };
+    const isWorkingDay = (date, workingDaysSet) => workingDaysSet.has(date.getDay());
+    const getNextWorkingWindow = (cursor, scheduleMap, workingDaysSet) => {
+        const hasSchedule = hasScheduleWindows(scheduleMap);
+        if (!hasSchedule) {
+            const start = new Date(cursor);
+            return {start, end: new Date(start.getTime() + 24 * 60 * 60000)};
+        }
+        const workingDays = (workingDaysSet && workingDaysSet.size) ? workingDaysSet : getWorkingDaysSet(scheduleMap);
+        if (!workingDays.size) {
+            const start = new Date(cursor);
+            return {start, end: new Date(start.getTime() + 24 * 60 * 60000)};
+        }
+        let probe = new Date(cursor);
+        while (true) {
+            const dayStart = new Date(probe);
+            dayStart.setHours(0, 0, 0, 0);
+            if (!isWorkingDay(dayStart, workingDays)) {
+                probe = new Date(dayStart.getTime() + 24 * 60 * 60000);
+                continue;
+            }
+            const weekday = dayStart.getDay();
+            const windows = getScheduleWindowsForWeekday(weekday, scheduleMap);
+            if (!windows.length) {
+                probe = new Date(dayStart.getTime() + 24 * 60 * 60000);
+                continue;
+            }
+            for (const window of windows) {
+                const windowStart = new Date(dayStart.getTime() + window.startMinutes * 60000);
+                const windowEnd = new Date(dayStart.getTime() + window.endMinutes * 60000);
+                if (probe <= windowEnd) {
+                    const slotStart = probe < windowStart ? windowStart : probe;
+                    if (slotStart < windowEnd) {
+                        return {start: slotStart, end: windowEnd};
+                    }
+                }
+            }
+            probe = new Date(dayStart.getTime() + 24 * 60 * 60000);
+        }
+    };
+    const DAY_MS = 24 * 60 * 60000;
+    const getDayStart = (value) => {
+        const date = new Date(value);
+        date.setHours(0, 0, 0, 0);
+        return date;
+    };
+    const getDayEnd = (value) => {
+        const start = getDayStart(value);
+        return new Date(start.getTime() + DAY_MS);
+    };
+    const alignToWorkingMoment = (cursor, scheduleMap, workingDaysSet) => {
+        const hasSchedule = hasScheduleWindows(scheduleMap);
+        if (!hasSchedule) {
+            const point = new Date(cursor);
+            const dayStart = getDayStart(point);
+            const dayEnd = getDayEnd(point);
+            if (point >= dayEnd) {
+                const next = dayEnd;
+                return {instant: next, dayStart: getDayStart(next)};
+            }
+            return {instant: point, dayStart};
+        }
+        let probe = new Date(cursor);
+        const workingDays = (workingDaysSet && workingDaysSet.size) ? workingDaysSet : getWorkingDaysSet(scheduleMap);
+        for (let guard = 0; guard < 14; guard++) {
+            const dayStart = getDayStart(probe);
+            const weekday = dayStart.getDay();
+            if (!isWorkingDay(dayStart, workingDays)) {
+                probe = new Date(dayStart.getTime() + DAY_MS);
+                continue;
+            }
+            const windows = getScheduleWindowsForWeekday(weekday, scheduleMap);
+            if (!windows.length) {
+                probe = new Date(dayStart.getTime() + DAY_MS);
+                continue;
+            }
+            for (const window of windows) {
+                const winStart = new Date(dayStart.getTime() + window.startMinutes * 60000);
+                const winEnd = new Date(dayStart.getTime() + window.endMinutes * 60000);
+                if (probe > winEnd) continue;
+                const instant = probe < winStart ? winStart : probe;
+                if (instant < winEnd) {
+                    return {instant, dayStart};
+                }
+            }
+            probe = new Date(dayStart.getTime() + DAY_MS);
+        }
+        return null;
+    };
+    const scheduleOperatorStage = (cursor, minutes, scheduleMap, workingDaysSet) => {
+        const hasSchedule = hasScheduleWindows(scheduleMap);
+        let attempt = new Date(cursor);
+        let guard = 0;
+        while (guard < 40) {
+            if (!hasSchedule) {
+                const dayStart = getDayStart(attempt);
+                const dayEnd = getDayEnd(attempt);
+                if (attempt >= dayEnd) {
+                    attempt = dayEnd;
+                    guard++;
+                    continue;
+                }
+                if (minutes === 0) {
+                    return {intervals: [], start: new Date(attempt), end: new Date(attempt), dayStart};
+                }
+                const end = new Date(attempt.getTime() + minutes * 60000);
+                if (end > dayEnd) {
+                    attempt = dayEnd;
+                    guard++;
+                    continue;
+                }
+                return {
+                    intervals: [{start: new Date(attempt), end}],
+                    start: new Date(attempt),
+                    end,
+                    dayStart
+                };
+            }
+            const aligned = alignToWorkingMoment(attempt, scheduleMap, workingDaysSet);
+            if (!aligned) return null;
+            const {instant, dayStart} = aligned;
+            const dayEnd = getDayEnd(dayStart);
+            const windows = getScheduleWindowsForWeekday(dayStart.getDay(), scheduleMap);
+            if (minutes === 0) {
+                return {intervals: [], start: instant, end: instant, dayStart};
+            }
+            const intervals = [];
+            let remaining = minutes;
+            let cursorPoint = new Date(instant);
+            for (const window of windows) {
+                const winStart = new Date(dayStart.getTime() + window.startMinutes * 60000);
+                const winEnd = new Date(dayStart.getTime() + window.endMinutes * 60000);
+                if (winEnd <= cursorPoint) continue;
+                const slotStart = cursorPoint > winStart ? cursorPoint : winStart;
+                if (slotStart >= winEnd) continue;
+                const available = (winEnd - slotStart) / 60000;
+                const used = Math.min(remaining, available);
+                const segEnd = new Date(slotStart.getTime() + used * 60000);
+                intervals.push({start: slotStart, end: segEnd});
+                remaining -= used;
+                cursorPoint = new Date(segEnd.getTime());
+                if (remaining <= 0) break;
+            }
+            if (remaining <= 0) {
+                return {
+                    intervals,
+                    start: intervals[0].start,
+                    end: intervals[intervals.length - 1].end,
+                    dayStart
+                };
+            }
+            attempt = dayEnd;
+            guard++;
+        }
+        return null;
+    };
+    const schedulePrintJob = (printerCursor, operatorCursor, prepMinutes, printMinutes, scheduleMap, workingDaysSet) => {
+        let guard = 0;
+        let attempt = new Date(Math.max(printerCursor.getTime(), operatorCursor.getTime()));
+        while (guard < 60) {
+            const prepBlock = scheduleOperatorStage(attempt, prepMinutes, scheduleMap, workingDaysSet);
+            if (!prepBlock) return null;
+            const dayStart = prepBlock.dayStart;
+            const dayEnd = getDayEnd(dayStart);
+            const earliestPrintStart = prepBlock.end;
+            const readyTime = Math.max(earliestPrintStart.getTime(), printerCursor.getTime());
+            if (readyTime >= dayEnd.getTime()) {
+                attempt = new Date(Math.max(dayEnd.getTime(), printerCursor.getTime(), operatorCursor.getTime()));
+                guard++;
+                continue;
+            }
+            const printEnd = new Date(readyTime + printMinutes * 60000);
+            if (printEnd > dayEnd) {
+                attempt = new Date(Math.max(dayEnd.getTime(), printerCursor.getTime(), operatorCursor.getTime()));
+                guard++;
+                continue;
+            }
+            return {
+                prepBlock,
+                printStart: new Date(readyTime),
+                printEnd,
+                dayStart
+            };
+        }
+        return null;
+    };
+    const buildScheduleSummary = (scheduleMap, breaksMap = {}) => {
+        if (!hasScheduleWindows(scheduleMap)) return [];
+        const summary = [];
+        WEEKDAY_LABELS.forEach(day => {
+            const windows = getScheduleWindowsForWeekday(day.value, scheduleMap);
+            const breaks = Array.isArray(breaksMap[day.value]) ? breaksMap[day.value] : [];
+            if (!windows.length && !breaks.length) return;
+            const workLabel = windows.length
+                ? windows.map(window => `${window.startLabel} — ${window.endLabel}`).join(', ')
+                : '';
+            const breakLabel = breaks.length
+                ? breaks.map(br => `${br.startLabel} — ${br.endLabel}`).join(', ')
+                : '';
+            summary.push({
+                dayLabel: day.label,
+                weekdayValue: day.value,
+                windowLabel: workLabel,
+                breaksLabel: breakLabel,
+                breaksRaw: breaks
+            });
+        });
+        return summary;
+    };
+    const computeBreaksMap = (scheduleMap) => {
+        const breaksMap = {};
+        WEEKDAY_LABELS.forEach(day => {
+            const periods = Array.isArray(scheduleMap[day.value]) ? scheduleMap[day.value] : [];
+            const sorted = periods.slice().sort((a, b) => a.startMinutes - b.startMinutes);
+            const dayBreaks = [];
+            for (let i = 0; i < sorted.length - 1; i++) {
+                const gapStart = sorted[i].endMinutes;
+                const gapEnd = sorted[i + 1].startMinutes;
+                if (gapEnd > gapStart) {
+                    dayBreaks.push({
+                        startMinutes: gapStart,
+                        endMinutes: gapEnd,
+                        duration: gapEnd - gapStart,
+                        startLabel: minutesToTimeString(gapStart),
+                        endLabel: minutesToTimeString(gapEnd)
+                    });
+                }
+            }
+            breaksMap[day.value] = dayBreaks;
+        });
+        return breaksMap;
+    };
+    const buildTimelineEvents = (printers, startDateStr, scheduleMap, breaksMap = {}) => {
+        if (!Array.isArray(printers) || printers.length === 0) {
+            return {events: [], scheduleSummary: []};
+        }
+        let base = startDateStr ? new Date(startDateStr) : new Date();
+        if (Number.isNaN(base.getTime())) {
+            base = new Date();
+        }
+        const workingDaysSet = getWorkingDaysSet(scheduleMap);
+        const scheduleSummary = buildScheduleSummary(scheduleMap, breaksMap);
+        const events = [];
+        printers.forEach(pr => {
+            let cursor = new Date(base.getTime());
+            let operatorCursor = new Date(cursor.getTime());
+            (pr.linesDetail || []).filter(ln => !ln.excludedFromTotals).forEach(line => {
+                const prepMinutes = Math.max(0, line.printerPrepMinutes || 0);
+                const printMinutes = Math.max(0, (line.hours || 0) * 60);
+                const coolingMinutes = Math.max(0, line.coolingMinutes || 0);
+                if (prepMinutes === 0 && printMinutes === 0 && coolingMinutes === 0) return;
+                const jobSchedule = schedulePrintJob(cursor, operatorCursor, prepMinutes, printMinutes, scheduleMap, workingDaysSet);
+                if (!jobSchedule) return;
+                const {prepBlock, printStart, printEnd} = jobSchedule;
+                if (prepMinutes > 0 && prepBlock && Array.isArray(prepBlock.intervals) && prepBlock.intervals.length) {
+                    events.push({
+                        printer: pr.printerName,
+                        modelName: line.displayName || line.name,
+                        modelId: line.id,
+                        thumbnail: line.thumbnail || '',
+                        type: 'prep',
+                        status: line.status,
+                        intervals: prepBlock.intervals.map(interval => ({start: new Date(interval.start), end: new Date(interval.end)})),
+                        duration: prepMinutes,
+                        start: prepBlock.intervals[0].start,
+                        end: prepBlock.intervals[prepBlock.intervals.length - 1].end
+                    });
+                }
+                if (printMinutes > 0) {
+                    events.push({
+                        printer: pr.printerName,
+                        modelName: line.displayName || line.name,
+                        modelId: line.id,
+                        thumbnail: line.thumbnail || '',
+                        type: 'print',
+                        status: line.status,
+                        intervals: [{start: printStart, end: printEnd}],
+                        duration: printMinutes,
+                        start: printStart,
+                        end: printEnd
+                    });
+                }
+                operatorCursor = prepBlock ? new Date(Math.max(operatorCursor.getTime(), prepBlock.end.getTime())) : operatorCursor;
+                cursor = new Date(printEnd.getTime());
+                if (coolingMinutes > 0) {
+                    const coolEvent = {
+                        printer: pr.printerName,
+                        modelName: line.displayName || line.name,
+                        modelId: line.id,
+                        thumbnail: line.thumbnail || '',
+                        type: 'cool',
+                        status: line.status,
+                        intervals: [],
+                        duration: 0,
+                        start: null,
+                        end: null
+                    };
+                    let remaining = coolingMinutes;
+                    let coolCursor = new Date(printEnd.getTime());
+                    while (remaining > 0) {
+                        const chunk = Math.min(remaining, 60);
+                        const segStart = new Date(coolCursor.getTime());
+                        const segEnd = new Date(segStart.getTime() + chunk * 60000);
+                        coolEvent.intervals.push({start: segStart, end: segEnd});
+                        coolEvent.duration += chunk;
+                        remaining -= chunk;
+                        coolCursor = new Date(segEnd.getTime());
+                    }
+                    if (coolEvent.intervals.length) {
+                        coolEvent.start = coolEvent.intervals[0].start;
+                        coolEvent.end = coolEvent.intervals[coolEvent.intervals.length - 1].end;
+                        events.push(coolEvent);
+                        cursor = new Date(coolEvent.end.getTime());
+                    }
+                }
+            });
+        });
+        events.sort((a, b) => a.start - b.start);
+        return {
+            events,
+            scheduleSummary
+        };
+    };
 
     /* Функции калькуляции */
     function renderCalcPrinters(){
@@ -2382,6 +3904,7 @@
             <th>Часы печати<\/th>
             <th>Вес (г)<\/th>
             <th>Материал<\/th>
+            <th>Этикетка<\/th>
             <th>Действия<\/th>
           <\/tr>
         <\/thead>
@@ -2391,6 +3914,49 @@
     `;
             c.appendChild(block);
         });
+    }
+
+    function renderCalcUrgencySelect(){
+        const select = document.getElementById('calcUrgencyProfile');
+        const summary = document.getElementById('calcUrgencySummary');
+        if (!select) return;
+        const profiles = Array.isArray(appData.labelSettings.urgencyProfiles) ? appData.labelSettings.urgencyProfiles : [];
+        select.innerHTML = '';
+        profiles.forEach(profile => {
+            const option = document.createElement('option');
+            option.value = profile.id;
+            const markupText = profile.markupPercent ? ` (+${profile.markupPercent}% )` : '';
+            option.textContent = `${profile.title}${markupText}`;
+            select.appendChild(option);
+        });
+        let currentId = appData.calcSettings.currentUrgencyId;
+        if (!profiles.some(p => String(p.id) === String(currentId)) && profiles.length) {
+            currentId = profiles[0].id;
+        }
+        if (profiles.length && !currentId) {
+            currentId = profiles[0].id;
+        }
+        if (currentId) {
+            select.value = currentId;
+            appData.calcSettings.currentUrgencyId = currentId;
+        }
+        const updateSummary = () => {
+            const profile = profiles.find(p => String(p.id) === String(select.value));
+            let text = '';
+            if (profile) {
+                const markupText = profile.markupPercent ? ` +${profile.markupPercent}% к цене` : ' без доп.наценки';
+                const desc = profile.description ? ` — ${profile.description}` : '';
+                const manualMarkup = appData.calcSettings.markupPercent || 0;
+                const manualText = manualMarkup ? `, ручная +${manualMarkup}%` : '';
+                text = `${profile.title}${markupText}${manualText}${desc}`;
+            }
+            if (summary) summary.textContent = text;
+            appData.calcSettings.currentUrgencyId = select.value;
+        };
+        select.onchange = updateSummary;
+        const markupInputEl = document.getElementById('calcMarkupPercent');
+        if (markupInputEl) markupInputEl.oninput = updateSummary;
+        updateSummary();
     }
     function addModelRow(printerId, modelData) {
         ensureIconsLoaded();
@@ -2421,31 +3987,39 @@
         const hoursId = `modelHours_${printerId}_${uniqueId}`;
         const weightId = `modelWeight_${printerId}_${uniqueId}`;
         const materialId = `modelMaterial_${printerId}_${uniqueId}`;
+        const labelId = `modelLabel_${printerId}_${uniqueId}`;
+        const includeLabel = modelData.includeLabel !== false;
         const tr = document.createElement('tr');
         const code = modelData.id || uniqueId;
         tr.dataset.modelId = code;
         tr.dataset.thumbnail = modelData.thumbnail || '';
         tr.innerHTML = `
-    <td><input type="text" class="form-control form-control-sm" id="${nameId}" placeholder="Название" value="${modelData.name || ''}" /> <small>(${code})<\/small><\/td>
+    <td><input type="text" class="form-control form-control-sm" id="${nameId}" data-role="model-name" placeholder="Название" value="${modelData.name || ''}" /> <small>(${code})<\/small><\/td>
     <td>
       ${modelData.thumbnail ? `<img id="thumb_${code}" src="data:image/png;base64,${modelData.thumbnail}" style="height:40px;width:40px;object-fit:contain;border:1px solid #ccc;cursor:pointer" onclick="document.getElementById('thumbFile_${code}').click()"/>` : `<i id="thumb_${code}" class="bi bi-image" style="font-size:1.5rem; cursor:pointer;" onclick="document.getElementById('thumbFile_${code}').click()"></i>`}
       <input type="file" id="thumbFile_${code}" accept="image/png" class="d-none" onchange="onModelThumbnailChange(event, '${code}')">
     <\/td>
     <td>
-      <select class="form-select form-select-sm" id="${statusId}">
+      <select class="form-select form-select-sm" id="${statusId}" data-role="model-status">
         ${optsStatus}
       <\/select>
     <\/td>
     <td><input type="text" class="form-control form-control-sm time-input"
-             id="${hoursId}" placeholder="ч:м"
+             id="${hoursId}" data-role="model-hours" placeholder="ч:м"
              value="${modelData.hours ? formatTimeForDisplay(modelData.hours) : ''}"
              onblur="this.value = formatTimeForDisplay(handleTimeInput({target: {value: this.value}}))" /><\/td>
-    <td><input type="number" step="0.1" class="form-control form-control-sm" id="${weightId}" placeholder="г" value="${modelData.weight || ''}" /><\/td>
+    <td><input type="number" step="0.1" class="form-control form-control-sm" id="${weightId}" data-role="model-weight" placeholder="г" value="${modelData.weight || ''}" /><\/td>
     <td>
-      <select class="form-select form-select-sm" id="${materialId}">
+      <select class="form-select form-select-sm" id="${materialId}" data-role="model-material">
         <option value="">-Материал-<\/option>
         ${optsMat}
       <\/select>
+    <\/td>
+    <td>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="${labelId}" data-role="model-label" ${includeLabel ? 'checked' : ''}>
+        <label class="form-check-label small" for="${labelId}">Печатать<\/label>
+      </div>
     <\/td>
     <td><button class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">Удл.<\/button><\/td>
   `;
@@ -2466,17 +4040,47 @@
     let lastSummaryCardHtml = '';
 
     let myNalogChallengeToken = '';
+
+    let clientDropdownVisible = false;
+    let currentCalcClientId = "";
     const MY_NALOG_API = 'https://lknpd.nalog.ru';
 
 
+    function setCalcOrderId(value) {
+        const input = document.getElementById("calcOrderId");
+        if (input) input.value = value || "";
+        const text = document.getElementById("calcOrderIdText");
+        if (text) {
+            const displayValue = value && String(value).trim() ? value : "—";
+            text.textContent = displayValue;
+        }
+    }
 
+    function openSettingsTab() {
+        const tabTrigger = document.getElementById('settings-tab');
+        if (!tabTrigger) return;
+        const tab = new bootstrap.Tab(tabTrigger);
+        tab.show();
+        const settingsSection = document.getElementById('settingsPane');
+        if (settingsSection) {
+            settingsSection.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+    }
+
+    function getCalcOrderId() {
+        const input = document.getElementById("calcOrderId");
+        return input ? input.value.trim() : "";
+    }
 
     function onCalculateAll() {
         const calcName = document.getElementById("calcName").value.trim();
         let clientName = document.getElementById("calcClientName").value.trim();
-        let clientId = "";
+        let clientId = currentCalcClientId || "";
         if(clientName){
-            let c = appData.clients.find(x=>x.name===clientName);
+            let c = clientId ? getClientById(clientId) : null;
+            if (!c) {
+                c = appData.clients.find(x => x.name === clientName);
+            }
             if(!c){
                 c = {id: getNextId('clients'), name: clientName};
                 appData.clients.push(c);
@@ -2484,17 +4088,47 @@
                 saveToLocalStorage();
             }
             clientId = c.id;
+            currentCalcClientId = c.id;
+        } else {
+            currentCalcClientId = "";
         }
         const orderStatus = document.getElementById("calcOrderStatus").value;
         const opRate = parseFloat(document.getElementById("calcOperatorRate").value) || 0;
-        const whDay = parseFloat(document.getElementById("calcWorkHoursDay").value) || 8;
         const cKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
         const tPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
         const roundingMode = document.getElementById("calcRoundingMode").value || "none";
         const ship = parseFloat(document.getElementById("calcShipping").value) || 0;
-        const sDate = document.getElementById("calcStartDate").value;
+        const startDateInput = document.getElementById("calcStartDate");
+        let sDate = startDateInput ? startDateInput.value : "";
+        if (sDate) {
+            sDate = normalizeDateTimeLocal(sDate);
+            if (startDateInput) startDateInput.value = sDate;
+        } else {
+            sDate = getTodayIsoDate();
+            if (startDateInput) startDateInput.value = sDate;
+        }
+        const deadlineInputEl = document.getElementById("calcDeadlineDate");
+        const rawDeadline = deadlineInputEl ? deadlineInputEl.value : "";
+        const normalizedDeadline = rawDeadline && rawDeadline.trim() ? normalizeDateTimeLocal(rawDeadline) : "";
+        if (deadlineInputEl && rawDeadline && normalizedDeadline !== rawDeadline) {
+            deadlineInputEl.value = normalizedDeadline;
+        }
+        const deadlineDate = normalizedDeadline ? parseDateTimeLocalToDate(normalizedDeadline) : null;
         const parallelMode = document.getElementById("calcParallelPrinting").value;
-        const markupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
+        const urgencySelectEl = document.getElementById("calcUrgencyProfile");
+        let urgencyId = urgencySelectEl ? urgencySelectEl.value : (appData.calcSettings.currentUrgencyId || '');
+        let urgencyProfile = getUrgencyProfileById(urgencyId);
+        if (!urgencyProfile) {
+            const allProfiles = appData.labelSettings.urgencyProfiles || [];
+            urgencyProfile = allProfiles.find(p => p.id === appData.calcSettings.currentUrgencyId) || allProfiles[0] || null;
+            if (urgencyProfile) {
+                urgencyId = urgencyProfile.id;
+            }
+        }
+        const initialUrgencyId = urgencyProfile ? urgencyProfile.id : null;
+        let profileMarkupPercent = urgencyProfile ? (parseFloat(urgencyProfile.markupPercent) || 0) : 0;
+        const userMarkupPercent = parseFloat(document.getElementById("calcMarkupPercent").value) || 0;
+        let markupPercent = userMarkupPercent + profileMarkupPercent;
         const discountPercent = parseFloat(document.getElementById("calcDiscountPercent").value) || 0;
         const manualFinalCost = parseFloat(document.getElementById("calcFinalCost").value) || 0;
         const downtimeRate = parseFloat(document.getElementById("calcDowntimeCost").value) || 0;
@@ -2506,6 +4140,8 @@
         const includeOverheads = document.getElementById("settingsIncludeOverheads").checked;
         const ignoreCoolingRejects = document.getElementById("settingsIgnoreCoolingRejects").checked;
         const servicesArr = appData.calcSettings.customServices || [];
+        const includeEstimatePrint = appData.calcSettings.includeEstimatePrint;
+        const estimatePrintCost = includeEstimatePrint ? (parseFloat(appData.calcSettings.estimatePrintCost) || 0) : 0;
         let servicesTotal = 0;
         const servicesUsed = [];
         servicesArr.forEach(s=>{
@@ -2517,7 +4153,8 @@
             servicesTotal+=total;
             servicesUsed.push({id:s.id,name:s.name,cost:cost,qty:qty,mode:s.mode,use:true,total});
         });
-        let orderId = document.getElementById("calcOrderId").value.trim();
+        appData.calcSettings.deadlineDate = normalizedDeadline;
+        let orderId = getCalcOrderId();
         let existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
         if (!orderId) {
             orderId = getNextOrderId();
@@ -2535,7 +4172,7 @@
                 }
             }
         }
-        document.getElementById("calcOrderId").value = orderId;
+        setCalcOrderId(orderId);
 
         // итоговый HTML для вывода
         var htmlRes = '';
@@ -2543,14 +4180,12 @@
         // Сохранение настроек расчёта
         appData.calcSettings.operatorRate = opRate;
         appData.calcSettings.includeOperatorForRejects = includeOpRejects;
-        appData.calcSettings.workHoursDay = whDay;
         appData.calcSettings.costKwh = cKwh;
         appData.calcSettings.taxPercent = tPercent;
         appData.calcSettings.roundingMode = roundingMode;
         appData.calcSettings.shipping = ship;
-        appData.calcSettings.startDate = sDate;
         appData.calcSettings.parallelPrinting = parallelMode;
-        appData.calcSettings.markupPercent = markupPercent;
+        appData.calcSettings.markupPercent = userMarkupPercent;
         appData.calcSettings.discountPercent = discountPercent;
         appData.calcSettings.downtimeCost = downtimeRate;
         appData.calcSettings.preparationRate = prepRate;
@@ -2559,6 +4194,7 @@
         appData.calcSettings.includeRejects = includeRejectsInCost;
         appData.calcSettings.includeOverheads = includeOverheads;
         appData.calcSettings.ignoreCoolingRejects = ignoreCoolingRejects;
+        appData.calcSettings.currentUrgencyId = urgencyId || (urgencyProfile ? urgencyProfile.id : appData.calcSettings.currentUrgencyId);
 
         saveToLocalStorage();
 
@@ -2570,12 +4206,13 @@
             const rows = table.querySelectorAll("tbody tr");
             let modelsData = [];
             rows.forEach(row => {
-                const inputs = Array.from(row.querySelectorAll('input')).filter(inp => inp.type !== 'file');
-                const inpName = inputs[0];
-                const selStatus = row.querySelectorAll("select")[0];
-                const inpH = inputs[1];
-                const inpW = inputs[2];
-                const selM = row.querySelectorAll("select")[1];
+                const inpName = row.querySelector('input[data-role="model-name"]');
+                const selStatus = row.querySelector('select[data-role="model-status"]');
+                const inpH = row.querySelector('input[data-role="model-hours"]');
+                const inpW = row.querySelector('input[data-role="model-weight"]');
+                const selM = row.querySelector('select[data-role="model-material"]');
+                const labelToggle = row.querySelector('input[data-role="model-label"]');
+                if (!inpName || !selStatus || !inpH || !inpW || !selM) return;
                 const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
                 const w = parseFloat(inpW.value) || 0;
                 modelsData.push({
@@ -2585,7 +4222,8 @@
                     status: selStatus.value || "new",
                     hours: h,
                     weight: w,
-                    materialId: selM.value
+                    materialId: selM.value,
+                    includeLabel: !labelToggle || labelToggle.checked
                 });
             });
             calcData[pr.id] = modelsData;
@@ -2617,12 +4255,13 @@
             let lines = [];
             const rows = table.querySelectorAll("tbody tr");
             rows.forEach(row => {
-                const inputs = Array.from(row.querySelectorAll('input')).filter(inp => inp.type !== 'file');
-                const inpName = inputs[0];
-                const selStatus = row.querySelectorAll("select")[0];
-                const inpH = inputs[1];
-                const inpW = inputs[2];
-                const selM = row.querySelectorAll("select")[1];
+                const inpName = row.querySelector('input[data-role="model-name"]');
+                const selStatus = row.querySelector('select[data-role="model-status"]');
+                const inpH = row.querySelector('input[data-role="model-hours"]');
+                const inpW = row.querySelector('input[data-role="model-weight"]');
+                const selM = row.querySelector('select[data-role="model-material"]');
+                const labelToggle = row.querySelector('input[data-role="model-label"]');
+                if (!inpName || !selStatus || !inpH || !inpW || !selM) return;
                 const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
                 const w = parseFloat(inpW.value) || 0;
                 const mid = selM.value;
@@ -2674,10 +4313,13 @@
 
                 prCostNoTax += subTotalModel;
 
+                const normalizedName = inpName.value.trim();
+                const effectiveName = normalizedName || row.dataset.modelId || `Модель ${lines.length + 1}`;
                 lines.push({
                     id: row.dataset.modelId || getNextId('models'),
                     thumbnail: row.dataset.thumbnail || '',
-                    name: inpName.value.trim() || "Модель",
+                    name: effectiveName,
+                    displayName: normalizedName,
                     status: selStatus.value || "new",
                     hours: h,
                     weight: w,
@@ -2690,6 +4332,8 @@
                     subTotalModel: subTotalModel,
                     excludedFromTotals: !includeModelTotals,
                     printerPrepMinutes: includeModelTotals ? matPrepMinutes : 0,
+                    coolingMinutes: includeModelTotals ? matCoolingMinutes : 0,
+                    includeLabel: !labelToggle || labelToggle.checked,
                     materialData: {
                         id: mat.id,
                         declaredWeight: mat.declaredWeight,
@@ -2721,6 +4365,74 @@
                 additionalDetails: printerAdditionalDetails
             });
         });
+
+        const hasSelectableProfiles = Array.isArray(appData.labelSettings.urgencyProfiles) && appData.labelSettings.urgencyProfiles.length;
+        const profilePool = hasSelectableProfiles ? appData.labelSettings.urgencyProfiles : DEFAULT_URGENCY_PROFILES;
+        let scheduleMinutesMap = getScheduleMinutesForProfile(urgencyProfile);
+        let breaksMap = computeBreaksMap(scheduleMinutesMap || {});
+        let timelineComputation = null;
+        let autoSelectedProfileId = null;
+        if (deadlineDate && profilePool.length) {
+            const sortedProfiles = profilePool.slice().sort((a, b) => {
+                const aMarkup = parseFloat(a.markupPercent) || 0;
+                const bMarkup = parseFloat(b.markupPercent) || 0;
+                return aMarkup - bMarkup;
+            });
+            let fallbackCandidate = null;
+            for (const profile of sortedProfiles) {
+                const candidateSchedule = getScheduleMinutesForProfile(profile);
+                const candidateBreaks = computeBreaksMap(candidateSchedule || {});
+                const candidateTimeline = buildTimelineEvents(detailsByPrinter, sDate, candidateSchedule, candidateBreaks);
+                const candidateFinish = getTimelineEndDate(candidateTimeline.events);
+                if (!fallbackCandidate || (candidateFinish && (!fallbackCandidate.finish || candidateFinish < fallbackCandidate.finish))) {
+                    fallbackCandidate = {
+                        profile,
+                        schedule: candidateSchedule,
+                        breaks: candidateBreaks,
+                        timeline: candidateTimeline,
+                        finish: candidateFinish
+                    };
+                }
+                if (candidateFinish && candidateFinish <= deadlineDate) {
+                    urgencyProfile = profile;
+                    scheduleMinutesMap = candidateSchedule;
+                    breaksMap = candidateBreaks;
+                    timelineComputation = candidateTimeline;
+                    autoSelectedProfileId = profile.id;
+                    break;
+                }
+            }
+            if (!timelineComputation && fallbackCandidate) {
+                urgencyProfile = fallbackCandidate.profile;
+                scheduleMinutesMap = fallbackCandidate.schedule;
+                breaksMap = fallbackCandidate.breaks;
+                timelineComputation = fallbackCandidate.timeline;
+                autoSelectedProfileId = fallbackCandidate.profile.id;
+            }
+            if (autoSelectedProfileId) {
+                if (hasSelectableProfiles && urgencySelectEl) {
+                    const hasOption = Array.from(urgencySelectEl.options).some(opt => String(opt.value) === String(autoSelectedProfileId));
+                    if (hasOption) {
+                        urgencySelectEl.value = autoSelectedProfileId;
+                        urgencySelectEl.dispatchEvent(new Event('change'));
+                    }
+                }
+                appData.calcSettings.currentUrgencyId = autoSelectedProfileId;
+            }
+        }
+        if (!timelineComputation) {
+            timelineComputation = buildTimelineEvents(detailsByPrinter, sDate, scheduleMinutesMap, breaksMap);
+        }
+        const {
+            events: timelineEvents,
+            scheduleSummary: timelineScheduleSummary
+        } = timelineComputation;
+        profileMarkupPercent = urgencyProfile ? (parseFloat(urgencyProfile.markupPercent) || 0) : 0;
+        markupPercent = userMarkupPercent + profileMarkupPercent;
+        const timelineEndDate = getTimelineEndDate(timelineEvents);
+        const deadlineMet = deadlineDate && timelineEndDate ? timelineEndDate <= deadlineDate : null;
+        const autoDeadlineApplied = Boolean(deadlineDate && autoSelectedProfileId);
+        const autoDeadlineChangedProfile = Boolean(autoDeadlineApplied && autoSelectedProfileId !== initialUrgencyId);
 
         // Проверяем для каждого материала, достаточно ли остатка
         let warnings = [];
@@ -2772,20 +4484,22 @@
         if(appData.labelSettings.printLabels) {
             const labelCost = appData.labelSettings.costPerLabel || 0;
             const totalModels = Object.values(calcData).reduce((acc, models) => {
-                const allowedModels = models.filter(m => includeRejectsInCost || (m.status !== 'reject'));
+                const allowedModels = models.filter(m =>
+                    (includeRejectsInCost || (m.status !== 'reject')) &&
+                    (m.includeLabel !== false)
+                );
                 return acc + allowedModels.length;
             }, 0);
             totalLabelsCost = totalModels * labelCost;
         }
 
 
-        let subtotal = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost;
+        let subtotalBeforeTax = sumWithoutTax + sumGlobalAdd + ship + totalOperatorCost + totalLabelsCost + estimatePrintCost;
         if (markupPercent > 0) {
-            subtotal *= (1 + markupPercent / 100);
+            subtotalBeforeTax *= (1 + markupPercent / 100);
         }
-        subtotal += servicesTotal;
-        const totalBeforeDiscount = subtotal / (1 - tPercent / 100);
-        const taxAmount = totalBeforeDiscount - subtotal;
+        subtotalBeforeTax += servicesTotal;
+        const totalBeforeDiscount = tPercent > 0 ? subtotalBeforeTax / (1 - tPercent / 100) : subtotalBeforeTax;
         let finalSum = totalBeforeDiscount;
         if(discountPercent > 0){
             finalSum = finalSum * (1 - discountPercent / 100);
@@ -2803,12 +4517,27 @@
                 finalSum = rounded;
             }
         }
+        const taxAmount = tPercent > 0 ? finalSum * (tPercent / 100) : 0;
+        const subtotal = finalSum - taxAmount;
+        const modelsRevenue = Math.max(0, finalSum - ship - servicesTotal);
 
-        let finDateStr = calcFinishDate(sDate, Math.ceil(finalTimeOperator / (whDay || 8)));
+        let finDateStr = calcFinishDate(timelineEvents, sDate);
 
         htmlRes = `<strong>Общий результат:<\/strong><br/>`;
         htmlRes += `Код: ${orderId}<br/>`;
-        htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${orderStatus}<br/>`;
+        htmlRes += `Название: ${calcName || "(Без названия)"}, Клиент: ${clientName || "(Не указан)"}, Статус: ${getOrderStatusLabel(orderStatus)}<br/>`;
+        const urgencyLabel = urgencyProfile ? `${urgencyProfile.title}${profileMarkupPercent ? ` (+${profileMarkupPercent}% )` : ''}` : '—';
+        htmlRes += `Срочность: ${urgencyLabel}<br/>`;
+        if (deadlineDate) {
+            const deadlineLabel = deadlineDate.toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            htmlRes += `Требуемая дата окончания: ${deadlineLabel}<br/>`;
+        }
         htmlRes += `Учет параллельной печати: ${(parallelMode === "yes") ? "Да" : "Нет"}<br/>`;
         const downtimeParts = [];
         if (totalCoolingHours > 0) {
@@ -2825,7 +4554,7 @@
         if (roundingInfo.adjustment > 0) {
             htmlRes += `Округление до ${roundingInfo.step} ₽: +${safeFixed(roundingInfo.adjustment)} ₽<br/>`;
         }
-        htmlRes += `Наценка: ${markupPercent}%.<br/>`;
+        htmlRes += `Наценка: ${markupPercent}% (профиль ${profileMarkupPercent}%, ручная ${userMarkupPercent}%).<br/>`;
         htmlRes += `Упаковка/Доставка: ${safeFixed(ship)} ₽<br/>`;
         htmlRes += `Стоимость этикеток: ${safeFixed(totalLabelsCost)} ₽<br/>`;
         if(servicesUsed.length>0){
@@ -2840,7 +4569,7 @@
         // Вывод цены за 1 грамм
         const totalWeight = detailsByPrinter.reduce((acc, printer) =>
             acc + printer.linesDetail.reduce((sum, line) => sum + (line.excludedFromTotals ? 0 : line.realWeight), 0), 0);
-        const pricePerGram = totalWeight > 0 ? finalSum / totalWeight : 0;
+        const pricePerGram = totalWeight > 0 ? modelsRevenue / totalWeight : 0;
 
 
         if(discountPercent > 0){
@@ -2854,7 +4583,20 @@
         htmlRes += `Цена за 1 грамм: ${safeFixed(pricePerGram)}<br/>`;
 
         if (finDateStr) {
-            htmlRes += `Дата завершения (примерно): ${finDateStr}<br/>`;
+            const finishStatus = deadlineDate && timelineEndDate
+                ? (deadlineMet ? ' (успеваем к сроку)' : ' (⚠️ не укладываемся)')
+                : '';
+            htmlRes += `Дата завершения (примерно): ${finDateStr}${finishStatus}<br/>`;
+        }
+        if (deadlineDate && autoDeadlineApplied) {
+            if (autoDeadlineChangedProfile && urgencyProfile) {
+                htmlRes += `<span class="text-muted">Профиль срочности автоматически изменён на "${urgencyProfile.title}".<\/span><br/>`;
+            }
+            if (deadlineMet === false) {
+                htmlRes += `<span class="text-danger">⚠️ Даже при максимально быстром профиле срок не соблюдается — сократите объём или расширьте график.<\/span><br/>`;
+            }
+        } else if (deadlineDate && deadlineMet === false) {
+            htmlRes += `<span class="text-danger">⚠️ Дедлайн не соблюдается. Попробуйте выбрать более срочный профиль или скорректировать график.<\/span><br/>`;
         }
 
         // формируем HTML карточки итогов для скачивания
@@ -2862,12 +4604,16 @@
         detailsByPrinter.forEach(pr => {
             pr.linesDetail.forEach(ln => {
                 if (ln.excludedFromTotals) return;
+                const statusLabel = getModelStatusLabel(ln.status);
+                const qualityLabel = getModelQualityLabel(ln.status);
+                const statusDisplay = qualityLabel ? `${statusLabel} — ${qualityLabel}` : statusLabel;
                 summaryModels += `<div class="model-card">` +
                     (ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" alt="icon">` : '') +
                     `<h3>${ln.name}<\/h3>` +
                     `<p><strong>Требуется:<\/strong> ${formatTimeForDisplay(ln.hours)}<\/p>` +
                     `<p><strong>Вес:<\/strong> ${safeFixed(ln.realWeight)} г<\/p>` +
                     `<p><strong>Материал:<\/strong> ${ln.matName}<\/p>` +
+                    `<p><strong>Статус:<\/strong> ${statusDisplay}<\/p>` +
                     `</div>`;
             });
         });
@@ -2882,7 +4628,7 @@
                 orderId,
                 orderName: calcName || '(Без названия)',
                 client: clientName || '(Не указан)',
-                status: orderStatus,
+                status: getOrderStatusLabel(orderStatus),
                 totalTime: formatTimeForDisplay(finalTimeOperator) + ' ч',
                 totalTimeOperator: formatTimeForDisplay(finalTimeOperator + prepTime + totalDowntimeHours) + ' ч',
                 downtimeTotalHours: formatTimeForDisplay(totalDowntimeHours),
@@ -2905,11 +4651,178 @@
                 qr: qrDataUrl,
                 paymentInfo: appData.labelSettings.bankDetails,
                 services: servicesUsed,
-                servicesTotal: safeFixed(servicesTotal)
+                servicesTotal: safeFixed(servicesTotal),
+                estimatePrintCost: includeEstimatePrint && estimatePrintCost > 0 ? safeFixed(estimatePrintCost) : '',
+                urgencyTitle: urgencyProfile ? urgencyProfile.title : '',
+                urgencyProfileMarkup: profileMarkupPercent,
+                urgencyUserMarkup: userMarkupPercent
             });
         });
         if (warnings.length > 0) {
             htmlRes += `<div class="alert alert-warning mt-2">Предупреждения:<br/>` + warnings.join("<br/>") + `<\/div>`;
+        }
+        if (timelineEvents.length > 0) {
+            htmlRes += `<hr/><strong>График печати<\/strong>`;
+            const timelineGroups = [];
+            const printerOrder = [];
+            const now = new Date();
+            timelineEvents.forEach(evt => {
+                const anchor = evt.start || (Array.isArray(evt.intervals) && evt.intervals.length ? evt.intervals[0].start : null);
+                const baseDate = anchor instanceof Date ? anchor : (evt.intervals && evt.intervals[0] && evt.intervals[0].start instanceof Date ? evt.intervals[0].start : null);
+                if (!baseDate) return;
+                const dayDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+                const dayKey = dayDate.getTime();
+                let group = timelineGroups.find(g => g.key === dayKey);
+                if (!group) {
+                    const dayLabel = dayDate.toLocaleDateString('ru-RU', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                    const isCurrentDay = dayDate.toDateString() === now.toDateString();
+                    group = {key: dayKey, label: dayLabel, printers: [], isCurrentDay};
+                    timelineGroups.push(group);
+                }
+                let printerGroup = group.printers.find(p => p.printer === (evt.printer || '—'));
+                if (!printerGroup) {
+                    printerGroup = {printer: evt.printer || '—', models: []};
+                    group.printers.push(printerGroup);
+                    if (!printerOrder.includes(printerGroup.printer)) printerOrder.push(printerGroup.printer);
+                }
+                const rawModelName = evt.modelName && evt.modelName.trim() ? evt.modelName.trim() : '';
+                const fallbackModelId = evt.modelId || '';
+                const modelLabel = rawModelName || fallbackModelId || '—';
+                const modelKey = fallbackModelId || modelLabel;
+                let modelGroup = printerGroup.models.find(m => m.key === modelKey);
+                if (!modelGroup) {
+                    modelGroup = {
+                        key: modelKey,
+                        modelLabel,
+                        modelName: rawModelName,
+                        modelId: fallbackModelId,
+                        thumbnail: evt.thumbnail || '',
+                        slots: []
+                    };
+                    printerGroup.models.push(modelGroup);
+                } else if (!modelGroup.thumbnail && evt.thumbnail) {
+                    modelGroup.thumbnail = evt.thumbnail;
+                }
+                modelGroup.slots.push(evt);
+            });
+            timelineGroups.sort((a, b) => a.key - b.key);
+            printerOrder.sort((a, b) => a.localeCompare(b));
+
+            timelineGroups.forEach(group => {
+                const containerClass = group.isCurrentDay ? 'timeline-day-container timeline-day-current' : 'timeline-day-container';
+                const dayDateObj = new Date(group.key);
+                const getPrinterFirstEvent = (printerGroup) => printerGroup.models
+                    .flatMap(model => model.slots)
+                    .map(slot => slot.start || (slot.intervals && slot.intervals[0] && slot.intervals[0].start))
+                    .filter(Boolean)
+                    .sort((a, b) => a - b)[0] || null;
+                const dayPrinters = group.printers
+                    .slice()
+                    .sort((a, b) => {
+                        const firstA = getPrinterFirstEvent(a);
+                        const firstB = getPrinterFirstEvent(b);
+                        if (firstA && firstB) return firstA - firstB;
+                        if (firstA) return -1;
+                        if (firstB) return 1;
+                        return printerOrder.indexOf(a.printer) - printerOrder.indexOf(b.printer);
+                    });
+                const dayBreakInfo = (timelineScheduleSummary || []).find(entry => entry.weekdayValue === dayDateObj.getDay());
+                const breakRows = dayBreakInfo && Array.isArray(dayBreakInfo.breaksRaw) ? dayBreakInfo.breaksRaw : [];
+                const dayBreakEntries = breakRows
+                    .map(br => ({
+                        ...br,
+                        startDate: new Date(dayDateObj.getTime() + (br.startMinutes || 0) * 60000),
+                        endDate: new Date(dayDateObj.getTime() + (br.endMinutes || 0) * 60000)
+                    }))
+                    .sort((a, b) => a.startDate - b.startDate);
+                let breakPointer = 0;
+                const dayTableRows = [];
+                const renderBreaksUpTo = (limitDate) => {
+                    while (breakPointer < dayBreakEntries.length && dayBreakEntries[breakPointer].startDate <= limitDate) {
+                        const br = dayBreakEntries[breakPointer];
+                        const timeRange = `${formatTimeOnly(br.startDate)} — ${formatTimeOnly(br.endDate)}`;
+                        const durationLabel = br.duration ? minutesToDuration(br.duration) : '—';
+                        const actionText = br.duration >= 55
+                            ? 'Обеденный перерыв'
+                            : 'Перерыв (оператор недоступен)';
+                        const note = 'Принтеры могут продолжать текущую печать';
+                        dayTableRows.push(`<tr class="timeline-break-row">
+            <td>${timeRange}</td>
+            <td>${durationLabel}</td>
+            <td>Перерыв</td>
+            <td>${actionText}. ${note}.</td>
+          </tr>`);
+                        breakPointer++;
+                    }
+                };
+                let dayTotalMinutes = 0;
+                dayPrinters.forEach(prGroup => {
+                    dayTableRows.push(`<tr class="timeline-printer-row"><td colspan="5" class="text-center"><strong>Принтер: ${prGroup.printer}</strong></td></tr>`);
+                    prGroup.models.forEach(modelGroup => {
+                        const hasReject = modelGroup.slots.some(slot => slot.status === 'reject');
+                        const modelQuality = hasReject ? ' — Брак' : '';
+                        const modelIcon = modelGroup.thumbnail
+                            ? `<img src="data:image/png;base64,${modelGroup.thumbnail}" alt="${modelGroup.modelLabel}" class="timeline-model-thumb">`
+                            : `<i class="bi bi-box text-primary"></i>`;
+                        const secondaryId = modelGroup.modelName && modelGroup.modelId && modelGroup.modelId !== modelGroup.modelLabel
+                            ? `<span class="timeline-model-id">${modelGroup.modelId}</span>`
+                            : '';
+                        dayTableRows.push(`<tr class="timeline-model-row"><td colspan="5"><div class="timeline-model-title">${modelIcon}<strong>${modelGroup.modelLabel}${modelQuality}</strong>${secondaryId}</div></td></tr>`);
+                        modelGroup.slots.forEach(evt => {
+                            const intervals = Array.isArray(evt.intervals) && evt.intervals.length ? evt.intervals : [{
+                                start: evt.start,
+                                end: evt.end
+                            }];
+                            const eventStart = intervals[0].start || evt.start || new Date(group.key);
+                            renderBreaksUpTo(eventStart);
+                            const stage = TIMELINE_STAGE_LABELS[evt.type] || evt.type;
+                            const action = TIMELINE_ACTIONS[evt.type] || '';
+                            const timeRange = intervals.map(interval => `${formatTimeOnly(interval.start)} — ${formatTimeOnly(interval.end)}`).join('<br/>');
+                            const isCurrentSlot = intervals.some(interval => now >= interval.start && now <= interval.end);
+                            const slotClass = isCurrentSlot ? 'timeline-slot-current' : '';
+                            const nowBadge = isCurrentSlot ? ' <span class="badge bg-warning text-dark ms-2">Сейчас</span>' : '';
+                            dayTableRows.push(`<tr class="${slotClass}">
+                    <td>${timeRange}${nowBadge}</td>
+          <td>${minutesToDuration(evt.duration || 0)}</td>
+          <td>${stage}</td>
+          <td>${action}</td>
+        </tr>`);
+                            dayTotalMinutes += evt.duration || 0;
+                            const eventEnd = intervals[intervals.length - 1].end || evt.end || eventStart;
+                            renderBreaksUpTo(eventEnd);
+                        });
+                    });
+                });
+                renderBreaksUpTo(new Date(dayDateObj.getTime() + 24 * 60 * 60000 - 1));
+                const dayBodyHtml = dayTableRows.join('');
+                htmlRes += `<div class="${containerClass}">
+        <div class="timeline-day-title">${group.label}<\/div>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle mb-0">
+            <thead>
+              <tr>
+                <th style="width:35%;">Время<\/th>
+                <th style="width:15%;">Длительность<\/th>
+                <th style="width:20%;">Этап<\/th>
+                <th>Задача оператору<\/th>
+              <\/tr>
+            <\/thead>
+            <tbody>${dayBodyHtml}<\/tbody>
+          <\/table>
+        <\/div>
+        <div class="timeline-day-summary">Итого за день: ${minutesToDuration(dayTotalMinutes)}<\/div>
+      <\/div>`;
+            });
+            const scheduleSummaryText = (timelineScheduleSummary || []).map(window => `${window.dayLabel}: ${window.windowLabel}`).join('; ');
+            const scheduleText = scheduleSummaryText ? `Рабочие окна: ${scheduleSummaryText}. ` : '';
+            const scheduleStartDate = new Date(sDate);
+            const startLabel = Number.isNaN(scheduleStartDate.getTime()) ? sDate : formatTimelineTime(scheduleStartDate);
+            htmlRes += `<div class="text-muted small">${scheduleText}График учитывает только рабочие периоды оператора и формируется от даты начала ${startLabel}.<\/div>`;
         }
         htmlRes += `<hr/><strong>Детализация по принтерам:<\/strong><br/>`;
         detailsByPrinter.forEach(d => {
@@ -2932,7 +4845,6 @@
         <th>Часы<\/th>
         <th>Вес (г)<\/th>
         <th>Материал<\/th>
-        <th>Вес<\/th>
         <th>Амортизация принтера (₽)<\/th>
         <th>Стоимость материала (₽)<\/th>
         <th>Электричество (₽)<\/th>
@@ -2944,11 +4856,10 @@
                     htmlRes += `<tr>
           <td>${ln.name} (${ln.id || ''})${ln.excludedFromTotals ? ' <span class="badge bg-secondary">не в расчёте<\/span>' : ''}<\/td>
           <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
-          <td>${ln.status}<\/td>
+          <td>${getModelStatusLabel(ln.status)}${getModelQualityLabel(ln.status) ? ` — ${getModelQualityLabel(ln.status)}` : ''}<\/td>
           <td>${formatTimeForDisplay(ln.hours)}<\/td>
-          <td>${safeFixed(ln.weight)}<\/td>
-          <td>${ln.matName}<\/td>
           <td>${safeFixed(ln.realWeight)}<\/td>
+          <td>${ln.matName}<\/td>
           <td>${safeFixed(ln.costPrinterPart)}<\/td>
           <td>${safeFixed(ln.costMaterial)}<\/td>
           <td>${safeFixed(ln.costElectric)}<\/td>
@@ -2956,7 +4867,7 @@
           <td>${safeFixed(ln.subTotalModel)}<\/td>
           <td>
             <button class="btn btn-sm btn-outline-secondary"
-              onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${safeFixed(ln.hours)}', '${safeFixed(ln.weight)}', '${ln.thumbnail || ''}')"
+              onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${safeFixed(ln.hours)}', '${safeFixed(ln.realWeight)}', '${ln.thumbnail || ''}')"
               ${ln.excludedFromTotals ? 'disabled title="Модель исключена из расчёта"' : ''}>
               Этикетка
             <\/button>
@@ -2968,7 +4879,7 @@
 
             // Вывод таблицы дополнительных расходов для принтера с итоговой суммой
             if (d.additionalDetails && d.additionalDetails.length > 0) {
-                let htmlResadditionalDetails = `<hr/><strong>Доп. расходы для принтера:<\/strong>`;
+                let htmlResadditionalDetails = `<hr/><strong>Накладные расходы для принтера:<\/strong>`;
                 htmlResadditionalDetails += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
                 htmlResadditionalDetails += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
                 let sumPrinterAdditional = 0;
@@ -2982,7 +4893,7 @@
         <\/tr>`;
                 });
                 htmlResadditionalDetails += `<\/tbody><\/table>`;
-                htmlResadditionalDetails += `Доп. расходы для принтера: ${safeFixed(sumPrinterAdditional)} ₽<br/>`;
+                htmlResadditionalDetails += `Накладные расходы для принтера: ${safeFixed(sumPrinterAdditional)} ₽<br/>`;
                 if(sumPrinterAdditional > 0)
                     htmlRes += htmlResadditionalDetails;
             }
@@ -2991,9 +4902,9 @@
         });
 
         if (globalAdditionalDetails.length > 0) {
-            htmlRes += `<hr/><strong>Глобальные доп. расходы (включённые):<\/strong>`;
+            htmlRes += `<hr/><strong>Накладные расходы (включённые):<\/strong>`;
             htmlRes += `<table class="table table-sm table-bordered mt-1" style="max-width:600px;">`;
-            htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>Распределено (₽)<\/th><\/tr><\/thead><tbody>`;
+            htmlRes += `<thead><tr><th>Описание<\/th><th>Исх. стоим.<\/th><th>Часы окуп.<\/th><th>В заказе (₽)<\/th><\/tr><\/thead><tbody>`;
             globalAdditionalDetails.forEach(gd => {
                 htmlRes += `<tr>
         <td>${gd.description}<\/td>
@@ -3022,8 +4933,6 @@
         if(qrTarget){
             new QRCode(qrTarget,{text:appData.labelSettings.chatLink,width:120,height:120,correctLevel:QRCode.CorrectLevel.H});
         }
-        const allBtn=document.getElementById("downloadAllLabelsBtn");
-        if(allBtn) allBtn.style.display='inline-block';
         const summaryBtn=document.getElementById("downloadSummaryCardBtn");
         if(summaryBtn) summaryBtn.style.display='inline-block';
         const myNalogBtn=document.getElementById("sendMyNalogBtn");
@@ -3042,7 +4951,10 @@
             total: finalSum,
             totalHours: finalTimeOperator,
             taxPercent: tPercent,
+            taxAmount,
             shipping: ship,
+            includeEstimatePrint,
+            estimatePrintCost,
             services: servicesUsed,
             servicesTotal,
             detailsByPrinter,
@@ -3064,10 +4976,22 @@
                 details: globalAdditionalDetails
             },
             parallelMode,
+            startDate: sDate,
             markupPercent,
             discountPercent,
             priceBeforeDiscount: totalBeforeDiscount,
             realTotal: manualFinalCost > 0 ? manualFinalCost : null,
+            totalLabelsCost,
+            modelsRevenue,
+            urgencyProfileId: urgencyProfile ? urgencyProfile.id : '',
+            urgencyProfileTitle: urgencyProfile ? urgencyProfile.title : '',
+            profileMarkupPercent,
+            userMarkupPercent,
+            timelineScheduleSummary,
+            requiredFinishDate: normalizedDeadline || "",
+            actualFinishDate: timelineEndDate ? timelineEndDate.toISOString() : "",
+            deadlineMet,
+            autoSelectedUrgencyId: autoSelectedProfileId || null,
             nalogReceipts: []
         };
         if(existingIndex !== -1){
@@ -3086,9 +5010,6 @@
             if(cancelBtn) cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
         }
 
-        lastCalcFullData.totalLabelsCost = totalLabelsCost;
-        lastCalcFullData.servicesTotal = servicesTotal;
-
         const dtStr = new Date().toLocaleString("ru-RU");
         const newEntry = {
             id: orderId,
@@ -3101,7 +5022,10 @@
             total: finalSum,
             totalHours: finalTimeOperator,
             taxPercent: tPercent,
+            taxAmount,
             shipping: ship,
+            includeEstimatePrint,
+            estimatePrintCost,
             services: servicesUsed,
             servicesTotal,
             operatorRate: opRate,
@@ -3123,16 +5047,28 @@
                 details: globalAdditionalDetails
             },
             parallelMode,
+            startDate: sDate,
             markupPercent,
             discountPercent,
             priceBeforeDiscount: totalBeforeDiscount,
             realTotal: manualFinalCost > 0 ? manualFinalCost : null,
+            urgencyProfileId: urgencyProfile ? urgencyProfile.id : '',
+            urgencyProfileTitle: urgencyProfile ? urgencyProfile.title : '',
+            profileMarkupPercent,
+            userMarkupPercent,
+            timelineScheduleSummary,
+            requiredFinishDate: normalizedDeadline || "",
+            actualFinishDate: timelineEndDate ? timelineEndDate.toISOString() : "",
+            deadlineMet,
+            autoSelectedUrgencyId: autoSelectedProfileId || null,
             nalogReceipts: Array.isArray(lastCalcFullData.nalogReceipts)
                 ? lastCalcFullData.nalogReceipts.map(r=>({uuid:r.uuid, canceled:!!r.canceled}))
                 : [],
             nalogReceiptUuid: lastCalcFullData.receiptUuid || null,
             rejectHours: totalRejectHours,
-            rejectWeight: totalRejectWeight
+            rejectWeight: totalRejectWeight,
+            totalLabelsCost,
+            modelsRevenue
         };
         if (existingIndex !== -1) {
             appData.calcHistory[existingIndex] = newEntry;
@@ -3330,15 +5266,46 @@
         reader.readAsText(file);
     }
 
-    function calcFinishDate(sv, days){
-        if(!sv) return "";
+    function getTimelineEndDate(events){
+        if (!Array.isArray(events) || !events.length) return null;
+        let maxDate = null;
+        events.forEach(evt => {
+            if (evt && evt.end instanceof Date) {
+                if (!maxDate || evt.end > maxDate) {
+                    maxDate = evt.end;
+                }
+            } else if (Array.isArray(evt?.intervals) && evt.intervals.length) {
+                const lastInterval = evt.intervals[evt.intervals.length - 1];
+                if (lastInterval?.end && (!maxDate || lastInterval.end > maxDate)) {
+                    maxDate = lastInterval.end;
+                }
+            }
+        });
+        return maxDate;
+    }
+
+    function calcFinishDate(events, fallbackStart){
         try{
-            const d = new Date(sv);
-            d.setDate(d.getDate()+days);
-            return d.toLocaleDateString("ru-RU");
-        } catch(e){
-            return "";
+            const maxDate = getTimelineEndDate(events);
+            if (maxDate) {
+                return maxDate.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            if (fallbackStart) {
+                const d = new Date(fallbackStart);
+                if (!Number.isNaN(d.getTime())) {
+                    return d.toLocaleDateString('ru-RU');
+                }
+            }
+        } catch (e) {
+            console.warn('calcFinishDate error', e);
         }
+        return '';
     }
     function renderHistoryTable(){
         const tb = document.querySelector("#historyTable tbody");
@@ -3409,34 +5376,7 @@
         renderHistoryTable();
         updateHistoryStats();
     }
-    function onExportHistory(){
-        const js = JSON.stringify(appData.calcHistory, null, 2);
-        document.getElementById("exportArea").value = js;
-    }
-    function onImportHistory(){
-        const s = document.getElementById("importArea").value.trim();
-        if(!s) {
-            if(confirm("Пустая строка. Очистить все данные?")){
-                localStorage.removeItem(STORAGE_KEY);
-                location.reload();
-            }
-            return;
-        }
-        try{
-            const obj = JSON.parse(s);
-            if(!Array.isArray(obj)){
-                alert("Ожидается массив.");
-                return;
-            }
-            appData.calcHistory = obj;
-            saveToLocalStorage();
-            renderHistoryTable();
-            updateHistoryStats();
-            alert("Импорт истории завершён.");
-        } catch(e){
-            alert("Ошибка импорта истории: " + e);
-        }
-    }
+
 
     function onChangeCalcHistoryStatus(timestamp, newStatus){
         const it = appData.calcHistory.find(x => x.timestamp === timestamp);
@@ -3498,16 +5438,98 @@
             alert("Ошибка: " + e);
         }
     }
+    function sanitizeProfileSchedule(profileLabel, rawSchedule) {
+        const schedule = {};
+        const workingDays = [];
+        const errors = [];
+        WEEKDAY_LABELS.forEach(day => {
+            const entries = Array.isArray(rawSchedule && rawSchedule[day.value]) ? rawSchedule[day.value] : [];
+            const normalized = entries
+                .map((period, idx) => {
+                    if (!period || (!period.start && !period.end)) return null;
+                    if (!period.start || !period.end) {
+                        errors.push(`${profileLabel}: ${day.label} строка ${idx + 1} заполнена некорректно`);
+                        return null;
+                    }
+                    const startMin = timeStringToMinutes(period.start);
+                    const endMin = timeStringToMinutes(period.end);
+                    if (Number.isNaN(startMin) || Number.isNaN(endMin) || startMin >= endMin) {
+                        errors.push(`${profileLabel}: ${day.label} строка ${idx + 1} заполнена некорректно`);
+                        return null;
+                    }
+                    return {startMinutes: startMin, endMinutes: endMin};
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.startMinutes - b.startMinutes);
+            const sanitizedDay = [];
+            let dayMinutes = 0;
+            let hasBreak = false;
+            normalized.forEach((segment, idx) => {
+                if (idx > 0 && segment.startMinutes < normalized[idx - 1].endMinutes) {
+                    errors.push(`${profileLabel}: ${day.label} имеет пересечение интервалов #${idx} и #${idx + 1}`);
+                }
+                if (idx > 0) {
+                    const gap = segment.startMinutes - normalized[idx - 1].endMinutes;
+                    if (gap >= 30 && gap <= 120) {
+                        hasBreak = true;
+                    }
+                }
+                sanitizedDay.push({
+                    start: minutesToTimeString(segment.startMinutes),
+                    end: minutesToTimeString(segment.endMinutes)
+                });
+                dayMinutes += segment.endMinutes - segment.startMinutes;
+            });
+            if (sanitizedDay.length) {
+                workingDays.push(day.value);
+                if (dayMinutes > 240 && !hasBreak) {
+                    errors.push(`${profileLabel}: ${day.label} требует перерыв 30–120 минут по ст. 108 ТК РФ`);
+                }
+            }
+            schedule[day.value] = sanitizedDay;
+        });
+        return {schedule, workingDays, errors};
+    }
+
     function saveBrandingSettings(){
+        captureScheduleFromInputs(currentUrgencyProfileId);
         const cn = document.getElementById("companyNameInput").value.trim();
         const cl = document.getElementById("chatLinkInput").value.trim();
         const pay = document.getElementById("bankDetailsInput").value.trim();
-        const hours = parseFloat(document.getElementById("calcWorkHoursDay").value) || 0;
+        const sanitizedProfiles = [];
+        const errors = [];
+        urgencyProfilesDraft.forEach(profile => {
+            const cleanName = (profile.title || '').trim() || 'Без названия';
+            const markup = parseFloat(profile.markupPercent) || 0;
+            const description = (profile.description || '').trim();
+            const {schedule, workingDays, errors: profileErrors} = sanitizeProfileSchedule(cleanName, profile.schedule || {});
+            if (profileErrors.length) {
+                errors.push(...profileErrors);
+            }
+            sanitizedProfiles.push({
+                id: profile.id || `urg_${Date.now()}`,
+                title: cleanName,
+                markupPercent: markup,
+                description,
+                schedule,
+                workingDays
+            });
+        });
+        if (errors.length) {
+            alert(`Исправьте график:\n${errors.join('\n')}`);
+            return;
+        }
         appData.labelSettings.companyName = cn || "Моя компания";
         appData.labelSettings.chatLink = cl || "https://t.me/example";
         appData.labelSettings.bankDetails = pay;
-        appData.calcSettings.workHoursDay = hours;
+        appData.labelSettings.urgencyProfiles = sanitizedProfiles;
+        if (!appData.labelSettings.urgencyProfiles.some(p => String(p.id) === String(appData.calcSettings.currentUrgencyId))) {
+            appData.calcSettings.currentUrgencyId = appData.labelSettings.urgencyProfiles[0] ? appData.labelSettings.urgencyProfiles[0].id : '';
+        }
         saveToLocalStorage();
+        initUrgencyProfilesDraft();
+        renderUrgencyProfileOptions();
+        renderCalcUrgencySelect();
         alert("Сохранено");
     }
 
@@ -3520,6 +5542,8 @@
         appData.calcSettings.preparationRate = parseFloat(document.getElementById("calcPreparationRate").value) || 0;
         appData.calcSettings.costKwh = parseFloat(document.getElementById("calcCostKwh").value) || 0;
         appData.calcSettings.taxPercent = parseFloat(document.getElementById("calcTaxPercent").value) || 0;
+        appData.calcSettings.includeEstimatePrint = document.getElementById("printEstimateCheckbox").checked;
+        appData.calcSettings.estimatePrintCost = parseFloat(document.getElementById("estimatePrintCostInput").value) || 0;
         appData.calcSettings.roundingMode = document.getElementById("calcRoundingMode").value || "none";
         appData.calcSettings.includeAmortization = document.getElementById("settingsIncludeAmortization").checked;
         appData.calcSettings.includeRejects = document.getElementById("settingsIncludeRejects").checked;
@@ -3667,52 +5691,6 @@
         });
     }
 
-    function downloadAllThermoLabelsHtml(){
-        if(!lastCalcFullData || !lastCalcFullData.detailsByPrinter){ alert("Нет данных."); return; }
-        const qrSize=100;
-        generateQRCodeCanvas(appData.labelSettings.chatLink, qrSize, function(qrCanvas){
-            const qrDataUrl=qrCanvas?qrCanvas.toDataURL("image/png"):"";
-            let htmlContent=`<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Этикетки<\/title>
-  <style>
-    body{font-family:sans-serif;}
-    .label{width:58mm;height:40mm;margin:2mm;padding:2mm;box-sizing:border-box;position:relative;border:1px solid #000;display:inline-block;}
-    .label-header{text-align:center;font-size:12pt;font-weight:bold;margin-bottom:2mm;}
-    .label-content{font-size:10pt;line-height:1.2;}
-    .label-content div{margin-bottom:1mm;}
-    .qr-code{position:absolute;bottom:2mm;right:2mm;width:15mm;height:15mm;}
-    .thumb{position:absolute;bottom:2mm;right:20mm;width:15mm;height:15mm;}
-  <\/style>
-<\/head>
-<body>`;
-            lastCalcFullData.detailsByPrinter.forEach(pr=>{
-                pr.linesDetail.forEach(ln=>{
-                    if (ln.excludedFromTotals) return;
-                    htmlContent+=`<div class="label">
-  <div class="label-header">${appData.labelSettings.companyName}<\/div>
-  <div class="label-content">
-    <div style="text-align: center;">${ln.name}<\/div>
-    <div>${pr.printerName}<\/div>
-    <div>${ln.matName}<\/div>
-    <div>${formatTimeForDisplay(ln.hours)}<\/div>
-    <div>${safeFixed(ln.weight)} г<\/div>
-    <div>${new Date().toLocaleDateString('ru-RU')}<\/div>
-  <\/div>
-  ${ln.thumbnail ? `<img class="thumb" src="data:image/png;base64,${ln.thumbnail}">` : ''}
-  <img class="qr-code" src="${qrDataUrl}" alt="QR-код">
-<\/div>`;
-                });
-            });
-            htmlContent+=`<\/body><\/html>`;
-            const blob=new Blob([htmlContent],{type:'text/html'});
-            downloadBlob(blob,`ThermoLabels_${Date.now()}.html`);
-        });
-    }
-
     /* Новая функция для генерации этикетки материала в формате 30x20 мм */
     function downloadMaterialLabelHtml(materialId) {
         // Ищем материал сначала в глобальных, затем в материалах принтеров
@@ -3780,7 +5758,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Счёт на оплату</title>
+  <title>Смета</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <style>
     body{background:var(--bs-body-bg);color:var(--bs-body-color);font-family:'Segoe UI',Tahoma,sans-serif;padding:2rem;background-image:radial-gradient(circle at 20% 20%,var(--bs-primary-bg-subtle),transparent 60%),radial-gradient(circle at 80% 0,var(--bs-success-bg-subtle),transparent 60%);}
@@ -3812,15 +5790,13 @@
     <div class="info-item"><span class="label">Название заказа:<\/span><span class="value">${data.orderName}<\/span></div>
     <div class="info-item"><span class="label">Клиент:<\/span><span class="value">${data.client}<\/span></div>
     <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
+    ${data.urgencyTitle ? `<div class="info-item"><span class="label">Срочность:<\/span><span class="value">${data.urgencyTitle}${data.urgencyProfileMarkup ? ` (+${data.urgencyProfileMarkup}% )` : ''}${data.urgencyUserMarkup ? `, ручная ${data.urgencyUserMarkup}%` : ''}<\/span></div>` : ''}
     <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
-    <div class="info-item"><span class="label">Простой оборудования:<\/span><span class="value">${data.downtimeTotalHours} ч. (остывание ${data.downtimeCoolingHours} ч., подготовка ${data.downtimePrepHours} ч.) — ${data.downtimeCost} ₽<\/span></div>
-	<div class="info-item"><span class="label">Подбор и корр. парам. печати:<\/span><span class="value">${data.prepTime} ч. (${data.preparationCost} ₽)<\/span></div>
 	<div class="info-item"><span class="label">Общее время работы оператора:<\/span><span class="value">${data.totalTimeOperator}<\/span></div>
     <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
     ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${s.total} ₽<\/span></div>`).join('') + `<div class="info-item"><span class="label">Итого услуги:<\/span><span class="value">${data.servicesTotal} ₽<\/span></div>` : ''}
     <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
     <div class="info-item"><span class="label">Цена за 1 грамм:<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
-    ${data.roundingNote ? `<div class="info-item"><span class="label">Округление:<\/span><span class="value">${data.roundingNote}<\/span></div>` : ''}
     ${data.paymentInfo ? `<div class="info-item"><span class="label">Оплата:<\/span><span class="value">${data.paymentInfo}<\/span></div>` : ''}
     ${data.finDate ? `<div class="info-item"><span class="label">Дата завершения:<\/span><span class="value">${data.finDate}<\/span></div>` : ''}
   <\/div>
@@ -3835,7 +5811,7 @@
     function downloadSummaryCardHtml(){
         if(!lastSummaryCardHtml){alert('Нет данных.');return;}
         const blob=new Blob([lastSummaryCardHtml],{type:'text/html'});
-        downloadBlob(blob,`Invoice_${Date.now()}.html`);
+        downloadBlob(blob, `Estimate_${Date.now()}.html`);
     }
 
     function generateDeviceId(len=16){
@@ -4170,19 +6146,27 @@
     }
     function startNewCalculation(){
         document.getElementById("calcName").value="";
-        document.getElementById("calcClientName").value="";
+        resetCalcClientSelector();
         document.getElementById("calcOrderStatus").value="new";
-        document.getElementById("calcOrderId").value="";
+        setCalcOrderId("");
         document.getElementById("calcDiscountPercent").value = 0;
         document.getElementById("calcFinalCost").value = "";
         toggleFinalFields('new');
-        const today = new Date().toISOString().split("T")[0];
-        document.getElementById("calcStartDate").value=today;
+        document.getElementById("calcStartDate").value = getTodayIsoDate();
+        const deadlineInput = document.getElementById("calcDeadlineDate");
+        if (deadlineInput) {
+            deadlineInput.value = "";
+        }
+        appData.calcSettings.deadlineDate = "";
         document.getElementById("calcPreparationTime").value = appData.calcSettings.preparationTime ? formatTimeForDisplay(appData.calcSettings.preparationTime) : "";
         lastCalcFullData = null;
         appData.printers.forEach(pr=>{
             const table=document.getElementById(`calcModelsTable_${pr.id}`);
             if(table) table.querySelector("tbody").innerHTML="";
+        });
+        ['downloadSummaryCardBtn','sendMyNalogBtn','cancelMyNalogBtn'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.style.display = 'none';
         });
     }
 
@@ -4280,9 +6264,10 @@
 <\/head>
 <body>
   <h1>Подробный расчёт<\/h1>
-  <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${d.orderStatus || "?"}<\/p>
+  <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${getOrderStatusLabel(d.orderStatus)}<\/p>
+  <p>Срочность: ${d.urgencyProfileTitle || '—'}${d.profileMarkupPercent ? ` (+${d.profileMarkupPercent}% )` : ''}${d.userMarkupPercent ? `, ручная ${d.userMarkupPercent}%` : ''}<\/p>
   <p>Итог: <strong>${safeFixed(d.total)} ₽<\/strong>${d.priceBeforeDiscount ? ` (скидка ${d.discountPercent}% от ${safeFixed(d.priceBeforeDiscount)} ₽)` : ''}<\/p>
-  <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${safeFixed(d.totalOperatorCost)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
+  <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${safeFixed(d.totalOperatorCost)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Этикетки: ${safeFixed(d.totalLabelsCost || 0)} ₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
   <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
   <p>Подитог: ${safeFixed(d.total - d.globalAdditional.taxAmount)} ₽, Общий налог: ${safeFixed(d.globalAdditional.taxAmount)} ₽<\/p>
   <hr/>
@@ -4301,7 +6286,6 @@
           <th>Часы<\/th>
           <th>Вес (г)<\/th>
           <th>Материал<\/th>
-          <th>Вес с браком<\/th>
           <th>Сумма<\/th>
         <\/tr><\/thead>
         <tbody>`;
@@ -4309,11 +6293,10 @@
                     s += `<tr>
           <td>${ln.name} (${ln.id || ''})${ln.excludedFromTotals ? ' <span style="color:#999;">(не в расчёте)<\/span>' : ''}<\/td>
           <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : ''}<\/td>
-          <td>${ln.status}<\/td>
+          <td>${getModelStatusLabel(ln.status)}${getModelQualityLabel(ln.status) ? ` — ${getModelQualityLabel(ln.status)}` : ''}<\/td>
           <td>${safeFixed(ln.hours)}<\/td>
-          <td>${safeFixed(ln.weight)}<\/td>
-          <td>${ln.matName}<\/td>
           <td>${safeFixed(ln.realWeight)}<\/td>
+          <td>${ln.matName}<\/td>
           <td>${safeFixed(ln.subTotalModel)}<\/td>
         <\/tr>`;
                 });
@@ -4350,18 +6333,28 @@
             });
             return;
         }
-        document.getElementById("calcOrderId").value = it.id || "";
+        setCalcOrderId(it.id || "");
         document.getElementById("calcName").value = it.calcName || "";
-        document.getElementById("calcClientName").value = it.clientName || "";
+        applyClientSelection(it.clientId || '', it.clientName || "");
         document.getElementById("calcOrderStatus").value = it.orderStatus || "new";
         document.getElementById("calcOperatorRate").value = it.operatorRate || "";
-        document.getElementById("calcWorkHoursDay").value = appData.calcSettings.workHoursDay || "";
         document.getElementById("calcCostKwh").value = it.costKwh || "";
         document.getElementById("calcTaxPercent").value = it.taxPercent || "";
         document.getElementById("calcShipping").value = it.shipping || "";
-        document.getElementById("calcStartDate").value = appData.calcSettings.startDate || "";
+        document.getElementById("calcStartDate").value = normalizeDateTimeLocal(it.startDate);
+        const deadlineInput = document.getElementById("calcDeadlineDate");
+        if (deadlineInput) {
+            deadlineInput.value = it.requiredFinishDate ? normalizeDateTimeLocal(it.requiredFinishDate) : "";
+        }
         document.getElementById("calcParallelPrinting").value = it.parallelMode || "no";
-        document.getElementById("calcMarkupPercent").value = it.markupPercent || 0;
+        const manualMarkup = typeof it.userMarkupPercent === 'number' ? it.userMarkupPercent : (it.markupPercent || 0);
+        document.getElementById("calcMarkupPercent").value = manualMarkup;
+        const urgencySelectEl = document.getElementById('calcUrgencyProfile');
+        if (urgencySelectEl && it.urgencyProfileId) {
+            urgencySelectEl.value = it.urgencyProfileId;
+            appData.calcSettings.currentUrgencyId = it.urgencyProfileId;
+            urgencySelectEl.dispatchEvent(new Event('change'));
+        }
         document.getElementById("calcDiscountPercent").value = it.discountPercent || 0;
         document.getElementById("calcFinalCost").value = it.realTotal || '';
         toggleFinalFields(it.orderStatus || 'new');
@@ -4488,6 +6481,7 @@
                 totalServiceCost: 0,
                 totalShippingCost: 0,
                 totalAdditionalCost: 0,
+                totalLabelsCost: 0,
                 totalMaterialCost: 0,
                 totalPrinterCost: 0,
                 totalMaintenanceCost: 0,
@@ -4567,7 +6561,8 @@
                 results.totalOperatorExpenses += order.totalOperatorCost || 0;
 
                 // Учет расходов на услуги
-                results.totalServiceCost += order.servicesTotal || 0;
+                const serviceCost = order.servicesTotal || 0;
+                results.totalServiceCost += serviceCost;
 
                 // Обработка деталей заказа
                 order.details?.forEach(printer => {
@@ -4691,9 +6686,23 @@
                 // Глобальные расходы
                 const addCost = orderAdditionalCost;
                 const shipping = order.shipping || 0;
-                const globalCosts = addCost + shipping + (order.totalOperatorCost || 0) + (order.servicesTotal || 0);
-                results.totalAdditionalCost += addCost;
+                const labelsCost = order.totalLabelsCost || 0;
+                const estimateCostHistory = order.estimatePrintCost || 0;
+                const globalCosts = addCost + labelsCost + estimateCostHistory + shipping + (order.totalOperatorCost || 0) + serviceCost;
+                results.totalAdditionalCost += addCost + labelsCost + estimateCostHistory;
                 results.totalShippingCost += shipping;
+                results.totalLabelsCost += labelsCost;
+                if (estimateCostHistory > 0) {
+                    results.additionalStats['estimatePrint'] = results.additionalStats['estimatePrint'] || {
+                        id: 'estimatePrint',
+                        name: 'Печать сметы',
+                        baseCost: parseFloat(order.estimatePrintCost) || 0,
+                        distributed: 0,
+                        orders: 0
+                    };
+                    results.additionalStats['estimatePrint'].distributed += estimateCostHistory;
+                    results.additionalStats['estimatePrint'].orders += 1;
+                }
                 results.totalCost += globalCosts;
                 orderCost += globalCosts;
 
@@ -4704,8 +6713,11 @@
                 results.totalDowntimeMinutes += orderDowntimeMinutes;
                 results.totalCoolingMinutes += orderCoolingMinutes;
 
-                if (orderGrams > 0) {
-                    const orderRevenueShare = order.total || 0;
+                const orderModelsRevenue = typeof order.modelsRevenue === 'number'
+                    ? order.modelsRevenue
+                    : Math.max(0, (order.total || 0) - (order.shipping || 0) - (order.servicesTotal || 0));
+                if (orderGrams > 0 && orderModelsRevenue > 0) {
+                    const orderRevenueShare = orderModelsRevenue;
                     Object.entries(orderMaterialGrams).forEach(([materialId, grams]) => {
                         const stat = results.materialStats[materialId];
                         if (!stat) return;
@@ -4797,7 +6809,6 @@
                 roi,
                 paybackOrders,
                 profitPerHour: summaryPrintHours > 0 ? netProfit / summaryPrintHours : 0,
-                revenuePerHour: summaryPrintHours > 0 ? totalRevenue / summaryPrintHours : 0,
                 avgOrderRevenue: completedOrdersCount > 0 ? totalRevenue / completedOrdersCount : 0,
                 avgOrderProfit: completedOrdersCount > 0 ? netProfit / completedOrdersCount : 0,
                 avgOrderCost,
@@ -4807,8 +6818,6 @@
                 netProfitPerKg: totalGrams > 0 ? netProfit / (totalGrams / 1000) : 0,
                 avgCostPerGram: totalGrams > 0 ? totalCost / totalGrams : 0,
                 avgRevenuePerGram: totalGrams > 0 ? totalRevenue / totalGrams : 0,
-                printerUtilization: appData.printers.length > 0 ?
-                    (summaryPrintHours / (appData.printers.length * 24 * 30)) * 100 : 0,
                 costStructure: {
                     material: totalCost > 0 ? (totalMaterialCost / totalCost) * 100 : 0,
                     electricity: totalCost > 0 ? (totalElectricityCost / totalCost) * 100 : 0,
@@ -4863,9 +6872,7 @@
                 grossProfit,
                 netProfit,
                 netMargin,
-                grossMargin,
                 paybackOrders,
-                revenuePerHour,
                 avgOrderRevenue,
                 avgOrderProfit,
                 avgOrderCost,
@@ -4875,7 +6882,6 @@
                 netProfitPerKg,
                 avgCostPerGram,
                 avgRevenuePerGram,
-                printerUtilization,
                 costStructure,
                 ebitda,
                 breakEvenRevenue,
@@ -4887,8 +6893,6 @@
 
             const paybackAbs = netProfit - capital.total;
             const avgModelsPerOrder = batchStats.avgModelsPerOrder || 0;
-            const medianBatchSize = batchStats.medianBatchSize || 0;
-            const smallBatchShare = batchStats.smallBatchShare || 0;
             const totalOutputMass = (kpis.totalGrams || 0) + (totalRejectGrams || 0);
             const yieldRate = totalOutputMass > 0 ? ((kpis.totalGrams || 0) / totalOutputMass) * 100 : 0;
             const periodHours = Math.max(1, periodDays) * 24;
@@ -4934,19 +6938,6 @@
             const productionHours = totalPrintHours + downtimeHours;
             const downtimeShare = productionHours > 0 ? (downtimeHours / productionHours) * 100 : 0;
             const prepShare = downtimeHours > 0 ? (prepHours / downtimeHours) * 100 : 0;
-            const unitEconomicsRows = [
-                {label: 'Средний чек', value: formatCurrency(avgOrderRevenue)},
-                {label: 'Себестоимость / заказ', value: formatCurrency(avgOrderCost)},
-                {label: 'Прибыль / заказ', value: formatCurrency(avgOrderProfit)},
-                {label: 'Материал / заказ', value: `${formatNumber(avgMaterialPerOrder / 1000, 2)} кг`},
-                {label: 'Цена печати', value: `${formatNumber(avgClientPricePerGram, 2)} ₽/г`}
-            ].map(row => `
-      <li class="list-group-item d-flex justify-content-between">
-        <span>${row.label}</span>
-        <strong>${row.value}</strong>
-      </li>
-    `).join('');
-
             const printerRows = Object.values(printerStats).map(p => {
                 const expenses = p.amortization + p.energy + p.material + p.maintenance;
                 const prepHours = (p.prepMinutes || 0) / 60;
@@ -5005,7 +6996,7 @@
         <td class="text-end">${formatCurrency(Math.max(0, stat.baseCost - stat.distributed))}</td>
         <td class="text-end">${stat.orders || 0}</td>
       </tr>`;
-            }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">Нет активных доп. расходов</td></tr>`;
+            }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">Нет активных накладных расходов</td></tr>`;
 
             const kpiCardItems = [
                 {title: 'Завершённых заказов', value: completedOrdersCount, desc: 'За выбранный период', icon: 'bi-check2-square', decimals: 0},
@@ -5013,18 +7004,20 @@
                 {title: 'Общие расходы', value: totalCost, desc: 'Все затраты', icon: 'bi-receipt-cutoff', format: formatCurrency},
                 {title: 'Чистая прибыль', value: netProfit, desc: 'После налогов', icon: 'bi-graph-up-arrow', format: formatCurrency, valueClass: netProfit >= 0 ? 'text-success' : 'text-danger'},
                 {title: 'Средний чек', value: avgOrderRevenue, desc: '₽ за заказ', icon: 'bi-receipt', format: formatCurrency},
-                {title: 'Материал / заказ', value: avgMaterialPerOrder / 1000, unit: ' кг', desc: 'Средний расход', icon: 'bi-bezier', decimals: 2},
+                {title: 'Средний расход', value: avgMaterialPerOrder / 1000, unit: ' кг', desc: 'Материал / заказ', icon: 'bi-bezier', decimals: 2},
                 {title: 'Чистая маржа', value: netMargin, unit: ' %', desc: 'Чистая прибыль / выручка', icon: 'bi-graph-down', decimals: 1},
-                {title: 'Валовая маржа', value: grossMargin, unit: ' %', desc: 'Валовая прибыль / выручка', icon: 'bi-bar-chart', decimals: 1},
                 {title: 'Цена печати', value: avgClientPricePerGram, unit: ' ₽/г', desc: 'Средняя клиентская цена за грамм', icon: 'bi-currency-ruble', decimals: 2},
-                {title: 'Часов печати / заказ', value: avgPrintHoursPerOrder, unit: ' ч', desc: 'Среднее время печати', icon: 'bi-clock-history', decimals: 1},
+                {title: 'Среднее время печати', value: avgPrintHoursPerOrder, unit: ' ч', desc: 'Часов печати / заказ', icon: 'bi-clock-history', decimals: 1},
                 {title: 'Средняя партия', value: avgModelsPerOrder, unit: ' моделей', desc: 'Моделей в заказе', icon: 'bi-layers', decimals: 1},
-                {title: 'Медианная партия', value: medianBatchSize, unit: ' моделей', desc: '50% заказов меньше', icon: 'bi-diagram-3', decimals: 1},
-                {title: 'Малые партии', value: smallBatchShare, unit: '%', desc: 'Заказы ≤ 3 моделей', icon: 'bi-percent', decimals: 1},
-                {title: 'Выход годных', value: yieldRate, unit: '%', desc: 'Годные vs брак', icon: 'bi-check-circle', decimals: 1},
-                {title: 'Брак (кг)', value: totalRejectGrams / 1000, unit: ' кг', desc: 'Вес бракованных моделей', icon: 'bi-x-circle', decimals: 3},
-                {title: 'Выручка / маш-час', value: revenuePerHour, unit: ' ₽/ч', desc: 'Эффективность парка', icon: 'bi-speedometer', decimals: 0},
-                {title: 'Загрузка оборудования', value: printerUtilization, unit: '%', desc: 'Использование парка', icon: 'bi-cpu', decimals: 1}
+                {title: 'Выход годных', value: yieldRate, unit: '%', desc: 'Годные без брака', icon: 'bi-check-circle', decimals: 1},
+                {
+                    title: 'Брак (кг)',
+                    value: totalRejectGrams / 1000,
+                    unit: ' кг',
+                    desc: 'Вес бракованных моделей',
+                    icon: 'bi-x-circle',
+                    decimals: 3
+                }
             ];
             const formatCardValue = (card) => {
                 if (typeof card.format === 'function') {
@@ -5071,7 +7064,7 @@
               <p class="mb-1">Вес: <strong>${formatNumber(capital.materialsWeight, 2)} кг</strong></p>
             </div>
             <div class="col-md-4">
-              <h6>Дополнительно:</h6>
+              <h6>Накладные расходы:</h6>
               <p class="mb-1">Сумма: <strong>${formatCurrency(capital.additionalCost)}</strong></p>
             </div>
           </div>
@@ -5095,7 +7088,7 @@
           </div>
 
           <div class="row mb-4">
-            <div class="col-md-6">
+            <div class="col-12">
               <div class="card mb-3">
                 <div class="card-body">
                   <h6>Детализация расходов</h6>
@@ -5121,7 +7114,7 @@
                       <span>${formatCurrency(totalShippingCost)} (${formatNumber(costStructure.shipping,1)}%)</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
-                      <span>Доп. расходы:</span>
+                      <span>Накладные расходы:</span>
                       <span>${formatCurrency(totalAdditionalCost)} (${formatNumber(costStructure.additional,1)}%)</span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
@@ -5144,56 +7137,12 @@
                 </div>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="card">
-                <div class="card-body">
-                  <h6>Эффективность</h6>
-                  <div class="progress mb-2" style="height: 25px">
-                    <div class="progress-bar" role="progressbar"
-                         style="width: ${Math.min(100, netMargin)}%"
-                         aria-valuenow="${netMargin}"
-                         aria-valuemin="0"
-                         aria-valuemax="100">
-                      Чистая маржа: ${formatNumber(netMargin, 1)}%
-                    </div>
-                  </div>
-                  <div class="progress mb-2" style="height: 25px">
-                    <div class="progress-bar bg-success" role="progressbar"
-                         style="width: ${Math.min(100, grossMargin)}%"
-                         aria-valuenow="${grossMargin}"
-                         aria-valuemin="0"
-                         aria-valuemax="100">
-                      Валовая маржа: ${formatNumber(grossMargin, 1)}%
-                    </div>
-                  </div>
-                  <div class="progress" style="height: 25px">
-                    <div class="progress-bar bg-info" role="progressbar"
-                         style="width: ${Math.min(100, yieldRate)}%"
-                         aria-valuenow="${yieldRate}"
-                         aria-valuemin="0"
-                         aria-valuemax="100">
-                      Выход годных: ${formatNumber(yieldRate, 1)}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
       <div class="row mb-4">
-        <div class="col-md-6">
-          <div class="card mb-3 h-100">
-            <div class="card-body">
-              <h6>Unit-экономика</h6>
-              <ul class="list-group list-group-flush">
-                ${unitEconomicsRows}
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
+        <div class="col-12">
           <div class="card mb-3 h-100">
             <div class="card-body">
               <h6>Время и простои</h6>
@@ -5426,8 +7375,10 @@
             onEditCalcHistory(parseInt(val,10));
         } else {
             document.getElementById('calcName').value = '';
-            document.getElementById('calcClientName').value = '';
+            resetCalcClientSelector();
             document.getElementById('calcOrderStatus').value = 'new';
+            const startDateInput = document.getElementById('calcStartDate');
+            if (startDateInput) startDateInput.value = getTodayIsoDate();
             appData.printers.forEach(pr=>{
                 const tb = document.querySelector(`#calcModelsTable_${pr.id} tbody`);
                 if(tb) tb.innerHTML='';
@@ -5576,8 +7527,6 @@
         document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
         const jsonBtn = document.getElementById('downloadJsonFileBtn');
         if (jsonBtn) jsonBtn.addEventListener('click', downloadJsonFile);
-        const allLabelsBtn = document.getElementById('downloadAllLabelsBtn');
-        if (allLabelsBtn) allLabelsBtn.addEventListener('click', downloadAllThermoLabelsHtml);
         const summaryBtn = document.getElementById('downloadSummaryCardBtn');
         if (summaryBtn) summaryBtn.addEventListener('click', downloadSummaryCardHtml);
         const myNalogBtn = document.getElementById('sendMyNalogBtn');
@@ -5592,6 +7541,134 @@
                 localStorage.setItem('my_nalog_phone', e.target.value.trim());
             });
         }
+        const workdayModal = document.getElementById('workdayTemplateModal');
+        if (workdayModal) {
+            workdayModal.addEventListener('show.bs.modal', () => {
+                presetWorkdayTemplateModal();
+                updateLunchStartByOffset();
+            });
+        }
+        const templateSelect = document.getElementById('workdayTemplateSelect');
+        if (templateSelect) {
+            templateSelect.addEventListener('change', () => {
+                const option = templateSelect.options[templateSelect.selectedIndex];
+                const hours = parseFloat(option.dataset.hours);
+                if (!Number.isNaN(hours)) {
+                    document.getElementById('workdayTotalHours').value = hours;
+                }
+                const lunch = parseInt(option.dataset.lunch, 10);
+                const skipLunch = document.getElementById('workdaySkipLunch');
+                if (!Number.isNaN(lunch) && lunch > 0) {
+                    document.getElementById('workdayLunchDuration').value = lunch;
+                    if (skipLunch) skipLunch.checked = false;
+                }
+                const offset = parseInt(option.dataset.offset, 10);
+                if (!Number.isNaN(offset)) {
+                    workdayLunchOffsetMinutes = offset;
+                    lunchStartManual = false;
+                    updateLunchStartByOffset();
+                }
+            });
+        }
+        const startTimeInput = document.getElementById('workdayStartTime');
+        if (startTimeInput) {
+            startTimeInput.addEventListener('change', () => {
+                lunchStartManual = false;
+                updateLunchStartByOffset();
+            });
+        }
+        const lunchStartInput = document.getElementById('workdayLunchStart');
+        if (lunchStartInput) {
+            lunchStartInput.addEventListener('input', () => {
+                lunchStartManual = true;
+            });
+        }
+        const skipLunchCheckbox = document.getElementById('workdaySkipLunch');
+        if (skipLunchCheckbox) {
+            skipLunchCheckbox.addEventListener('change', e => {
+                const disabled = e.target.checked;
+                document.getElementById('workdayLunchStart').disabled = disabled;
+                document.getElementById('workdayLunchDuration').disabled = disabled;
+                if (disabled) {
+                    lunchStartManual = true;
+                } else {
+                    lunchStartManual = false;
+                    updateLunchStartByOffset();
+                }
+            });
+        }
+        const addBreakBtn = document.getElementById('addSpecialBreakBtn');
+        if (addBreakBtn) {
+            addBreakBtn.addEventListener('click', () => addSpecialBreakRow());
+        }
+        const addPresetBreaksBtn = document.getElementById('addPresetBreaksBtn');
+        if (addPresetBreaksBtn) {
+            addPresetBreaksBtn.addEventListener('click', () => {
+                const startVal = document.getElementById('workdayStartTime').value;
+                const startMin = timeStringToMinutes(startVal || '');
+                if (!Number.isNaN(startMin)) {
+                    addSpecialBreakRow(minutesToTimeString(startMin + 120), 10);
+                    addSpecialBreakRow(minutesToTimeString(startMin + 360), 10);
+                } else {
+                    addSpecialBreakRow('', 10);
+                    addSpecialBreakRow('', 10);
+                }
+            });
+        }
+        const breaksContainer = document.getElementById('specialBreaksContainer');
+        if (breaksContainer) {
+            breaksContainer.addEventListener('click', event => {
+                const removeBtn = event.target.closest('.remove-break-row');
+                if (removeBtn) {
+                    event.preventDefault();
+                    const row = removeBtn.closest('.special-break-row');
+                    if (row) row.remove();
+                }
+            });
+        }
+        const applyTemplateBtn = document.getElementById('applyWorkdayTemplateBtn');
+        if (applyTemplateBtn) {
+            applyTemplateBtn.addEventListener('click', applyWorkdayTemplateFromModal);
+        }
+        const urgencySelectEl = document.getElementById('urgencyProfileSelect');
+        if (urgencySelectEl) {
+            urgencySelectEl.addEventListener('change', () => {
+                captureScheduleFromInputs(currentUrgencyProfileId);
+                currentUrgencyProfileId = urgencySelectEl.value;
+                renderCurrentUrgencyMeta();
+                renderOperatorScheduleInputsForProfile(currentUrgencyProfileId);
+            });
+        }
+        const urgencyNameInput = document.getElementById('urgencyProfileName');
+        if (urgencyNameInput) {
+            urgencyNameInput.addEventListener('input', e => {
+                const profile = getEditingProfileById(currentUrgencyProfileId);
+                if (!profile) return;
+                profile.title = e.target.value;
+                refreshUrgencyProfileSelectLabels();
+            });
+        }
+        const urgencyMarkupInput = document.getElementById('urgencyProfileMarkup');
+        if (urgencyMarkupInput) {
+            urgencyMarkupInput.addEventListener('input', e => {
+                const profile = getEditingProfileById(currentUrgencyProfileId);
+                if (!profile) return;
+                profile.markupPercent = parseFloat(e.target.value) || 0;
+                refreshUrgencyProfileSelectLabels();
+            });
+        }
+        const urgencyDescInput = document.getElementById('urgencyProfileDescription');
+        if (urgencyDescInput) {
+            urgencyDescInput.addEventListener('input', e => {
+                const profile = getEditingProfileById(currentUrgencyProfileId);
+                if (!profile) return;
+                profile.description = e.target.value;
+            });
+        }
+        const addUrgencyBtn = document.getElementById('addUrgencyProfileBtn');
+        if (addUrgencyBtn) addUrgencyBtn.addEventListener('click', addUrgencyProfile);
+        const deleteUrgencyBtn = document.getElementById('deleteUrgencyProfileBtn');
+        if (deleteUrgencyBtn) deleteUrgencyBtn.addEventListener('click', deleteCurrentUrgencyProfile);
         [
             {id: 'settingsIncludeAmortization', key: 'includeAmortization'},
             {id: 'settingsIncludeRejects', key: 'includeRejects'},
