@@ -12,6 +12,33 @@ const { URL, pathToFileURL, fileURLToPath } = require('node:url');
 const { buildOfflineSite, DEFAULT_SOURCE_URL, atomicSwapDir } = require('./offlineBuilder');
 const { scanOrcaProfiles, buildPreview, applyAssignments } = require('./orcaSync');
 
+const APP_ID = 'com.n4v.nprintcalc';
+
+function resolveWindowIconPath() {
+  // Prefer Windows ICO, fallback to PNGs (useful for Linux/titlebar).
+  const candidates = [];
+  if (process.platform === 'win32') {
+    candidates.push(path.join(__dirname, 'build', 'win', 'icon.ico'));
+  }
+  candidates.push(path.join(__dirname, 'build', 'png', '512x512.png'));
+  candidates.push(path.join(__dirname, 'build', 'png', '256x256.png'));
+
+  for (const p of candidates) {
+    try {
+      if (p && fs.existsSync(p)) return p;
+    } catch {}
+  }
+  return undefined;
+}
+
+const WINDOW_ICON = resolveWindowIconPath();
+
+// Ensures Windows taskbar uses the correct identity/icon grouping.
+if (process.platform === 'win32') {
+  try { app.setAppUserModelId(APP_ID); } catch {}
+}
+
+
 let win = null;
 let toolbarView = null;
 let contentView = null;
@@ -49,14 +76,22 @@ const CALC_STORE_PATH = path.join(SYNC_DIR, 'calc_data_master.json');
 const ORCA_DEFAULT_PATH = path.join(app.getPath('appData'), 'OrcaSlicer', 'user', 'default');
 
 // ---------- Logging ----------
-const LOG_DIR = path.join(os.tmpdir(), 'GCodeCalc-logs');
-fs.mkdirSync(LOG_DIR, { recursive: true });
+// По умолчанию логи отключены (не блокируем UI синхронными fs.appendFileSync на каждое событие).
+// Включить можно, если нужно отладить: запуск с флагом --logs или переменной окружения GCODECALC_LOGS=1.
+const LOGS_ENABLED = (process.env.GCODECALC_LOGS === '1') || process.argv.includes('--logs');
 
 function ts() { return new Date().toISOString(); }
-const LOG_FILE = path.join(LOG_DIR, `gcodecalc_${new Date().toISOString().replace(/[:.]/g,'-')}_pid${process.pid}.log`);
-try { fs.writeFileSync(path.join(LOG_DIR, 'latest.txt'), LOG_FILE, 'utf-8'); } catch {}
+
+let LOG_FILE = null;
+if (LOGS_ENABLED) {
+  const LOG_DIR = path.join(os.tmpdir(), 'GCodeCalc-logs');
+  try { fs.mkdirSync(LOG_DIR, { recursive: true }); } catch {}
+  LOG_FILE = path.join(LOG_DIR, `gcodecalc_${new Date().toISOString().replace(/[:.]/g,'-')}_pid${process.pid}.log`);
+  try { fs.writeFileSync(path.join(LOG_DIR, 'latest.txt'), LOG_FILE, 'utf-8'); } catch {}
+}
 
 function log(...parts) {
+  if (!LOGS_ENABLED || !LOG_FILE) return;
   const line = `[${ts()}] ` + parts.map(p => {
     try { return (typeof p === 'string') ? p : JSON.stringify(p); }
     catch { return String(p); }
@@ -64,6 +99,7 @@ function log(...parts) {
   try { fs.appendFileSync(LOG_FILE, line, 'utf-8'); } catch {}
   try { process.stdout.write(line); } catch {}
 }
+
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -248,7 +284,7 @@ function getPathsPayload() {
 }
 
 function refocusMainViews() {
-  const attempts = [0, 150, 400, 800];
+  const attempts = [0, 150, 400, 800, 1500, 2500, 4000];
   attempts.forEach((delay) => {
     setTimeout(() => {
       try {
@@ -276,36 +312,70 @@ async function readCalcStoreRaw() {
   }
 }
 
-let pendingStorePayload = null;
-let storeWriteTimer = null;
-async function flushCalcStore() {
-  const payload = pendingStorePayload;
-  pendingStorePayload = null;
-  storeWriteTimer = null;
-  if (!payload) return;
+async function writeCalcStoreRaw(raw) {
   try {
     await fsp.mkdir(path.dirname(CALC_STORE_PATH), { recursive: true });
-    await fsp.writeFile(CALC_STORE_PATH, payload, 'utf-8');
+    await fsp.writeFile(CALC_STORE_PATH, raw, 'utf-8');
   } catch (e) {
     log('calcStore.write.error', { error: e?.message });
   }
 }
 
-function queueCalcStoreWrite(raw, { immediate = false } = {}) {
-  pendingStorePayload = raw;
-  if (immediate) {
-    if (storeWriteTimer) clearTimeout(storeWriteTimer);
-    storeWriteTimer = null;
-    flushCalcStore();
-    return;
+async function hasCalcDataInRenderer() {
+  if (!contentView?.webContents || contentView.webContents.isDestroyed()) return false;
+  try {
+    await ensureContentReady();
+    const ok = await contentView.webContents.executeJavaScript(`
+      (() => {
+        try {
+          const key = ${JSON.stringify(STORAGE_KEY)};
+          const v = localStorage.getItem(key);
+          return !!(v && v.length > 2);
+        } catch (e) {
+          return false;
+        }
+      })()
+    `, true);
+    return !!ok;
+  } catch {
+    return false;
   }
-  if (storeWriteTimer) return;
-  storeWriteTimer = setTimeout(() => {
-    flushCalcStore();
-  }, 200);
 }
 
+async function hydrateCalcFromStoreIfNeeded(storeRaw) {
+  if (!storeRaw) return false;
+  try {
+    const already = await hasCalcDataInRenderer();
+    if (already) return false;
+
+    await importCalcData(storeRaw, { skipResnapshot: true });
+    return true;
+  } catch (e) {
+    log('calcStore.hydrate.error', { error: e?.message });
+    return false;
+  }
+}
+
+
+
 async function getCalcDataForSync() {
+  // Стараемся брать самый свежий слепок из живого UI (localStorage/appData),
+  // а файл master-store используем как запасной вариант (когда UI ещё не поднялся).
+  if (contentView?.webContents && !contentView.webContents.isDestroyed()) {
+    try {
+      const snap = await exportCalcSnapshot();
+      return {
+        raw: snap.raw,
+        data: snap.data,
+        source: 'snapshot',
+        exportPath: snap.exportPath,
+        exportedAt: snap.exportedAt || null
+      };
+    } catch (e) {
+      log('calcSnapshot.capture.error', { error: e?.message });
+    }
+  }
+
   const raw = await readCalcStoreRaw();
   if (raw) {
     try {
@@ -315,8 +385,15 @@ async function getCalcDataForSync() {
       log('calcStore.parse.error', { error: e?.message });
     }
   }
+
   const snap = await exportCalcSnapshot();
-  return { raw: snap.raw, data: snap.data, source: 'snapshot', exportPath: snap.exportPath };
+  return {
+    raw: snap.raw,
+    data: snap.data,
+    source: 'snapshot',
+    exportPath: snap.exportPath,
+    exportedAt: snap.exportedAt || null
+  };
 }
 
 function rememberOfflineBuild(meta = {}) {
@@ -650,7 +727,7 @@ async function exportCalcSnapshot() {
   await fsp.mkdir(SYNC_DIR, { recursive: true });
   const exportPath = path.join(SYNC_DIR, 'calc_data.json');
   await fsp.writeFile(exportPath, raw, 'utf-8');
-  queueCalcStoreWrite(raw);
+  await writeCalcStoreRaw(raw);
   const data = JSON.parse(raw);
   return { data, raw, exportPath, exportedAt: new Date().toISOString() };
 }
@@ -658,45 +735,66 @@ async function exportCalcSnapshot() {
 async function importCalcData(updatedJson, options = {}) {
   await ensureContentReady();
   const rawString = typeof updatedJson === 'string' ? updatedJson : JSON.stringify(updatedJson);
+
   const script = `
     (() => {
       try {
-        const dataStr = ${rawString ? 'JSON.stringify(' + JSON.stringify(JSON.parse(rawString)) + ')' : 'null'};
         const storageKey = ${JSON.stringify(STORAGE_KEY)};
-        localStorage.setItem(storageKey, dataStr);
-        const dataObj = JSON.parse(dataStr);
+        const raw = ${JSON.stringify(rawString)};
+        const dataObj = JSON.parse(raw);
+
+        let next = dataObj;
         if (typeof migrateOldData === 'function') {
-          window.appData = migrateOldData(dataObj);
-        } else {
-          window.appData = dataObj;
+          next = migrateOldData(next);
         }
         if (typeof normalizeIds === 'function') {
-          normalizeIds(window.appData);
+          normalizeIds(next);
         }
-        if (typeof saveToLocalStorage === 'function') {
-          saveToLocalStorage();
+
+        window.appData = next;
+
+        // Persist once, without calling saveToLocalStorage() (it can be heavy).
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch {}
+
+        // Defer re-init to idle time to reduce UI stalls after native dialogs.
+        const runInit = () => {
+          try { if (typeof initAll === 'function') initAll(); } catch {}
+        };
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(runInit, { timeout: 500 });
         } else {
-          localStorage.setItem(storageKey, JSON.stringify(window.appData));
+          setTimeout(runInit, 0);
         }
-        if (typeof initAll === 'function') {
-          initAll();
-        }
+
         return { ok: true };
       } catch (error) {
         return { ok: false, error: error.message };
       }
     })()
   `;
+
   const result = await contentView.webContents.executeJavaScript(script, true);
   if (!result?.ok) {
     throw new Error(result?.error || 'Не удалось применить новые данные калькулятора');
   }
+
   await ensureContentReady();
   await waitForAppDataReady();
-  queueCalcStoreWrite(rawString, { immediate: options.flushStore === true });
+
+  await writeCalcStoreRaw(rawString);
+  if (!options.skipResnapshot) {
+    try {
+      await exportCalcSnapshot();
+    } catch (e) {
+      log('import.exportAfter.error', { error: e?.message });
+    }
+  }
 }
 
 const syncManager = {
+
   setAuto() {},
   isAuto() { return false; },
   getSnapshot() { return null; },
@@ -711,7 +809,8 @@ function openSyncWindow() {
     syncWin.focus();
     return syncWin;
   }
-  syncWin = new BrowserWindow({
+
+  const syncOpts = {
     width: 1100,
     height: 720,
     backgroundColor: '#0b1220',
@@ -723,11 +822,16 @@ function openSyncWindow() {
       sandbox: true,
       nodeIntegration: false
     }
-  });
+  };
+
+  if (WINDOW_ICON) syncOpts.icon = WINDOW_ICON;
+
+  syncWin = new BrowserWindow(syncOpts);
   syncWin.loadFile(path.join(__dirname, 'sync.html'));
   syncWin.on('closed', () => { syncWin = null; });
   return syncWin;
 }
+
 
 // ---------- Content load ----------
 async function refreshOfflineAvailability() {
@@ -739,6 +843,13 @@ async function loadOnline() {
   const previousMode = mode;
   setMode('online', 'Открываю онлайн…');
   await contentView.webContents.loadURL(remoteUrl);
+
+  // Не затираем уже существующее localStorage (иначе "не сохраняется при перезагрузке").
+  // Подтягиваем master-store только если UI пустой.
+  const storeRaw = await readCalcStoreRaw();
+  if (storeRaw) {
+    await hydrateCalcFromStoreIfNeeded(storeRaw);
+  }
 }
 
 async function loadOffline(message) {
@@ -749,13 +860,12 @@ async function loadOffline(message) {
   }
   setMode('offline', message || 'Открываю офлайн…');
   await contentView.webContents.loadFile(offlineIndexPath);
+
+  // Важно: НЕ перетираем данные калькулятора при каждом "обновить/перезагрузить".
+  // Если localStorage уже содержит данные — оставляем их. Если пусто — подтягиваем из master-store.
   const storeRaw = await readCalcStoreRaw();
   if (storeRaw) {
-    try {
-      await importCalcData(storeRaw);
-    } catch (e) {
-      log('calcStore.apply.error', { error: e?.message });
-    }
+    await hydrateCalcFromStoreIfNeeded(storeRaw);
   }
 }
 
@@ -813,9 +923,11 @@ function attachContentGuards() {
     }
   });
 
+  if (LOGS_ENABLED) {
   contentView.webContents.on('console-message', (_event, level, message, line, sourceId) => {
     log('content.console', { level, message, line, sourceId });
   });
+}
 }
 
 // ---------- Import delivery ----------
@@ -878,12 +990,16 @@ async function buildOffline(options = {}) {
 // ---------- Window / Views ----------
 function createWindow(startSilent) {
   toolbarHeight = TOOLBAR_BASE_HEIGHT;
-  win = new BrowserWindow({
+  const winOpts = {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#0b1220',
     webPreferences: { contextIsolation: true }
-  });
+  };
+
+  if (WINDOW_ICON) winOpts.icon = WINDOW_ICON;
+
+  win = new BrowserWindow(winOpts);
 
   toolbarView = new BrowserView({
     webPreferences: {
@@ -1075,11 +1191,11 @@ ipcMain.handle('sync:apply', async (_event, payload = {}) => {
     const { updatedData, summary } = applyAssignments(snapshot.data, assignments, orcaInfo);
     await fsp.mkdir(SYNC_DIR, { recursive: true });
     const syncedPath = path.join(SYNC_DIR, 'calc_data_synced.json');
-    const json = JSON.stringify(updatedData, null, 2);
+    const json = JSON.stringify(updatedData);
     await fsp.writeFile(syncedPath, json, 'utf-8');
-    queueCalcStoreWrite(json, { immediate: true });
+    await writeCalcStoreRaw(json);
     await fsp.writeFile(path.join(SYNC_DIR, 'calc_data.json'), json, 'utf-8');
-    await importCalcData(json, { flushStore: true });
+    await importCalcData(json, { skipResnapshot: true });
     log('sync.apply.success', { summary, syncedPath });
     return { ok: true, summary, syncedPath };
   } catch (e) {

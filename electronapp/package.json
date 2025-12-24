@@ -51,6 +51,7 @@
     }
   },
   "build": {
+    "appId": "com.n4v.nprintcalc",
     "asar": false,
     "icon": "build/png/256x256.png",
     "mac": {
