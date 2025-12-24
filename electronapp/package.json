@@ -1,0 +1,68 @@
+{
+  "name": "nprintcalc",
+  "productName": "NPrintCalc",
+  "description": "Калькулятор печати",
+  "keywords": [],
+  "main": "./main.js",
+  "version": "1.0.0",
+  "author": "n4v",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\"",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
+    "dist:mac": "electron-builder --mac"
+  },
+  "devDependencies": {
+    "electron": "40.0.0-beta.4",
+    "@electron-forge/cli": "7.9.0",
+    "@electron-forge/maker-deb": "7.9.0",
+    "@electron-forge/maker-rpm": "7.9.0",
+    "@electron-forge/maker-squirrel": "7.9.0",
+    "@electron-forge/maker-zip": "7.9.0",
+    "electron-builder": "26.4.0"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel"
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
+  },
+  "build": {
+    "asar": false,
+    "icon": "build/png/256x256.png",
+    "mac": {
+      "icon": "build/mac/icon.icns"
+    },
+    "linux": {
+      "icon": "build/png/512x512.png"
+    },
+    "win": {
+      "icon": "build/win/icon.ico",
+      "signAndEditExecutable": false
+    }
+  },
+  "license": "MIT"
+}
