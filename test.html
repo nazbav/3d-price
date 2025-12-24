@@ -266,604 +266,616 @@
         </div>
     </nav>
     <div class="app-panel">
-    <ul class="nav nav-tabs" id="mainTab" role="tablist">
-        <li class="nav-item">
-            <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
-                    data-bs-target="#calculatePane" type="button" role="tab" aria-selected="true"
-                    aria-controls="calculatePane" aria-selected="false">
-                Калькулятор
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="history-tab" data-bs-toggle="tab"
-                    data-bs-target="#historyPane" type="button" role="tab"
-                    aria-controls="historyPane" aria-selected="false">
-                История
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
-                    data-bs-target="#clientsPane" type="button" role="tab"
-                    aria-controls="clientsPane" aria-selected="false">
-                Клиенты
-            </button>
-        </li>
+        <ul class="nav nav-tabs" id="mainTab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
+                        data-bs-target="#calculatePane" type="button" role="tab" aria-selected="true"
+                        aria-controls="calculatePane" aria-selected="false">
+                    Калькулятор
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab"
+                        data-bs-target="#historyPane" type="button" role="tab"
+                        aria-controls="historyPane" aria-selected="false">
+                    История
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
+                        data-bs-target="#clientsPane" type="button" role="tab"
+                        aria-controls="clientsPane" aria-selected="false">
+                    Клиенты
+                </button>
+            </li>
 
-        <li class="nav-item">
-            <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
-                    data-bs-target="#printersPane" type="button" role="tab" aria-controls="printersPane" >
-                Принтеры
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
-                    data-bs-target="#globalMaterialsPane" type="button" role="tab"
-                    aria-controls="globalMaterialsPane" aria-selected="false">
-                Общие материалы
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
-                    data-bs-target="#globalAdditionalPane" type="button" role="tab"
-                    aria-controls="globalAdditionalPane" aria-selected="false">
-                Накладные расходы
-            </button>
-        </li>
-        <li class="nav-item d-none">
-            <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
-                    data-bs-target="#settingsPane" type="button" role="tab"
-                    aria-controls="settingsPane" aria-selected="false">
-                Настройки
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
-                    data-bs-target="#summaryPane" type="button" role="tab"
-                    aria-controls="summaryPane" aria-selected="false">
-                Статистика
-            </button>
-        </li>
+            <li class="nav-item">
+                <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
+                        data-bs-target="#printersPane" type="button" role="tab" aria-controls="printersPane" >
+                    Принтеры
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
+                        data-bs-target="#globalMaterialsPane" type="button" role="tab"
+                        aria-controls="globalMaterialsPane" aria-selected="false">
+                    Общие материалы
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
+                        data-bs-target="#globalAdditionalPane" type="button" role="tab"
+                        aria-controls="globalAdditionalPane" aria-selected="false">
+                    Накладные расходы
+                </button>
+            </li>
+            <li class="nav-item d-none">
+                <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
+                        data-bs-target="#settingsPane" type="button" role="tab"
+                        aria-controls="settingsPane" aria-selected="false">
+                    Настройки
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
+                        data-bs-target="#summaryPane" type="button" role="tab"
+                        aria-controls="summaryPane" aria-selected="false">
+                    Статистика
+                </button>
+            </li>
 
 
-    </ul>
+        </ul>
 
-    <div class="tab-content" id="mainTabContent">
-        <!-- Принтеры -->
-        <div class="tab-pane fade" id="printersPane" role="tabpanel" aria-labelledby="printers-tab">
-            <div class="mt-4">
-                <h3>Список принтеров</h3>
-                <p class="small-text">
-                    Укажите параметры принтера и при необходимости добавьте доп. расходы и материалы, уникальные для него.
-                </p>
-                <div class="mb-2">
-                    <button class="btn btn-primary btn-sm" onclick="onAddPrinter()">Добавить принтер</button>
-                    <button class="btn btn-danger btn-sm" onclick="massDelete('printers')">Массовое удаление</button>
-                    <button class="btn btn-warning btn-sm" onclick="massEdit('printers')">Массовое изменение</button>
-                    <button class="btn btn-info btn-sm" id="managePrinterProfilesBtn">Профили принтеров</button>
-                </div>
-                <div class="table-responsive">
-                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('printersTable', this.value)">
-                    <table class="table table-bordered table-hover" id="printersTable">
-                        <thead class="">
-                        <tr>
-                            <th><input type="checkbox" id="selectAll_printers" onchange="selectAll(this, 'printers')"></th>
-                            <th onclick="sortTable('printersTable',1)">Название</th>
-                            <th onclick="sortTable('printersTable',2)">Стоимость (₽)</th>
-                            <th onclick="sortTable('printersTable',3)">Часы окуп.</th>
-                            <th onclick="sortTable('printersTable',4)">Мощн. (Вт)</th>
-                            <th onclick="sortTable('printersTable',5)">Обсл. (₽/ч)</th>
-                            <th>Действия</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-            <hr/>
-        </div>
-
-        <!-- Общие материалы -->
-        <div class="tab-pane fade" id="globalMaterialsPane" role="tabpanel" aria-labelledby="globalMaterials-tab">
-            <div class="mt-4">
-                <h3>Общие материалы</h3>
-                <p class="small-text">Эти материалы доступны всем принтерам «по умолчанию». Укажите стоимость за кг, остаток, заявленный вес, производителя и дату производства.</p>
-                <div class="mb-2">
-                    <button class="btn btn-primary btn-sm" onclick="onAddGlobalMaterial()">Добавить материал</button>
-                    <button class="btn btn-danger btn-sm" onclick="massDelete('globalMaterials')">Массовое удаление</button>
-                    <button class="btn btn-warning btn-sm" onclick="massEdit('globalMaterials')">Массовое изменение</button>
-                    <button class="btn btn-info btn-sm" id="manageMaterialProfilesBtn">Профили Orca</button>
-                </div>
-                <div class="table-responsive">
-                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('materialsTable', this.value)">
-                    <table class="table table-bordered table-hover" id="materialsTable">
-                        <thead class="">
-                        <tr>
-                            <th><input type="checkbox" id="selectAll_globalMaterials" onchange="selectAll(this, 'globalMaterials')"></th>
-                            <th onclick="sortTable('materialsTable',1)">Название</th>
-                            <th onclick="sortTable('materialsTable',1)">Тип</th>
-                            <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
-                            <th onclick="sortTable('materialsTable',3)">Остаток (гр)</th>
-                            <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
-                            <th onclick="sortTable('materialsTable',5)">Время остыв. (мин)</th>
-                            <th onclick="sortTable('materialsTable',6)">Подготовка (мин)</th>
-                            <th onclick="sortTable('materialsTable',7)">Производитель</th>
-                            <th onclick="sortTable('materialsTable',8)">Дата произв.</th>
-                            <th>Принтеры</th>
-                            <th>Профили</th>
-                            <th>Действия</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Накладные расходы -->
-        <div class="tab-pane fade" id="globalAdditionalPane" role="tabpanel" aria-labelledby="globalAdditional-tab">
-            <div class="mt-4">
-                <h3>Накладные расходы</h3>
-                <div class="mb-2">
-                    <button class="btn btn-primary btn-sm" onclick="onAddGlobalAdditional()">Добавить расход</button>
-                    <button class="btn btn-danger btn-sm" onclick="massDelete('globalAdditional')">Массовое удаление</button>
-                    <button class="btn btn-warning btn-sm" onclick="massEdit('globalAdditional')">Массовое изменение</button>
-                </div>
-                <div class="table-responsive">
-                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('additionalGlobalTable', this.value)">
-                    <table class="table table-bordered table-hover" id="additionalGlobalTable">
-                        <thead class="">
-                        <tr>
-                            <th><input type="checkbox" id="selectAll_globalAdditional" onchange="selectAll(this, 'globalAdditional')"></th>
-                            <th onclick="sortTable('additionalGlobalTable',1)">Описание</th>
-                            <th onclick="sortTable('additionalGlobalTable',2)">Стоим. (₽)</th>
-                            <th onclick="sortTable('additionalGlobalTable',3)">Часы окуп.</th>
-                            <th onclick="sortTable('additionalGlobalTable',4)">Вкл. в расчёт?</th>
-                            <th>Принтеры</th>
-                            <th>Действия</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Калькулятор -->
-        <div class="tab-pane fade show active" id="calculatePane" role="tabpanel" aria-labelledby="calculate-tab">
-            <div class="my-4">
-                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
-                    <h3 class="mb-2 mb-md-0">Расчёт стоимости (очередь печати)</h3>
-                    <div class="text-muted small">Код заказа: <span class="fw-semibold" id="calcOrderIdText">—</span>
+        <div class="tab-content" id="mainTabContent">
+            <!-- Принтеры -->
+            <div class="tab-pane fade" id="printersPane" role="tabpanel" aria-labelledby="printers-tab">
+                <div class="mt-4">
+                    <h3>Список принтеров</h3>
+                    <p class="small-text">
+                        Укажите параметры принтера и при необходимости добавьте доп. расходы и материалы, уникальные для него.
+                    </p>
+                    <div class="mb-2">
+                        <button class="btn btn-primary btn-sm" onclick="onAddPrinter()">Добавить принтер</button>
+                        <button class="btn btn-danger btn-sm" onclick="massDelete('printers')">Массовое удаление</button>
+                        <button class="btn btn-warning btn-sm" onclick="massEdit('printers')">Массовое изменение</button>
+                        <button class="btn btn-info btn-sm" id="managePrinterProfilesBtn">Профили принтеров</button>
                     </div>
-                </div>
-                <p class="small-text mb-0">
-                    До 10 моделей на каждый принтер. Здесь можно задать название расчёта, имя клиента и статус заказа.
-                </p>
-                <input type="hidden" id="calcOrderId"/>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <label for="calcName" class="form-label">Название расчёта:</label>
-                    <input type="text" id="calcName" class="form-control" placeholder="Например: Заказ 123" />
-                </div>
-                <div class="col-md-4">
-                    <label for="calcClientName" class="form-label">Клиент (ФИО/компания):</label>
-                    <div class="dropdown w-100" id="calcClientDropdownWrapper">
-                        <div class="input-group">
-                            <input type="text"
-                                   id="calcClientName"
-                                   class="form-control"
-                                   placeholder="Иванов Иван"
-                                   autocomplete="off"
-                                   onfocus="onClientFieldFocus()"
-                                   oninput="onCalcClientInput()"
-                                   onkeydown="onClientFieldKeydown(event)"/>
-                        </div>
-                        <div class="dropdown-menu w-100 p-0" id="calcClientDropdownMenu"></div>
-                    </div>
-                    <div class="form-text">Можно выбрать клиента из справочника или ввести новое имя вручную. Нажмите
-                        Enter, чтобы добавить нового клиента.
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <label for="calcOrderStatus" class="form-label">Статус заказа:</label>
-                    <select id="calcOrderStatus" class="form-select" onchange="toggleFinalFields(this.value)">
-                        <option value="new">Новый</option>
-                        <option value="inprogress">В работе</option>
-                        <option value="done">Завершён</option>
-                        <option value="paid">Оплачен</option>
-                        <option value="canceled">Отменён</option>
-                    </select>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <label for="calcUrgencyProfile" class="form-label">Срочность заказа:</label>
-                    <select id="calcUrgencyProfile" class="form-select"></select>
-                </div>
-                <div class="col-md-8 d-flex align-items-end">
-                    <div class="small-text" id="calcUrgencySummary"></div>
-                </div>
-            </div>
-            <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="calcShipping" class="form-label">Упаковка/Доставка (₽):</label>
-                    <input type="number" step="1" id="calcShipping" class="form-control" />
-                </div>
-                <div class="col-md-3">
-                    <label for="calcStartDate" class="form-label">Дата и время начала:</label>
-                    <input type="datetime-local" id="calcStartDate" class="form-control"/>
-                </div>
-                <div class="col-md-3">
-                    <label for="calcDeadlineDate" class="form-label">Требуемая дата окончания:</label>
-                    <input type="datetime-local" id="calcDeadlineDate" class="form-control"/>
-                    <div class="form-text">Если указана, профиль срочности подбирается автоматически.</div>
-                </div>
-                <div class="col-md-3">
-                    <label for="calcParallelPrinting" class="form-label">Учёт параллельной печати?</label>
-                    <select id="calcParallelPrinting" class="form-select">
-                        <option value="no">Нет</option>
-                        <option value="yes">Да</option>
-                    </select>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="calcMarkupPercent" class="form-label">Наценка (%):</label>
-                    <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
-                </div>
-                <div class="col-md-3">
-                    <label for="calcDiscountPercent" class="form-label">Скидка (%):</label>
-                    <input type="number" step="1" id="calcDiscountPercent" class="form-control" />
-                </div>
-                <div class="col-md-3 d-none" id="finalCostGroup">
-                    <label for="calcFinalCost" class="form-label">Финальная цена (₽):</label>
-                    <input type="number" step="0.01" id="calcFinalCost" class="form-control" />
-                </div>
-                <div class="col-md-3">
-                    <label for="calcPreparationTime" class="form-label">Часы подготовки (ч:м):</label>
-                    <input type="text" id="calcPreparationTime" class="form-control" onblur="this.value = formatTimeForDisplay(handleTimeInput({target:{value:this.value}}))" />
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-12">
-                    <label class="form-label">Услуги:</label>
                     <div class="table-responsive">
-                        <table class="table table-sm table-bordered" id="customServicesTable">
-                            <thead>
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('printersTable', this.value)">
+                        <table class="table table-bordered table-hover" id="printersTable">
+                            <thead class="">
                             <tr>
-                                <th>Вкл.</th>
-                                <th>Название</th>
-                                <th>Стоимость за ед.</th>
-                                <th>Кол-во</th>
-                                <th>Тип</th>
-                                <th></th>
+                                <th><input type="checkbox" id="selectAll_printers" onchange="selectAll(this, 'printers')"></th>
+                                <th onclick="sortTable('printersTable',1)">Название</th>
+                                <th onclick="sortTable('printersTable',2)">Стоимость (₽)</th>
+                                <th onclick="sortTable('printersTable',3)">Часы окуп.</th>
+                                <th onclick="sortTable('printersTable',4)">Мощн. (Вт)</th>
+                                <th onclick="sortTable('printersTable',5)">Обсл. (₽/ч)</th>
+                                <th>Действия</th>
                             </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
-                    <button class="btn btn-sm btn-primary" onclick="addCustomService()">Добавить услугу</button>
+                </div>
+                <hr/>
+            </div>
+
+            <!-- Общие материалы -->
+            <div class="tab-pane fade" id="globalMaterialsPane" role="tabpanel" aria-labelledby="globalMaterials-tab">
+                <div class="mt-4">
+                    <h3>Общие материалы</h3>
+                    <p class="small-text">Эти материалы доступны всем принтерам «по умолчанию». Укажите стоимость за кг, остаток, заявленный вес, производителя и дату производства.</p>
+                    <div class="mb-2">
+                        <button class="btn btn-primary btn-sm" onclick="onAddGlobalMaterial()">Добавить материал</button>
+                        <button class="btn btn-danger btn-sm" onclick="massDelete('globalMaterials')">Массовое удаление</button>
+                        <button class="btn btn-warning btn-sm" onclick="massEdit('globalMaterials')">Массовое изменение</button>
+                        <button class="btn btn-info btn-sm" id="manageMaterialProfilesBtn">Профили Orca</button>
+                    </div>
+                    <div class="table-responsive">
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('materialsTable', this.value)">
+                        <table class="table table-bordered table-hover" id="materialsTable">
+                            <thead class="">
+                            <tr>
+                                <th><input type="checkbox" id="selectAll_globalMaterials" onchange="selectAll(this, 'globalMaterials')"></th>
+                                <th onclick="sortTable('materialsTable',1)">Название</th>
+                                <th onclick="sortTable('materialsTable',1)">Тип</th>
+                                <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
+                                <th onclick="sortTable('materialsTable',3)">Остаток (гр)</th>
+                                <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
+                                <th onclick="sortTable('materialsTable',5)">Время остыв. (мин)</th>
+                                <th onclick="sortTable('materialsTable',6)">Подготовка (мин)</th>
+                                <th onclick="sortTable('materialsTable',7)">Производитель</th>
+                                <th onclick="sortTable('materialsTable',8)">Дата произв.</th>
+                                <th>Принтеры</th>
+                                <th>Профили</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <hr/>
-            <div id="calcPrintersContainer"></div>
-            <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3 mt-3">
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
-                    <button class="btn btn-warning ms-2 me-lg-5" id="downloadSummaryCardBtn" style="display:none">Скачать смету</button>
+
+            <!-- Накладные расходы -->
+            <div class="tab-pane fade" id="globalAdditionalPane" role="tabpanel" aria-labelledby="globalAdditional-tab">
+                <div class="mt-4">
+                    <h3>Накладные расходы</h3>
+                    <div class="mb-2">
+                        <button class="btn btn-primary btn-sm" onclick="onAddGlobalAdditional()">Добавить расход</button>
+                        <button class="btn btn-danger btn-sm" onclick="massDelete('globalAdditional')">Массовое удаление</button>
+                        <button class="btn btn-warning btn-sm" onclick="massEdit('globalAdditional')">Массовое изменение</button>
+                    </div>
+                    <div class="table-responsive">
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('additionalGlobalTable', this.value)">
+                        <table class="table table-bordered table-hover" id="additionalGlobalTable">
+                            <thead class="">
+                            <tr>
+                                <th><input type="checkbox" id="selectAll_globalAdditional" onchange="selectAll(this, 'globalAdditional')"></th>
+                                <th onclick="sortTable('additionalGlobalTable',1)">Описание</th>
+                                <th onclick="sortTable('additionalGlobalTable',2)">Стоим. (₽)</th>
+                                <th onclick="sortTable('additionalGlobalTable',3)">Часы окуп.</th>
+                                <th onclick="sortTable('additionalGlobalTable',4)">Вкл. в расчёт?</th>
+                                <th>Принтеры</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Калькулятор -->
+            <div class="tab-pane fade show active" id="calculatePane" role="tabpanel" aria-labelledby="calculate-tab">
+                <div class="my-4">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+                        <h3 class="mb-2 mb-md-0">Расчёт стоимости (очередь печати)</h3>
+                        <div class="text-muted small">Код заказа: <span class="fw-semibold" id="calcOrderIdText">—</span>
+                        </div>
+                    </div>
+                    <p class="small-text mb-0">
+                        До 10 моделей на каждый принтер. Здесь можно задать название расчёта, имя клиента и статус заказа.
+                    </p>
+                    <input type="hidden" id="calcOrderId"/>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="calcName" class="form-label">Название расчёта:</label>
+                        <input type="text" id="calcName" class="form-control" placeholder="Например: Заказ 123" />
+                    </div>
+                    <div class="col-md-4">
+                        <label for="calcClientName" class="form-label">Клиент (ФИО/компания):</label>
+                        <div class="dropdown w-100" id="calcClientDropdownWrapper">
+                            <div class="input-group">
+                                <input type="text"
+                                       id="calcClientName"
+                                       class="form-control"
+                                       placeholder="Иванов Иван"
+                                       autocomplete="off"
+                                       onfocus="onClientFieldFocus()"
+                                       oninput="onCalcClientInput()"
+                                       onkeydown="onClientFieldKeydown(event)"/>
+                            </div>
+                            <div class="dropdown-menu w-100 p-0" id="calcClientDropdownMenu"></div>
+                        </div>
+                        <div class="form-text">Можно выбрать клиента из справочника или ввести новое имя вручную. Нажмите
+                            Enter, чтобы добавить нового клиента.
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="calcOrderStatus" class="form-label">Статус заказа:</label>
+                        <select id="calcOrderStatus" class="form-select" onchange="toggleFinalFields(this.value)">
+                            <option value="new">Новый</option>
+                            <option value="inprogress">В работе</option>
+                            <option value="done">Завершён</option>
+                            <option value="paid">Оплачен</option>
+                            <option value="canceled">Отменён</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="calcUrgencyProfile" class="form-label">Срочность заказа:</label>
+                        <select id="calcUrgencyProfile" class="form-select"></select>
+                    </div>
+                    <div class="col-md-8 d-flex align-items-end">
+                        <div class="small-text" id="calcUrgencySummary"></div>
+                    </div>
+                </div>
+                <div class="row mb-3" id="calcAdvancedSettings" style="display:none"></div>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="calcShipping" class="form-label">Упаковка/Доставка (₽):</label>
+                        <input type="number" step="1" id="calcShipping" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label for="calcStartDate" class="form-label">Дата и время начала:</label>
+                        <input type="datetime-local" id="calcStartDate" class="form-control"/>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="calcDeadlineDate" class="form-label">Требуемая дата окончания:</label>
+                        <input type="datetime-local" id="calcDeadlineDate" class="form-control"/>
+                        <div class="form-text">Если указана, профиль срочности подбирается автоматически.</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="calcParallelPrinting" class="form-label">Учёт параллельной печати?</label>
+                        <select id="calcParallelPrinting" class="form-select">
+                            <option value="no">Нет</option>
+                            <option value="yes">Да</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="calcMarkupPercent" class="form-label">Наценка (%):</label>
+                        <input type="number" step="1" id="calcMarkupPercent" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label for="calcDiscountPercent" class="form-label">Скидка (%):</label>
+                        <input type="number" step="1" id="calcDiscountPercent" class="form-control" />
+                    </div>
+                    <div class="col-md-3 d-none" id="finalCostGroup">
+                        <label for="calcFinalCost" class="form-label">Финальная цена (₽):</label>
+                        <input type="number" step="0.01" id="calcFinalCost" class="form-control" />
+                    </div>
+                    <div class="col-md-3">
+                        <label for="calcPreparationTime" class="form-label">Часы подготовки (ч:м):</label>
+                        <input type="text" id="calcPreparationTime" class="form-control" onblur="this.value = formatTimeForDisplay(handleTimeInput({target:{value:this.value}}))" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label">Услуги:</label>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered" id="customServicesTable">
+                                <thead>
+                                <tr>
+                                    <th>Вкл.</th>
+                                    <th>Название</th>
+                                    <th>Стоимость за ед.</th>
+                                    <th>Кол-во</th>
+                                    <th>Тип</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="addCustomService()">Добавить услугу</button>
+                    </div>
+                </div>
+                <hr/>
+                <div id="calcPrintersContainer"></div>
+                <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3 mt-3">
                     <div class="d-flex flex-wrap align-items-center gap-2">
-                        <button class="btn btn-primary" id="sendMyNalogBtn" style="display:none">Отправить чек</button>
-                        <button class="btn btn-danger" id="cancelMyNalogBtn" style="display:none">Отменить чек</button>
-                    </div>
-                </div>
-                <button class="btn btn-secondary" onclick="startNewCalculation()">Новый расчёт</button>
-            </div>
-            <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
-
-
-        </div>
-
-        <!-- Статистика -->
-        <div class="tab-pane fade" id="summaryPane" role="tabpanel" aria-labelledby="summary-tab">
-            <div class="mt-4">
-                <h3>Общий обзор («Статистика»)</h3>
-                <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
-                <div class="d-flex align-items-center mb-3">
-                    <select id="summaryPeriod" class="form-select form-select-sm w-auto me-2">
-                        <option value="all">Весь период</option>
-                        <option value="week">Неделя</option>
-                        <option value="month">Месяц</option>
-                        <option value="year">Год</option>
-                        <option value="custom">Ручной</option>
-                    </select>
-                    <input type="date" id="summaryFrom" class="form-control form-control-sm w-auto me-2 d-none">
-                    <input type="date" id="summaryTo" class="form-control form-control-sm w-auto me-2 d-none">
-                    <button class="btn btn-primary btn-sm d-none" id="summaryApplyBtn">Применить</button>
-                </div>
-                <div id="summaryContent"></div>
-            </div>
-        </div>
-
-        <!-- История -->
-        <div class="tab-pane fade" id="historyPane" role="tabpanel" aria-labelledby="history-tab">
-            <div class="mt-4">
-                <h3>История расчетов</h3>
-                <p class="small-text">
-                    Прошлые расчёты. Кнопки: «JSON» — показать объект, «HTML» — скачать отчёт, «Редакт.» — загрузить данные обратно в калькулятор.
-                </p>
-                <button class="btn btn-danger mb-3" onclick="onClearCalcHistory()">Очистить историю</button>
-                <div class="table-responsive">
-                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('historyTable', this.value)">
-                    <table class="table table-bordered table-hover" id="historyTable">
-                        <thead class="">
-                        <tr>
-                            <th onclick="sortTable('historyTable',0)">Дата/время</th>
-                            <th onclick="sortTable('historyTable',1)">Код</th>
-                            <th onclick="sortTable('historyTable',2)">Название расчёта</th>
-                            <th onclick="sortTable('historyTable',3)">Клиент</th>
-                            <th onclick="sortTable('historyTable',4)">Статус</th>
-                            <th onclick="sortTable('historyTable',5)">Итог (₽)</th>
-                            <th>Чек</th>
-                            <th>Подробнее</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    <div class="row g-2 mt-3">
-                        <div class="col-auto">
-                            <input type="date" class="form-control" id="histFrom">
-                        </div>
-                        <div class="col-auto">
-                            <input type="date" class="form-control" id="histTo">
-                        </div>
-                        <div class="col-auto">
-                            <button class="btn btn-primary" onclick="updateHistoryStats()">Фильтр</button>
+                        <button class="btn btn-success" onclick="onCalculateAll()">Рассчитать всё</button>
+                        <button class="btn btn-warning ms-2 me-lg-5" id="downloadSummaryCardBtn" style="display:none">Скачать смету</button>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <button class="btn btn-primary" id="sendMyNalogBtn" style="display:none">Отправить чек</button>
+                            <button class="btn btn-danger" id="cancelMyNalogBtn" style="display:none">Отменить чек</button>
                         </div>
                     </div>
-                    <div id="historyStats" class="mt-2"></div>
+                    <button class="btn btn-secondary" onclick="startNewCalculation()">Новый расчёт</button>
+                </div>
+                <div class="alert alert-info mt-3" id="calcResult" style="display: none;"></div>
+
+
+            </div>
+
+            <!-- Статистика -->
+            <div class="tab-pane fade" id="summaryPane" role="tabpanel" aria-labelledby="summary-tab">
+                <div class="mt-4">
+                    <h3>Общий обзор («Статистика»)</h3>
+                    <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
+                    <div class="d-flex align-items-center mb-3">
+                        <select id="summaryPeriod" class="form-select form-select-sm w-auto me-2">
+                            <option value="all">Весь период</option>
+                            <option value="week">Неделя</option>
+                            <option value="month">Месяц</option>
+                            <option value="year">Год</option>
+                            <option value="custom">Ручной</option>
+                        </select>
+                        <input type="date" id="summaryFrom" class="form-control form-control-sm w-auto me-2 d-none">
+                        <input type="date" id="summaryTo" class="form-control form-control-sm w-auto me-2 d-none">
+                        <button class="btn btn-primary btn-sm d-none" id="summaryApplyBtn">Применить</button>
+                    </div>
+                    <div id="summaryContent"></div>
+                </div>
+            </div>
+
+            <!-- История -->
+            <div class="tab-pane fade" id="historyPane" role="tabpanel" aria-labelledby="history-tab">
+                <div class="mt-4">
+                    <h3>История расчетов</h3>
+                    <p class="small-text">
+                        Прошлые расчёты. Кнопки: «JSON» — показать объект, «HTML» — скачать отчёт, «Редакт.» — загрузить данные обратно в калькулятор.
+                    </p>
+                    <button class="btn btn-danger mb-3" onclick="onClearCalcHistory()">Очистить историю</button>
+                    <div class="table-responsive">
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('historyTable', this.value)">
+                        <table class="table table-bordered table-hover" id="historyTable">
+                            <thead class="">
+                            <tr>
+                                <th onclick="sortTable('historyTable',0)">Дата/время</th>
+                                <th onclick="sortTable('historyTable',1)">Код</th>
+                                <th onclick="sortTable('historyTable',2)">Название расчёта</th>
+                                <th onclick="sortTable('historyTable',3)">Клиент</th>
+                                <th onclick="sortTable('historyTable',4)">Статус</th>
+                                <th onclick="sortTable('historyTable',5)">Итог (₽)</th>
+                                <th>Чек</th>
+                                <th>Подробнее</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="row g-2 mt-3">
+                            <div class="col-auto">
+                                <input type="date" class="form-control" id="histFrom">
+                            </div>
+                            <div class="col-auto">
+                                <input type="date" class="form-control" id="histTo">
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-primary" onclick="updateHistoryStats()">Фильтр</button>
+                            </div>
+                        </div>
+                        <div id="historyStats" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Клиенты -->
+            <div class="tab-pane fade" id="clientsPane" role="tabpanel" aria-labelledby="clients-tab">
+                <div class="mt-4">
+                    <h3>Клиенты</h3>
+                    <div class="mb-2">
+                        <button class="btn btn-primary btn-sm" onclick="onAddClient()">Добавить клиента</button>
+                    </div>
+                    <div class="table-responsive">
+                        <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('clientsTable', this.value)">
+                        <table class="table table-bordered table-hover" id="clientsTable">
+                            <thead>
+                            <tr>
+                                <th onclick="sortTable('clientsTable',0)">Имя</th>
+                                <th onclick="sortTable('clientsTable',1)">Телефон</th>
+                                <th onclick="sortTable('clientsTable',2)">Ссылки</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- Настройки -->
+        <div class="tab-pane fade" id="settingsPane" role="tabpanel" aria-labelledby="settings-tab">
+            <div class="row mt-4">
+                <div class="col-md-3 mb-3">
+                    <div class="nav flex-column nav-pills" id="settingsSubTab" role="tablist">
+                        <button class="nav-link active" id="brand-set-tab" data-bs-toggle="pill" data-bs-target="#brandSet" type="button" role="tab">Брендинг</button>
+                        <button class="nav-link" id="calc-set-tab" data-bs-toggle="pill" data-bs-target="#calcSet" type="button" role="tab">Калькуляция</button>
+                        <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Импорт/Экспорт</button>
+                        <button class="nav-link" id="spoolman-set-tab" data-bs-toggle="pill" data-bs-target="#spoolmanSet" type="button" role="tab">Spoolman</button>
+                        <button class="nav-link" id="nalog-set-tab" data-bs-toggle="pill" data-bs-target="#nalogSet" type="button" role="tab">Мой Налог</button>
+                        <button class="nav-link" id="about-set-tab" data-bs-toggle="pill" data-bs-target="#aboutSet"
+                                type="button" role="tab">О калькуляторе
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <div class="tab-content" id="settingsSubTabContent">
+                        <div class="tab-pane fade show active" id="brandSet" role="tabpanel">
+                            <h3>Брендинг</h3>
+                            <div class="mb-3">
+                                <label for="companyNameInput" class="form-label">Название компании:</label>
+                                <input type="text" id="companyNameInput" class="form-control"/>
+                            </div>
+                            <div class="mb-3">
+                                <label for="chatLinkInput" class="form-label">Ссылка на чат (QR):</label>
+                                <input type="text" id="chatLinkInput" class="form-control"/>
+                            </div>
+                            <div class="mb-3">
+                                <label for="bankDetailsInput" class="form-label">Банковские реквизиты (р/с):</label>
+                                <textarea id="bankDetailsInput" class="form-control" rows="4"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Профили срочности и графиков:</label>
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-5">
+                                        <select id="urgencyProfileSelect" class="form-select"></select>
+                                    </div>
+                                    <div class="col-md-7 text-md-end">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="addUrgencyProfileBtn">Добавить профиль</button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="deleteUrgencyProfileBtn">Удалить</button>
+                                    </div>
+                                </div>
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Название профиля</label>
+                                        <input type="text" id="urgencyProfileName" class="form-control"/>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Наценка профиля (%)</label>
+                                        <input type="number" step="1" id="urgencyProfileMarkup" class="form-control"/>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Описание</label>
+                                        <input type="text" id="urgencyProfileDescription" class="form-control"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+                                    <label class="form-label mb-0">Рабочий график по дням недели:</label>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#workdayTemplateModal">Автозаполнение дня</button>
+                                </div>
+                                <ul class="nav nav-tabs mb-3" id="operatorWeekTabs" role="tablist"></ul>
+                                <div class="tab-content border rounded p-3" id="operatorWeekContent"></div>
+                                <div class="form-text" id="urgencyScheduleHint"></div>
+                                <div class="form-text">Оставьте строки пустыми, если день нерабочий. Перерывы автоматически проверяются на соответствие ст. 108 и 109 ТК РФ.</div>
+                                <div class="form-text">Используйте кнопку автозаполнения, чтобы быстро задать шаблон (6/8/12 часовые смены, обед и спецперерывы). Изменения вступят в силу после сохранения.</div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveBrandingSettings()">Сохранить</button>
+                        </div>
+                        <div class="tab-pane fade" id="calcSet" role="tabpanel">
+                            <h3>Калькуляция</h3>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="printLabelsCheckbox">
+                                <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
+                            </div>
+                            <div class="mb-3">
+                                <label for="labelCostInput" class="form-label">Стоимость 1 этикетки (₽):</label>
+                                <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="printEstimateCheckbox">
+                                <label class="form-check-label" for="printEstimateCheckbox">Учитывать печать сметы</label>
+                            </div>
+                            <div class="mb-3">
+                                <label for="estimatePrintCostInput" class="form-label">Стоимость печати сметы (₽):</label>
+                                <input type="number" step="0.01" id="estimatePrintCostInput" class="form-control"/>
+                            </div>
+                            <div class="mb-3">
+                                <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
+                                <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="calcOperatorReject">
+                                <label class="form-check-label" for="calcOperatorReject">Учесть ставку оператора для бракованных моделей</label>
+                            </div>
+                            <div class="mb-3">
+                                <label for="calcDowntimeCost" class="form-label">Стоимость минуты простоя (₽/мин):</label>
+                                <input type="number" step="0.01" id="calcDowntimeCost" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="calcPreparationRate" class="form-label">Стоимость часа подготовки (₽/ч):</label>
+                                <input type="number" step="0.01" id="calcPreparationRate" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="calcCostKwh" class="form-label">Цена 1 кВт⋅ч (₽):</label>
+                                <input type="number" step="0.01" id="calcCostKwh" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="calcTaxPercent" class="form-label">Налог (%):</label>
+                                <input type="number" step="1" id="calcTaxPercent" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="calcRoundingMode" class="form-label">Округление итоговой стоимости:</label>
+                                <select id="calcRoundingMode" class="form-select">
+                                    <option value="none">Без округления</option>
+                                    <option value="round10">До 10 ₽ (вверх)</option>
+                                    <option value="round100">До 100 ₽ (вверх)</option>
+                                </select>
+                                <div class="form-text">Доплата за округление добавляется как дополнительная наценка.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label d-block">Расчётные опции:</label>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="settingsIncludeAmortization">
+                                    <label class="form-check-label" for="settingsIncludeAmortization">Учитывать амортизацию и обслуживание</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="settingsIncludeRejects">
+                                    <label class="form-check-label" for="settingsIncludeRejects">Учитывать брак в стоимости</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="settingsIncludeOverheads">
+                                    <label class="form-check-label" for="settingsIncludeOverheads">Учитывать накладные расходы</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="settingsIgnoreCoolingRejects">
+                                    <label class="form-check-label" for="settingsIgnoreCoolingRejects">Не учитывать остывание для брака</label>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveCalcSettings()">Сохранить</button>
+                        </div>
+                        <div class="tab-pane fade" id="cloudSet" role="tabpanel">
+                            <div class="mt-4">
+                                <h3>Облачный экспорт (SupaBase, шифрованное хранение данных 5 минут)</h3>
+                                <button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
+                                <button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
+                                <button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
+                                <input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
+                                <div id="qrcode" class="mt-2"></div>
+                            </div>
+                            <div class="mt-4">
+                                <h3>Экспорт данных</h3>
+                                <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
+                                <button class="btn btn-info" id="downloadJsonFileBtn">Скачать JSON файл</button>
+                                <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
+                            </div>
+                            <div class="mt-4">
+                                <h3>Импорт данных</h3>
+                                <textarea id="importArea" class="form-control" rows="5"></textarea>
+                                <input type="file" id="importJsonFile" class="form-control mt-2" accept=".json">
+                                <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
+                                <button class="btn btn-info mt-2" onclick="importFromFile()">Импорт из файла</button>
+
+                                <div class="mt-3 p-3 border rounded bg-light">
+                                    <h5 class="mb-2">Сохранённые ответы модалок импорта</h5>
+                                    <div class="small text-muted mb-2">
+                                        Здесь хранятся ваши решения «сопоставить профиль → принтер/материал/заказ» (если вы включали галочку «Сохранить»).
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                                        <button class="btn btn-outline-danger btn-sm" type="button" id="clearPromptMemoryBtn">Очистить сохранения</button>
+                                        <div class="small text-muted" id="promptMemoryStats"></div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-secondary mt-3 mb-0 small">
+                                    <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
+                                    <p class="mb-0">Чтобы сбросить настройки, импортируйте пустой JSON или очистите
+                                        LocalStorage вручную.</p>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="tab-pane fade" id="spoolmanSet" role="tabpanel">
+                            <div id="spoolmanSettingsContainer" class="mt-4"></div>
+                        </div>
+                        <div class="tab-pane fade" id="nalogSet" role="tabpanel">
+                            <h3>Мой Налог</h3>
+                            <div class="mb-3">
+                                <label for="myNalogToken" class="form-label">Токен доступа:</label>
+                                <input type="text" id="myNalogToken" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="myNalogPhone" class="form-label">Телефон:</label>
+                                <input type="text" id="myNalogPhone" class="form-control" />
+                            </div>
+                            <div class="mb-3">
+                                <button class="btn btn-secondary" id="requestSmsBtn">Запросить SMS</button>
+                            </div>
+                            <div class="mb-3">
+                                <label for="myNalogSms" class="form-label">Код из SMS:</label>
+                                <input type="text" id="myNalogSms" class="form-control" />
+                                <button class="btn btn-primary mt-2" id="confirmSmsBtn">Получить токен</button>
+                            </div>
+                            <div class="mb-3">
+                                <button class="btn btn-primary" onclick="saveMyNalogSettings()">Сохранить</button>
+                                <button class="btn btn-info ms-2" onclick="checkMyNalogStatus()">Проверить статус</button>
+                            </div>
+                            <div id="myNalogStatus" class="small-text"></div>
+                        </div>
+                        <div class="tab-pane fade" id="aboutSet" role="tabpanel">
+                            <div class="mt-4">
+                                <h3>О калькуляторе</h3>
+                                <p class="mb-0"> Интерфейс собран на
+                                    Bootstrap 5, логика работает на чистом JavaScript без серверной части, данные живут в
+                                    LocalStorage прямо в браузере.</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Клиенты -->
-        <div class="tab-pane fade" id="clientsPane" role="tabpanel" aria-labelledby="clients-tab">
-            <div class="mt-4">
-                <h3>Клиенты</h3>
-                <div class="mb-2">
-                    <button class="btn btn-primary btn-sm" onclick="onAddClient()">Добавить клиента</button>
-                </div>
-                <div class="table-responsive">
-                    <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('clientsTable', this.value)">
-                    <table class="table table-bordered table-hover" id="clientsTable">
-                        <thead>
-                        <tr>
-                            <th onclick="sortTable('clientsTable',0)">Имя</th>
-                            <th onclick="sortTable('clientsTable',1)">Телефон</th>
-                            <th onclick="sortTable('clientsTable',2)">Ссылки</th>
-                            <th>Действия</th>
-                        </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
     </div>
-    <!-- Настройки -->
-    <div class="tab-pane fade" id="settingsPane" role="tabpanel" aria-labelledby="settings-tab">
-        <div class="row mt-4">
-            <div class="col-md-3 mb-3">
-                <div class="nav flex-column nav-pills" id="settingsSubTab" role="tablist">
-                    <button class="nav-link active" id="brand-set-tab" data-bs-toggle="pill" data-bs-target="#brandSet" type="button" role="tab">Брендинг</button>
-                    <button class="nav-link" id="calc-set-tab" data-bs-toggle="pill" data-bs-target="#calcSet" type="button" role="tab">Калькуляция</button>
-                    <button class="nav-link" id="cloud-set-tab" data-bs-toggle="pill" data-bs-target="#cloudSet" type="button" role="tab">Импорт/Экспорт</button>
-                    <button class="nav-link" id="spoolman-set-tab" data-bs-toggle="pill" data-bs-target="#spoolmanSet" type="button" role="tab">Spoolman</button>
-                    <button class="nav-link" id="nalog-set-tab" data-bs-toggle="pill" data-bs-target="#nalogSet" type="button" role="tab">Мой Налог</button>
-                    <button class="nav-link" id="about-set-tab" data-bs-toggle="pill" data-bs-target="#aboutSet"
-                            type="button" role="tab">О калькуляторе
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-9">
-                <div class="tab-content" id="settingsSubTabContent">
-                    <div class="tab-pane fade show active" id="brandSet" role="tabpanel">
-                        <h3>Брендинг</h3>
-                        <div class="mb-3">
-                            <label for="companyNameInput" class="form-label">Название компании:</label>
-                            <input type="text" id="companyNameInput" class="form-control"/>
-                        </div>
-                        <div class="mb-3">
-                            <label for="chatLinkInput" class="form-label">Ссылка на чат (QR):</label>
-                            <input type="text" id="chatLinkInput" class="form-control"/>
-                        </div>
-                        <div class="mb-3">
-                            <label for="bankDetailsInput" class="form-label">Банковские реквизиты (р/с):</label>
-                            <textarea id="bankDetailsInput" class="form-control" rows="4"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Профили срочности и графиков:</label>
-                            <div class="row g-2 align-items-center">
-                                <div class="col-md-5">
-                                    <select id="urgencyProfileSelect" class="form-select"></select>
-                                </div>
-                                <div class="col-md-7 text-md-end">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="addUrgencyProfileBtn">Добавить профиль</button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" id="deleteUrgencyProfileBtn">Удалить</button>
-                                </div>
-                            </div>
-                            <div class="row g-3 mt-2">
-                                <div class="col-md-4">
-                                    <label class="form-label">Название профиля</label>
-                                    <input type="text" id="urgencyProfileName" class="form-control"/>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Наценка профиля (%)</label>
-                                    <input type="number" step="1" id="urgencyProfileMarkup" class="form-control"/>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Описание</label>
-                                    <input type="text" id="urgencyProfileDescription" class="form-control"/>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
-                                <label class="form-label mb-0">Рабочий график по дням недели:</label>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#workdayTemplateModal">Автозаполнение дня</button>
-                            </div>
-                            <ul class="nav nav-tabs mb-3" id="operatorWeekTabs" role="tablist"></ul>
-                            <div class="tab-content border rounded p-3" id="operatorWeekContent"></div>
-                            <div class="form-text" id="urgencyScheduleHint"></div>
-                            <div class="form-text">Оставьте строки пустыми, если день нерабочий. Перерывы автоматически проверяются на соответствие ст. 108 и 109 ТК РФ.</div>
-                            <div class="form-text">Используйте кнопку автозаполнения, чтобы быстро задать шаблон (6/8/12 часовые смены, обед и спецперерывы). Изменения вступят в силу после сохранения.</div>
-                        </div>
-                        <button class="btn btn-primary" onclick="saveBrandingSettings()">Сохранить</button>
-                    </div>
-                    <div class="tab-pane fade" id="calcSet" role="tabpanel">
-                        <h3>Калькуляция</h3>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="printLabelsCheckbox">
-                            <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
-                        </div>
-                        <div class="mb-3">
-                            <label for="labelCostInput" class="form-label">Стоимость 1 этикетки (₽):</label>
-                            <input type="number" step="0.01" id="labelCostInput" class="form-control"/>
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="printEstimateCheckbox">
-                            <label class="form-check-label" for="printEstimateCheckbox">Учитывать печать сметы</label>
-                        </div>
-                        <div class="mb-3">
-                            <label for="estimatePrintCostInput" class="form-label">Стоимость печати сметы (₽):</label>
-                            <input type="number" step="0.01" id="estimatePrintCostInput" class="form-control"/>
-                        </div>
-                        <div class="mb-3">
-                            <label for="calcOperatorRate" class="form-label">Ставка оператора (₽/ч):</label>
-                            <input type="number" step="0.01" id="calcOperatorRate" class="form-control" />
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="calcOperatorReject">
-                            <label class="form-check-label" for="calcOperatorReject">Учесть ставку оператора для бракованных моделей</label>
-                        </div>
-                        <div class="mb-3">
-                            <label for="calcDowntimeCost" class="form-label">Стоимость минуты простоя (₽/мин):</label>
-                            <input type="number" step="0.01" id="calcDowntimeCost" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="calcPreparationRate" class="form-label">Стоимость часа подготовки (₽/ч):</label>
-                            <input type="number" step="0.01" id="calcPreparationRate" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="calcCostKwh" class="form-label">Цена 1 кВт⋅ч (₽):</label>
-                            <input type="number" step="0.01" id="calcCostKwh" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="calcTaxPercent" class="form-label">Налог (%):</label>
-                            <input type="number" step="1" id="calcTaxPercent" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="calcRoundingMode" class="form-label">Округление итоговой стоимости:</label>
-                            <select id="calcRoundingMode" class="form-select">
-                                <option value="none">Без округления</option>
-                                <option value="round10">До 10 ₽ (вверх)</option>
-                                <option value="round100">До 100 ₽ (вверх)</option>
-                            </select>
-                            <div class="form-text">Доплата за округление добавляется как дополнительная наценка.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label d-block">Расчётные опции:</label>
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="settingsIncludeAmortization">
-                                <label class="form-check-label" for="settingsIncludeAmortization">Учитывать амортизацию и обслуживание</label>
-                            </div>
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="settingsIncludeRejects">
-                                <label class="form-check-label" for="settingsIncludeRejects">Учитывать брак в стоимости</label>
-                            </div>
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="settingsIncludeOverheads">
-                                <label class="form-check-label" for="settingsIncludeOverheads">Учитывать накладные расходы</label>
-                            </div>
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="settingsIgnoreCoolingRejects">
-                                <label class="form-check-label" for="settingsIgnoreCoolingRejects">Не учитывать остывание для брака</label>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" onclick="saveCalcSettings()">Сохранить</button>
-                    </div>
-                    <div class="tab-pane fade" id="cloudSet" role="tabpanel">
-                        <div class="mt-4">
-                            <h3>Облачный экспорт (SupaBase, шифрованное хранение данных 5 минут)</h3>
-                            <button class="btn btn-primary mt-2" onclick="generateSyncLinkAndQR()">🔗 Сгенерировать ссылку и QR</button>
-                            <button class="btn btn-warning mt-2" onclick="saveSettingsToCloud()">☁️ Сохранить в облако (на 5 минут)</button>
-                            <button class="btn btn-info mt-2" onclick="loadSettingsFromCloud()">☁️ Загрузить из облака</button>
-                            <input type="text" id="syncLinkDisplay" class="form-control mt-2" readonly>
-                            <div id="qrcode" class="mt-2"></div>
-                        </div>
-                        <div class="mt-4">
-                            <h3>Экспорт данных</h3>
-                            <button class="btn btn-primary" onclick="onExportJson()">Выгрузить JSON</button>
-                            <button class="btn btn-info" id="downloadJsonFileBtn">Скачать JSON файл</button>
-                            <textarea id="exportArea" class="form-control mt-2" rows="5"></textarea>
-                        </div>
-                        <div class="mt-4">
-                            <h3>Импорт данных</h3>
-                            <textarea id="importArea" class="form-control" rows="5"></textarea>
-                            <input type="file" id="importJsonFile" class="form-control mt-2" accept=".json">
-                            <button class="btn btn-success mt-2" onclick="onImportJson()">Импортировать</button>
-                            <button class="btn btn-info mt-2" onclick="importFromFile()">Импорт из файла</button>
-                            <div class="alert alert-secondary mt-3 mb-0 small">
-                                <p class="mb-1">Все данные сохраняются в LocalStorage при любых изменениях.</p>
-                                <p class="mb-0">Чтобы сбросить настройки, импортируйте пустой JSON или очистите
-                                    LocalStorage вручную.</p>
-                            </div>
-                        </div>
-
-                    </div>
-                    <div class="tab-pane fade" id="spoolmanSet" role="tabpanel">
-                        <div id="spoolmanSettingsContainer" class="mt-4"></div>
-                    </div>
-                    <div class="tab-pane fade" id="nalogSet" role="tabpanel">
-                        <h3>Мой Налог</h3>
-                        <div class="mb-3">
-                            <label for="myNalogToken" class="form-label">Токен доступа:</label>
-                            <input type="text" id="myNalogToken" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="myNalogPhone" class="form-label">Телефон:</label>
-                            <input type="text" id="myNalogPhone" class="form-control" />
-                        </div>
-                        <div class="mb-3">
-                            <button class="btn btn-secondary" id="requestSmsBtn">Запросить SMS</button>
-                        </div>
-                        <div class="mb-3">
-                            <label for="myNalogSms" class="form-label">Код из SMS:</label>
-                            <input type="text" id="myNalogSms" class="form-control" />
-                            <button class="btn btn-primary mt-2" id="confirmSmsBtn">Получить токен</button>
-                        </div>
-                        <div class="mb-3">
-                            <button class="btn btn-primary" onclick="saveMyNalogSettings()">Сохранить</button>
-                            <button class="btn btn-info ms-2" onclick="checkMyNalogStatus()">Проверить статус</button>
-                        </div>
-                        <div id="myNalogStatus" class="small-text"></div>
-                    </div>
-                    <div class="tab-pane fade" id="aboutSet" role="tabpanel">
-                        <div class="mt-4">
-                            <h3>О калькуляторе</h3>
-                            <p class="mb-0"> Интерфейс собран на
-                                Bootstrap 5, логика работает на чистом JavaScript без серверной части, данные живут в
-                                LocalStorage прямо в браузере.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-    </div>
+</div>
 </div>
 
 <!-- Модальное окно автозаполнения графика -->
@@ -1198,7 +1210,213 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="utils/normalizeIds.js"></script>
+<script>
+    /**
+     * Embedded utilities (previously )
+     * Важно: эти функции НЕ зависят от Electron и работают на обычном сайте.
+     */
+    (function(){
+        function _asArr(x){ return Array.isArray(x) ? x : []; }
+        function _s(v){ return (v===undefined || v===null) ? '' : String(v); }
+        function _isEmptyId(id){ const s=_s(id).trim(); return !s || s.toLowerCase()==='nan' || s.toLowerCase()==='undefined' || s.toLowerCase()==='null'; }
+        function _maxNumericId(arr){
+            let max=0;
+            for(const it of _asArr(arr)){
+                const n = parseInt(it && it.id, 10);
+                if(!isNaN(n)) max = Math.max(max, n);
+            }
+            return max;
+        }
+        function _normalizeCollection(appData, arrName, counterKey){
+            const arr = _asArr(appData[arrName]);
+            const seen = new Set();
+            const map = {}; // oldIdStr -> newIdStr
+            let next = _maxNumericId(arr) + 1;
+
+            for(const it of arr){
+                if(!it) continue;
+                const oldStr = _s(it.id).trim();
+                if(_isEmptyId(oldStr) || seen.has(oldStr)){
+                    const newId = String(next++);
+                    if(!_isEmptyId(oldStr)) map[oldStr] = newId;
+                    it.id = newId;
+                    seen.add(newId);
+                } else {
+                    seen.add(oldStr);
+                }
+            }
+
+            // counters: держим на максимуме, чтобы getNextId() не создавала коллизии
+            appData.counters = appData.counters || {};
+            const maxNow = _maxNumericId(arr);
+            const current = parseInt(appData.counters[counterKey] || 0, 10);
+            appData.counters[counterKey] = Math.max(isNaN(current)?0:current, maxNow);
+
+            // сохранить обратно, если было не массивом
+            appData[arrName] = arr;
+            return map;
+        }
+
+        function validateUniqueIds(appData){
+            const errors = [];
+            function checkCollection(arr, label){
+                if(!Array.isArray(arr)){
+                    errors.push(`${label}: not_array`);
+                    return;
+                }
+                const seen = new Set();
+                arr.forEach((it, idx)=>{
+                    const id = it ? _s(it.id).trim() : '';
+                    if(_isEmptyId(id)){
+                        errors.push(`${label}[${idx}]: missing_id`);
+                        return;
+                    }
+                    if(seen.has(id)){
+                        errors.push(`${label}: duplicate_id ${id}`);
+                    }
+                    seen.add(id);
+                });
+            }
+
+            checkCollection(appData.printers, 'printers');
+            checkCollection(appData.materials, 'materials');
+            checkCollection(appData.clients, 'clients');
+            checkCollection(appData.additionalGlobal, 'additionalGlobal');
+            checkCollection(appData.printerProfiles, 'printerProfiles');
+            checkCollection(appData.materialProfiles, 'materialProfiles');
+
+
+            const printerIds = new Set(_asArr(appData.printers).map(p=>_s(p.id)));
+            const ppIds = new Set(_asArr(appData.printerProfiles).map(p=>_s(p.id)));
+            const mpIds = new Set(_asArr(appData.materialProfiles).map(p=>_s(p.id)));
+
+            _asArr(appData.printerProfiles).forEach((pf)=>{
+                const prId = _s(pf && pf.printerId).trim();
+                if(prId && !printerIds.has(prId)){
+                    errors.push(`printerProfiles(${_s(pf.id)}): bad_printerId ${prId}`);
+                }
+            });
+
+            _asArr(appData.printers).forEach((pr)=>{
+                const pids = _asArr(pr && pr.profileIds).map(_s);
+                const seenLocal = new Set();
+                for(const pid of pids){
+                    if(_isEmptyId(pid)) continue;
+                    if(seenLocal.has(pid)) errors.push(`printers(${_s(pr.id)}).profileIds: duplicate ${pid}`);
+                    seenLocal.add(pid);
+                    if(!ppIds.has(pid)) errors.push(`printers(${_s(pr.id)}).profileIds: missing_ref ${pid}`);
+                }
+            });
+
+            _asArr(appData.materials).forEach((m)=>{
+                const pids = _asArr(m && m.profileIds).map(_s);
+                const seenLocal = new Set();
+                for(const pid of pids){
+                    if(_isEmptyId(pid)) continue;
+                    if(seenLocal.has(pid)) errors.push(`materials(${_s(m.id)}).profileIds: duplicate ${pid}`);
+                    seenLocal.add(pid);
+                    if(!mpIds.has(pid)) errors.push(`materials(${_s(m.id)}).profileIds: missing_ref ${pid}`);
+                }
+            });
+
+            return { success: errors.length === 0, errors };
+        }
+
+        function normalizeIds(appData){
+            if(!appData || typeof appData !== 'object') return;
+
+
+            if(!Array.isArray(appData.printers)) appData.printers = [];
+            if(!Array.isArray(appData.materials)) appData.materials = [];
+            if(!Array.isArray(appData.clients)) appData.clients = [];
+            if(!Array.isArray(appData.additionalGlobal)) appData.additionalGlobal = [];
+            if(!Array.isArray(appData.printerProfiles)) appData.printerProfiles = [];
+            if(!Array.isArray(appData.materialProfiles)) appData.materialProfiles = [];
+
+            const mapPrinters = _normalizeCollection(appData, 'printers', 'printers');
+            const mapMaterials = _normalizeCollection(appData, 'materials', 'materials');
+            const mapClients = _normalizeCollection(appData, 'clients', 'clients');
+            const mapAdd = _normalizeCollection(appData, 'additionalGlobal', 'globalAdditional');
+            const mapPP = _normalizeCollection(appData, 'printerProfiles', 'printerProfiles');
+            const mapMP = _normalizeCollection(appData, 'materialProfiles', 'materialProfiles');
+
+
+            appData.printerProfiles.forEach(pf=>{
+                const prId = _s(pf && pf.printerId).trim();
+                if(prId && mapPrinters[prId]) pf.printerId = mapPrinters[prId];
+            });
+
+
+            appData.printers.forEach(pr=>{
+                if(!Array.isArray(pr.profileIds)) pr.profileIds = [];
+                pr.profileIds = pr.profileIds.map(pid=>{
+                    const s=_s(pid).trim();
+                    return mapPP[s] ? mapPP[s] : pid;
+                }).filter(pid=>!_isEmptyId(pid));
+
+                pr.profileIds = Array.from(new Set(pr.profileIds.map(_s)));
+            });
+
+
+            appData.materials.forEach(m=>{
+                if(!Array.isArray(m.profileIds)) m.profileIds = [];
+                m.profileIds = m.profileIds.map(pid=>{
+                    const s=_s(pid).trim();
+                    return mapMP[s] ? mapMP[s] : pid;
+                }).filter(pid=>!_isEmptyId(pid));
+                m.profileIds = Array.from(new Set(m.profileIds.map(_s)));
+            });
+
+
+            if(Array.isArray(appData.calcHistory)){
+                appData.calcHistory.forEach(h=>{
+
+                    if(Array.isArray(h.details)){
+                        h.details.forEach(d=>{
+                            if(d && d.printerId!=null){
+                                const old=_s(d.printerId);
+                                if(mapPrinters[old]) d.printerId = mapPrinters[old];
+                            }
+                            if(d && d.materialId!=null){
+                                const old=_s(d.materialId);
+                                if(mapMaterials[old]) d.materialId = mapMaterials[old];
+                            }
+                        });
+                    }
+
+
+                    if(h && h.calcData && typeof h.calcData === 'object'){
+                        const newCD = {};
+                        Object.keys(h.calcData).forEach(pid=>{
+                            const newPid = mapPrinters[_s(pid)] ? mapPrinters[_s(pid)] : pid;
+                            const arr = h.calcData[pid];
+                            if(Array.isArray(arr)){
+                                arr.forEach(model=>{
+                                    if(model && model.materialId!=null){
+                                        const old=_s(model.materialId);
+                                        if(mapMaterials[old]) model.materialId = mapMaterials[old];
+                                    }
+                                });
+                            }
+                            if(newCD[newPid]){
+
+                                if(Array.isArray(newCD[newPid]) && Array.isArray(arr)) newCD[newPid] = newCD[newPid].concat(arr);
+                            } else {
+                                newCD[newPid] = arr;
+                            }
+                        });
+                        h.calcData = newCD;
+                    }
+                });
+            }
+
+           appData.counters = appData.counters || {};
+        }
+
+        window.normalizeIds = normalizeIds;
+        window.validateUniqueIds = validateUniqueIds;
+    })();
+</script>
 <script>
     const _instrumentInitialKeys = new Set(Object.keys(window));
 
@@ -1481,161 +1699,365 @@
         return obj;
     }
 
-    function showMultiPrompt(title, fields){
-        return new Promise(res=>{
-            const body = document.getElementById('multiPromptBody');
-            body.innerHTML = '';
-            document.getElementById('multiPromptTitle').textContent = title;
-            fields.forEach(f=>{
-                if(f.type==='checkbox'){
-                    const div=document.createElement('div');
-                    div.className='form-check mb-2';
-                    const inp=document.createElement('input');
-                    inp.type='checkbox';
-                    inp.className='form-check-input';
-                    inp.id='mp_'+f.id;
-                    inp.checked=!!f.value;
-                    const lbl=document.createElement('label');
-                    lbl.className='form-check-label ms-2';
-                    lbl.setAttribute('for','mp_'+f.id);
-                    lbl.textContent=f.label;
-                    div.appendChild(inp); div.appendChild(lbl); body.appendChild(div);
-                } else if(f.type==='multiselect'){
-                    const div=document.createElement('div');
-                    div.className='mb-2';
-                    const lbl=document.createElement('label');
-                    lbl.className='form-label';
-                    lbl.textContent=f.label;
-                    const sel=document.createElement('select');
-                    sel.className='form-select';
-                    sel.multiple=true;
-                    sel.id='mp_'+f.id;
-                    (f.options||[]).forEach(opt=>{
-                        const o=document.createElement('option');
-                        o.value=opt.value;
-                        o.textContent=opt.label;
-                        if(f.value&&f.value.includes(opt.value)) o.selected=true;
-                        sel.appendChild(o);
-                    });
-                    div.appendChild(lbl); div.appendChild(sel); body.appendChild(div);
-                } else if(f.type==='select'){
-                    const div=document.createElement('div');
-                    div.className='mb-2';
-                    const lbl=document.createElement('label');
-                    lbl.className='form-label';
-                    lbl.textContent=f.label;
-                    const sel=document.createElement('select');
-                    sel.className='form-select';
-                    sel.id='mp_'+f.id;
-                    (f.options||[]).forEach(opt=>{
-                        const o=document.createElement('option');
-                        o.value=opt.value;
-                        o.textContent=opt.label;
-                        if(f.value==opt.value) o.selected=true;
-                        sel.appendChild(o);
-                    });
-                    div.appendChild(lbl); div.appendChild(sel); body.appendChild(div);
-                } else if(f.type==='textarea'){
-                    const div=document.createElement('div');
-                    div.className='mb-2';
-                    const lbl=document.createElement('label');
-                    lbl.className='form-label';
-                    lbl.textContent=f.label;
-                    const area=document.createElement('textarea');
-                    area.className='form-control';
-                    area.rows=f.rows||3;
-                    area.id='mp_'+f.id;
-                    area.value=f.value||'';
-                    div.appendChild(lbl); div.appendChild(area); body.appendChild(div);
-                } else {
-                    const div=document.createElement('div');
-                    div.className='mb-2';
-                    const lbl=document.createElement('label');
-                    lbl.className='form-label';
-                    lbl.textContent=f.label;
-                    const inp=document.createElement('input');
-                    inp.className='form-control';
-                    inp.type=f.type||'text';
-                    inp.id='mp_'+f.id;
-                    inp.value=f.value||'';
-                    div.appendChild(lbl); div.appendChild(inp); body.appendChild(div);
-                }
-            });
-            const modal = new bootstrap.Modal(document.getElementById('multiPromptModal'));
-            document.getElementById('multiPromptOk').onclick = () => {
-                const result={};
-                fields.forEach(f=>{
-                    const el=document.getElementById('mp_'+f.id);
-                    if(f.type==='checkbox') result[f.id] = el.checked;
-                    else if(f.type==='multiselect') result[f.id] = Array.from(el.selectedOptions).map(o=>o.value);
-                    else if(f.type==='select') result[f.id] = el.value;
-                    else if(f.type==='textarea') result[f.id] = el.value;
-                    else result[f.id] = el.value;
-                });
-                modal.hide();
-                res(result);
+    const __modalQueue = (() => {
+        let chain = Promise.resolve();
+        return {
+            run(task){
+                const next = chain.then(task, task);
+                chain = next.catch(()=>{});
+                return next;
+            }
+        };
+    })();
+
+    function __cleanupModalArtifacts() {
+        try {
+            const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+            if (backdrops.length > 1) backdrops.slice(1).forEach(b => b.remove());
+
+            const anyShown = document.querySelector('.modal.show');
+            if (!anyShown) {
+                // hard reset if nothing is open
+                backdrops.forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+        } catch (e) {
+            console.warn('cleanupModalArtifacts failed', e);
+        }
+    }
+
+    function __waitModalHidden(modalEl) {
+        return new Promise(resolve => {
+            const handler = () => {
+                modalEl.removeEventListener('hidden.bs.modal', handler);
+                __cleanupModalArtifacts();
+                resolve();
             };
-            modal.show();
+            modalEl.addEventListener('hidden.bs.modal', handler);
         });
     }
 
-    function showMaterialSelectionForGcode(fileName, thumbnail, materialOptions) {
-        return new Promise(res => {
+    const PromptMemory = (() => {
+        const KEY = 'gcodecalc_prompt_memory_v1';
+        let data = { printerMap: {}, materialMap: {}, orderAuto: null };
+
+        function load() {
+            try {
+                const raw = localStorage.getItem(KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === 'object') {
+                    data.printerMap = parsed.printerMap && typeof parsed.printerMap === 'object' ? parsed.printerMap : {};
+                    data.materialMap = parsed.materialMap && typeof parsed.materialMap === 'object' ? parsed.materialMap : {};
+                    data.orderAuto = parsed.orderAuto && typeof parsed.orderAuto === 'object' ? parsed.orderAuto : null;
+                }
+            } catch (e) {
+                console.warn('PromptMemory load failed', e);
+            }
+        }
+        function save() {
+            try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {}
+        }
+        function clear() {
+            data = { printerMap: {}, materialMap: {}, orderAuto: null };
+            try { localStorage.removeItem(KEY); } catch(e) {}
+        }
+
+        function getPrinter(key) {
+            if (!key) return '';
+            return data.printerMap[key] ? String(data.printerMap[key]) : '';
+        }
+        function setPrinter(key, printerId) {
+            if (!key || !printerId) return;
+            data.printerMap[key] = String(printerId);
+            save();
+        }
+        function forgetPrinter(key) {
+            if (!key) return;
+            delete data.printerMap[key];
+            save();
+        }
+
+        function getMaterial(profile) {
+            if (!profile) return '';
+            return data.materialMap[profile] ? String(data.materialMap[profile]) : '';
+        }
+        function setMaterial(profile, materialId) {
+            if (!profile || !materialId) return;
+            data.materialMap[profile] = String(materialId);
+            save();
+        }
+        function forgetMaterial(profile) {
+            if (!profile) return;
+            delete data.materialMap[profile];
+            save();
+        }
+
+        function getOrderAuto() {
+            return data.orderAuto && typeof data.orderAuto === 'object' ? data.orderAuto : null;
+        }
+        function setOrderAuto(orderAuto) {
+            data.orderAuto = orderAuto || null;
+            save();
+        }
+        function consumeOrderAuto() {
+            if (!data.orderAuto) return;
+            if (typeof data.orderAuto.remaining !== 'number') { data.orderAuto = null; save(); return; }
+            data.orderAuto.remaining -= 1;
+            if (data.orderAuto.remaining <= 0) data.orderAuto = null;
+            save();
+        }
+
+        function stats() {
+            const printers = Object.keys(data.printerMap || {}).length;
+            const materials = Object.keys(data.materialMap || {}).length;
+            const order = data.orderAuto ? `, авто-заказ: ${data.orderAuto.kind || '—'} (${data.orderAuto.remaining || 0})` : '';
+            return `Принтеры: ${printers}, материалы: ${materials}${order}`;
+        }
+
+        load();
+        return {
+            clear, stats,
+            getPrinter, setPrinter, forgetPrinter,
+            getMaterial, setMaterial, forgetMaterial,
+            getOrderAuto, setOrderAuto, consumeOrderAuto
+        };
+    })()
+
+    function renderPromptMemoryStats(){
+        const el = document.getElementById('promptMemoryStats');
+        if(el) el.textContent = PromptMemory.stats();
+    }
+
+    function initPromptMemoryUi(){
+        const btn = document.getElementById('clearPromptMemoryBtn');
+        if(btn && !btn.__bound){
+            btn.__bound = true;
+            btn.addEventListener('click', () => {
+                PromptMemory.clear();
+                renderPromptMemoryStats();
+                alert('Сохранённые ответы модалок импорта очищены.');
+            });
+        }
+        renderPromptMemoryStats();
+    }
+
+    ;
+
+
+    function showMultiPrompt(title, fields){
+        return __modalQueue.run(() => new Promise(res=>{
             const body = document.getElementById('multiPromptBody');
             body.innerHTML = '';
-            document.getElementById('multiPromptTitle').textContent = 'Выберите материал для модели';
+            document.getElementById('multiPromptTitle').textContent = title;
 
-            const modelInfoDiv = document.createElement('div');
-            modelInfoDiv.className = 'mb-3 p-3 border rounded bg-light';
+            const elements = [];
 
-            if (thumbnail) {
-                const thumbImg = document.createElement('img');
-                thumbImg.src = `data:image/png;base64,${thumbnail}`;
-                thumbImg.style.cssText = 'width: 80px; height: 80px; object-fit: contain; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px; display: block;';
-                modelInfoDiv.appendChild(thumbImg);
-            }
+            (fields||[]).forEach(f=>{
+                if(!f) return;
 
-            const fileNameDiv = document.createElement('div');
-            fileNameDiv.innerHTML = `<strong>Файл:</strong> ${fileName}`;
-            fileNameDiv.className = 'mb-2';
-            modelInfoDiv.appendChild(fileNameDiv);
+                if(f.type==='html'){
+                    const div=document.createElement('div');
+                    div.className = f.className || 'mb-3';
+                    div.innerHTML = f.html || '';
+                    body.appendChild(div);
+                    return;
+                }
 
-            body.appendChild(modelInfoDiv);
+                const wrap=document.createElement('div');
+                wrap.className = (f.type==='checkbox') ? 'form-check mb-2' : 'mb-2';
 
-            const materialDiv = document.createElement('div');
-            materialDiv.className = 'mb-2';
+                const id = 'mp_' + f.id;
 
-            const label = document.createElement('label');
-            label.className = 'form-label';
-            label.textContent = 'Выберите материал:';
+                let el=null;
 
-            const select = document.createElement('select');
-            select.className = 'form-select';
-            select.id = 'mp_materialId';
+                if(f.type==='checkbox'){
+                    el=document.createElement('input');
+                    el.type='checkbox';
+                    el.className='form-check-input';
+                    el.id=id;
+                    el.checked=!!f.value;
 
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = '-- Выберите материал --';
-            select.appendChild(defaultOption);
+                    const lbl=document.createElement('label');
+                    lbl.className='form-check-label ms-2';
+                    lbl.setAttribute('for', id);
+                    lbl.textContent=f.label||'';
 
-            materialOptions.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt.value;
-                option.textContent = opt.label;
-                select.appendChild(option);
+                    wrap.appendChild(el);
+                    wrap.appendChild(lbl);
+                } else if(f.type==='multiselect'){
+                    const lbl=document.createElement('label');
+                    lbl.className='form-label';
+                    lbl.setAttribute('for', id);
+                    lbl.textContent=f.label||'';
+
+                    el=document.createElement('select');
+                    el.className='form-select';
+                    el.multiple=true;
+                    el.id=id;
+                    (f.options||[]).forEach(opt=>{
+                        const o=document.createElement('option');
+                        o.value=opt.value;
+                        o.textContent=opt.label;
+                        if(Array.isArray(f.value) && f.value.includes(opt.value)) o.selected=true;
+                        el.appendChild(o);
+                    });
+
+                    wrap.appendChild(lbl);
+                    wrap.appendChild(el);
+                } else if(f.type==='select'){
+                    const lbl=document.createElement('label');
+                    lbl.className='form-label';
+                    lbl.setAttribute('for', id);
+                    lbl.textContent=f.label||'';
+
+                    el=document.createElement('select');
+                    el.className='form-select';
+                    el.id=id;
+
+                    (f.options||[]).forEach(opt=>{
+                        const o=document.createElement('option');
+                        o.value=opt.value;
+                        o.textContent=opt.label;
+                        if(String(f.value ?? '') === String(opt.value)) o.selected=true;
+                        el.appendChild(o);
+                    });
+
+                    wrap.appendChild(lbl);
+                    wrap.appendChild(el);
+                } else if(f.type==='textarea'){
+                    const lbl=document.createElement('label');
+                    lbl.className='form-label';
+                    lbl.setAttribute('for', id);
+                    lbl.textContent=f.label||'';
+
+                    el=document.createElement('textarea');
+                    el.className='form-control';
+                    el.id=id;
+                    el.rows=f.rows||3;
+                    el.value=f.value||'';
+
+                    wrap.appendChild(lbl);
+                    wrap.appendChild(el);
+                } else if(f.type==='number'){
+                    const lbl=document.createElement('label');
+                    lbl.className='form-label';
+                    lbl.setAttribute('for', id);
+                    lbl.textContent=f.label||'';
+
+                    el=document.createElement('input');
+                    el.type='number';
+                    el.className='form-control';
+                    el.id=id;
+                    if (f.min !== undefined) el.min = String(f.min);
+                    if (f.max !== undefined) el.max = String(f.max);
+                    if (f.step !== undefined) el.step = String(f.step);
+                    el.value = (f.value !== undefined && f.value !== null) ? String(f.value) : '';
+
+                    wrap.appendChild(lbl);
+                    wrap.appendChild(el);
+                } else {
+                    const lbl=document.createElement('label');
+                    lbl.className='form-label';
+                    lbl.setAttribute('for', id);
+                    lbl.textContent=f.label||'';
+
+                    el=document.createElement('input');
+                    el.type=f.type||'text';
+                    el.className='form-control';
+                    el.id=id;
+                    el.value=f.value||'';
+                    if (f.placeholder) el.placeholder = f.placeholder;
+
+                    wrap.appendChild(lbl);
+                    wrap.appendChild(el);
+                }
+
+                if (el && f.disabled) el.disabled = true;
+
+                if (f.help) {
+                    const help=document.createElement('div');
+                    help.className='form-text';
+                    help.textContent = f.help;
+                    wrap.appendChild(help);
+                }
+
+                if (el && typeof f.onChange === 'function') {
+                    el.addEventListener('change', () => f.onChange(el));
+                }
+
+                body.appendChild(wrap);
+
+                if(el) elements.push({field:f, el});
             });
 
-            materialDiv.appendChild(label);
-            materialDiv.appendChild(select);
-            body.appendChild(materialDiv);
+            const modalEl = document.getElementById('multiPromptModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-            const modal = new bootstrap.Modal(document.getElementById('multiPromptModal'));
-            document.getElementById('multiPromptOk').onclick = () => {
-                const materialId = document.getElementById('mp_materialId').value;
+            let finalResult = null;
+
+            const okBtn = document.getElementById('multiPromptOk');
+            const prevOnClick = okBtn.onclick;
+
+            function cleanup(){
+                okBtn.onclick = prevOnClick;
+                __cleanupModalArtifacts();
+            }
+
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                cleanup();
+                res(finalResult);
+            }, { once: true });
+
+            okBtn.onclick = () => {
+                const result = {};
+                elements.forEach(({field, el})=>{
+                    if (!field || field.type === 'html') return;
+                    if(field.type==='checkbox') result[field.id] = el.checked;
+                    else if(field.type==='multiselect') result[field.id] = Array.from(el.selectedOptions).map(o=>o.value);
+                    else if(field.type==='select') result[field.id] = el.value;
+                    else if(field.type==='textarea') result[field.id] = el.value;
+                    else if(field.type==='number') result[field.id] = el.value === '' ? '' : Number(el.value);
+                    else result[field.id] = el.value;
+                });
+                finalResult = result;
                 modal.hide();
-                res(materialId ? { materialId } : null);
             };
+
+            __cleanupModalArtifacts();
+
             modal.show();
+        }));
+    }
+
+    function showMaterialSelectionForGcode(fileName, thumbnail, materialOptions, profile){
+        const safeProfile = (profile || '').trim();
+        const infoHtml = (() => {
+            const thumb = thumbnail ? `<img src="data:image/png;base64,${thumbnail}" style="width:80px;height:80px;object-fit:contain;border:1px solid #ccc;border-radius:4px;margin-bottom:10px;display:block;">` : '';
+            const prof = safeProfile ? `<div class="small text-muted"><strong>Профиль:</strong> ${escapeHtml(safeProfile)}</div>` : '';
+            return `
+                <div class="mb-2 p-3 border rounded bg-light">
+                    ${thumb}
+                    <div class="mb-1"><strong>Файл:</strong> ${escapeHtml(fileName||'')}</div>
+                    ${prof}
+                </div>`;
+        })();
+
+        const options = [{value:'', label:'-- Выберите материал --'}].concat(materialOptions||[]);
+
+        const rememberLabel = safeProfile
+            ? `Сохранить выбор для профиля «${safeProfile}»`
+            : 'Сохранить выбор для этого профиля';
+
+        return showMultiPrompt('Выберите материал для модели', [
+            { type:'html', html: infoHtml },
+            { id:'materialId', label:'Материал', type:'select', options, value:'' },
+            { id:'remember', label: rememberLabel, type:'checkbox', value:false }
+        ]).then(r=>{
+            if(!r || !r.materialId) return null;
+            return { materialId: r.materialId, remember: !!r.remember };
         });
     }
 
@@ -1995,6 +2417,13 @@
         buildOperatorScheduleUI();
         renderUrgencyProfileOptions();
         renderCalcUrgencySelect();
+
+
+        window.__gcodecalc_ready = true;
+        if (window.__gcodecalc_readyResolve) {
+            window.__gcodecalc_readyResolve();
+            window.__gcodecalc_readyResolve = null;
+        }
     }
 
     // Функции для работы с форматами времени
@@ -2706,6 +3135,9 @@
 
                         if (result && result.materialId) {
                             mid = result.materialId;
+                            if (result.remember && (parsed.matProfile||'').trim()) {
+                                PromptMemory.setMaterial(parsed.matProfile.trim(), mid);
+                            }
                         } else {
                             continue;
                         }
@@ -2727,6 +3159,184 @@
             }
         });
     }
+
+
+    function waitForAppReady(){
+        if (window.__gcodecalc_ready) return Promise.resolve();
+        return new Promise(resolve => {
+            window.__gcodecalc_readyResolve = resolve;
+        });
+    }
+
+    const __importQueue = (() => {
+        let chain = Promise.resolve();
+        return {
+            enqueue(task){
+                const next = chain.then(task, task);
+                chain = next.catch(e => console.error('Import task failed', e));
+                return next;
+            }
+        };
+    })();
+
+    const __recentImports = new Map();
+    function __isDuplicateImportKey(key){
+        const now = Date.now();
+        const last = __recentImports.get(key) || 0;
+        __recentImports.set(key, now);
+
+        for (const [k,t] of __recentImports.entries()){
+            if (now - t > 10000) __recentImports.delete(k);
+        }
+        return (now - last) < 1200;
+    }
+
+    async function ensureTargetOrderForImport(){
+        const auto = PromptMemory.getOrderAuto();
+        if(auto && typeof auto.remaining === 'number' && auto.remaining > 0){
+            if(auto.kind === 'history'){
+                const ts = parseInt(auto.value, 10);
+                const exists = (appData.calcHistory||[]).some(h => String(h.timestamp) === String(ts));
+                if(exists){
+                    onEditCalcHistory(ts);
+                    PromptMemory.consumeOrderAuto();
+                    await new Promise(r => setTimeout(r, 0));
+                    return true;
+                }
+                PromptMemory.setOrderAuto(null);
+            } else if(auto.kind === 'current'){
+                PromptMemory.consumeOrderAuto();
+                return true;
+            }
+        }
+
+        const options = [
+            { value:'current', label:'Текущий расчёт' },
+            { value:'new', label:'Создать новый расчёт' },
+        ].concat((appData.calcHistory||[]).map(h => ({
+            value: String(h.timestamp),
+            label: (h.calcName || h.dateStr || String(h.timestamp))
+        })));
+
+        const res = await showMultiPrompt('Куда добавить модель?', [
+            { id:'targetOrder', label:'Расчёт', type:'select', options, value:'current' },
+            { id:'remember', label:'Сохранить выбор для следующих импортов', type:'checkbox', value:false,
+                help:'Полезно, когда Orca экспортирует пачку моделей подряд.' ,
+                onChange:(el)=>{ const cnt=document.getElementById('mp_rememberCount'); if(cnt) cnt.disabled=!el.checked; } },
+            { id:'rememberCount', label:'Сколько следующих моделей', type:'number', min:1, max:999, step:1, value:5, disabled:true }
+        ]);
+
+        if(!res) return false;
+
+        const val = String(res.targetOrder || 'current');
+
+        if(val === 'new'){
+            startNewCalculation();
+        } else if(val !== 'current'){
+            onEditCalcHistory(parseInt(val,10));
+        }
+
+        if(res.remember){
+            const remaining = Math.max(1, parseInt(res.rememberCount || 1, 10));
+            const kind = (val !== 'current' && val !== 'new') ? 'history' : 'current';
+            const value = kind === 'history' ? val : 'current';
+            PromptMemory.setOrderAuto({ kind, value, remaining });
+        } else {
+            PromptMemory.setOrderAuto(null);
+        }
+
+        await new Promise(r => setTimeout(r, 0));
+        return true;
+    }
+
+    async function importGcodeTextFlow(gcodeText, fileName){
+        await waitForAppReady();
+
+        const txt = String(gcodeText || '');
+        const fn = String(fileName || '').trim() || 'model.gcode';
+
+        const parsed = await parseGcodeText(txt);
+
+        const dedupeKey = [
+            fn,
+            parsed.code || '',
+            parsed.modelName || '',
+            parsed.printer || '',
+            parsed.matProfile || '',
+            parsed.timeStr || '',
+            parsed.weight || ''
+        ].join('|');
+
+        if(__isDuplicateImportKey(dedupeKey)){
+            console.warn('Duplicate import suppressed', dedupeKey);
+            return;
+        }
+
+        const pr = await resolvePrinterForLink(parsed.printer);
+        if(!pr){
+            alert('Не найден принтер для профиля: ' + (parsed.printer || 'Unknown'));
+            return;
+        }
+
+        let mid = await resolveMaterialIdByProfile(parsed.matProfile);
+
+        if(!mid){
+            const materialOptions = (appData.materials||[]).map(m => ({
+                value: String(m.id),
+                label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
+            }));
+
+            if(materialOptions.length === 0){
+                alert('Нет доступных материалов. Добавьте материалы во вкладке "Материалы".');
+                return;
+            }
+
+            const pick = await showMaterialSelectionForGcode(fn, parsed.thumb, materialOptions, parsed.matProfile);
+            if(!pick || !pick.materialId) return;
+
+            mid = pick.materialId;
+
+            if(pick.remember && (parsed.matProfile||'').trim()){
+                PromptMemory.setMaterial(parsed.matProfile.trim(), mid);
+            }
+        }
+
+        const ok = await ensureTargetOrderForImport();
+        if(!ok) return;
+
+        const modelName = parsed.modelName || fn.replace(/\.gcode$/i,'') || parsed.code;
+
+        addModelRow(pr.id, {
+            id: parsed.code,
+            name: modelName,
+            thumbnail: parsed.thumb,
+            status: 'new',
+            hours: parseTimeFromLink(parsed.timeStr),
+            weight: parseFloat(parsed.weight) || 0,
+            materialId: mid
+        });
+    }
+
+    function attachExternalImportBridge(){
+        if(window.__gcodecalc_externalImportAttached) return;
+        window.__gcodecalc_externalImportAttached = true;
+
+        window.__gcodecalcImportGcodeText = (payload) => {
+            if(!payload) return;
+            __importQueue.enqueue(() => importGcodeTextFlow(payload.text || '', payload.fileName || payload.filePath || 'model.gcode'));
+        };
+
+        if(window.gcodeBridge && typeof window.gcodeBridge.onGcodeFile === 'function'){
+            try {
+                window.gcodeBridge.onGcodeFile((payload) => {
+                    window.__gcodecalcImportGcodeText(payload);
+                });
+            } catch (e) {
+                console.warn('Failed to attach gcodeBridge', e);
+            }
+        }
+    }
+
 
     document.addEventListener("DOMContentLoaded", () => { instrumentFunctions(); initAll(); });
 
@@ -5124,17 +5734,34 @@
     }
 
     async function resolveMaterialIdByProfile(profile){
-        const mats=findMaterialsByProfile(profile);
-        if(mats.length===1) return mats[0].id;
-        if(mats.length>1){
+        const safeProfile = (profile || '').trim();
+        if(!safeProfile) return '';
 
+        const rememberedId = PromptMemory.getMaterial(safeProfile);
+        if(rememberedId){
+            const mm = (appData.materials||[]).find(m=>String(m.id)===String(rememberedId));
+            if(mm) return String(mm.id);
+            PromptMemory.forgetMaterial(safeProfile);
+        }
+
+        const mats = findMaterialsByProfile(safeProfile);
+        if(mats.length===1) return String(mats[0].id);
+
+        if(mats.length>1){
             const options = mats.map(m => ({
                 value: String(m.id),
                 label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
             }));
 
-            const res=await showMultiPrompt('Материал для профиля '+profile,[{id:'mid',label:'Материал',type:'select',options}]);
-            return res&&res.mid?res.mid:'';
+            const res=await showMultiPrompt('Материал для профиля '+safeProfile,[
+                {id:'mid',label:'Материал',type:'select',options,value:options[0]?.value||''},
+                {id:'remember',label:`Сохранить выбор для профиля «${safeProfile}»`,type:'checkbox',value:false,help:'Сохранение работает только для этого браузера/компьютера (LocalStorage).'}
+            ]);
+
+            if(res && res.mid){
+                if(res.remember) PromptMemory.setMaterial(safeProfile, res.mid);
+                return String(res.mid);
+            }
         }
         return '';
     }
@@ -6029,7 +6656,7 @@
             if (resp.ok) {
                 const data = await resp.json();
                 if (data.health === "false") {
-                    // Display technical work message from the API
+
                     statusEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${data.message}`;
                 } else if(data.displayName) {
                     statusEl.innerHTML = `<i class="bi bi-check-square me-2"></i>ИНН ${data.inn} ${data.displayName}`;
@@ -7333,20 +7960,40 @@
     }
 
     async function resolvePrinterForLink(key){
-        const list = appData.printers.filter(p=>{
-            if(p.name===key) return true;
+        const safeKey = (key || 'Unknown').trim();
+        const printers = Array.isArray(appData.printers) ? appData.printers : [];
+
+        const list = printers.filter(p=>{
+            if(p.name===safeKey) return true;
             return (p.profileIds||[]).some(pid=>{
                 const pf=appData.printerProfiles.find(x=>String(x.id)===String(pid));
-                return pf && pf.config && pf.config.printer_settings_id===key;
+                return pf && pf.config && pf.config.printer_settings_id===safeKey;
             });
         });
+
         if(list.length===1) return list[0];
-        if(list.length>1){
-            const options=list.map(p=>({value:String(p.id),label:p.name}));
-            const res=await showMultiPrompt('Принтер для профиля '+key,[{id:'pid',label:'Принтер',type:'select',options}]);
-            if(res && res.pid){
-                return list.find(p=>String(p.id)===res.pid) || null;
-            }
+
+        const rememberedId = PromptMemory.getPrinter(safeKey);
+        if(rememberedId){
+            const remembered = printers.find(p=>String(p.id)===String(rememberedId));
+            if(remembered) return remembered;
+            PromptMemory.forgetPrinter(safeKey);
+        }
+
+        if(list.length===0 && printers.length===1) return printers[0];
+
+        const candidates = (list.length>0 ? list : printers);
+        if(candidates.length<=0) return null;
+
+        const options=candidates.map(p=>({value:String(p.id),label:p.name}));
+        const res=await showMultiPrompt('Принтер для профиля '+safeKey,[
+            {id:'pid',label:'Принтер',type:'select',options,value:options[0]?.value||''},
+            {id:'remember',label:`Сохранить выбор для профиля «${safeKey}»`,type:'checkbox',value:false,help:'Сохранение работает только для этого браузера/компьютера (LocalStorage).'}
+        ]);
+
+        if(res && res.pid){
+            if(res.remember) PromptMemory.setPrinter(safeKey, res.pid);
+            return printers.find(p=>String(p.id)===String(res.pid)) || null;
         }
         return null;
     }
@@ -7367,23 +8014,22 @@
 
     async function applyIncomingData(){
         const sel = document.getElementById('targetOrderSelect');
-        const val = sel.value;
+        const val = sel ? sel.value : 'new';
+
         const modalEl = document.getElementById('incomingDataModal');
-        const modal = bootstrap.Modal.getInstance(modalEl);
+        const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+
         modal.hide();
+        await __waitModalHidden(modalEl);
+
         if(val !== 'new'){
             onEditCalcHistory(parseInt(val,10));
         } else {
-            document.getElementById('calcName').value = '';
-            resetCalcClientSelector();
-            document.getElementById('calcOrderStatus').value = 'new';
-            const startDateInput = document.getElementById('calcStartDate');
-            if (startDateInput) startDateInput.value = getTodayIsoDate();
-            appData.printers.forEach(pr=>{
-                const tb = document.querySelector(`#calcModelsTable_${pr.id} tbody`);
-                if(tb) tb.innerHTML='';
-            });
+            startNewCalculation();
         }
+
+        await new Promise(r=>setTimeout(r,0));
+
         if(incomingLinkData){
             const pr = await resolvePrinterForLink(incomingLinkData.printerKey);
             if(!pr){
@@ -7407,6 +8053,7 @@
         const tab = new bootstrap.Tab(tabEl);
         tab.show();
         incomingLinkData = null;
+
     }
 
 </script>
@@ -7698,15 +8345,13 @@
         if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
         loadMyNalogSettings();
 
-        // document.getElementById('orcaPrinterFileInput').addEventListener('change',(e)=>{
-        //   importPrinterJson(e.target.files[0]);
-        //   e.target.value='';
-        // });
         parseIncomingLinkParams(params);
         if(params.toString()){
             window.history.replaceState({}, document.title, window.location.pathname);
         }
         setupGcodeDrop();
+        attachExternalImportBridge();
+        initPromptMemoryUi();
     });
 
 
