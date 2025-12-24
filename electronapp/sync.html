@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Синхронизация Orca</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1220;
+      --panel: #111827;
+      --border: #1f2937;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --danger: #f87171;
+      --success: #34d399;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(56,189,248,0.08), transparent 45%), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+    .page {
+      width: min(1200px, 100%);
+      padding: 24px;
+      box-sizing: border-box;
+    }
+    h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      letter-spacing: 0.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .card {
+      background: rgba(17,24,39,0.85);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      border: 1px solid var(--border);
+    }
+    .status-chip.ok {
+      color: var(--success);
+      border-color: rgba(52,211,153,0.4);
+      background: rgba(52,211,153,0.1);
+    }
+    .status-chip.warn {
+      color: #facc15;
+      border-color: rgba(250,204,21,0.4);
+      background: rgba(250,204,21,0.1);
+    }
+    .status-chip.danger {
+      color: var(--danger);
+      border-color: rgba(248,113,113,0.4);
+      background: rgba(248,113,113,0.12);
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .input-row input {
+      flex: 1 1 240px;
+      min-width: 200px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .input-row .btn { flex: 0 0 auto; }
+    .btn {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #1e293b;
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+    .btn:hover {
+      background: #273549;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-accent {
+      border-color: rgba(56,189,248,0.5);
+      background: rgba(56,189,248,0.15);
+      color: #bae6fd;
+    }
+    .btn-primary {
+      border-color: rgba(59,130,246,0.6);
+      background: rgba(59,130,246,0.2);
+      color: #dbeafe;
+    }
+    .tabs {
+      display: inline-flex;
+      gap: 8px;
+      margin-top: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 0.95rem;
+      padding: 8px 14px;
+      cursor: pointer;
+      border-radius: 999px;
+      transition: color 0.2s ease, background 0.2s ease;
+    }
+    .tab-btn.active {
+      color: var(--text);
+      background: rgba(56,189,248,0.15);
+    }
+    .panels {
+      margin-top: 16px;
+    }
+    .panel {
+      display: none;
+      background: rgba(15,23,42,0.8);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+    .panel.active {
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 0.92rem;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+    tbody tr.needs-action {
+      background: rgba(248,113,113,0.08);
+    }
+    .select {
+      min-width: 220px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      color: var(--text);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .pill.auto { color: #fde68a; border-color: rgba(250,204,21,0.5); }
+    .pill.linked { color: var(--success); border-color: rgba(34,197,94,0.4); }
+    .pill.none { color: var(--danger); border-color: rgba(248,113,113,0.4); }
+    .table-scroll {
+      max-height: 320px;
+      overflow: auto;
+    }
+    footer {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .log {
+      flex: 1;
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-height: 20px;
+    }
+    .stats {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 32px 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .badge {
+      background: rgba(59,130,246,0.18);
+      color: #bfdbfe;
+      border-radius: 10px;
+      padding: 3px 8px;
+      font-size: 0.8rem;
+      margin-left: 8px;
+    }
+    @media (max-width: 720px) {
+      .input-row {
+        flex-direction: column;
+      }
+      .select {
+        min-width: 180px;
+      }
+      th, td {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Синхронизация параметров Orca</h1>
+    <p class="subtitle">Экспортируем calc_data.json из калькулятора, считываем профили Orca и обновляем данные без ручных импортов.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <h3>Калькулятор</h3>
+        <div id="calcStatus" class="status-chip warn">Нет данных</div>
+        <div class="stats" id="calcPath"></div>
+      </div>
+      <div class="card">
+        <h3>Папка OrcaSlicer</h3>
+        <div id="orcaStatus" class="status-chip warn">Поиск пути…</div>
+        <div class="input-row">
+          <input type="text" id="orcaPathInput" placeholder="%APPDATA%\OrcaSlicer\user\default" />
+          <button class="btn" id="btnBrowse">Обзор</button>
+          <button class="btn btn-accent" id="btnRescan">Сканировать</button>
+        </div>
+        <div class="stats" id="orcaCounts"></div>
+      </div>
+      <div class="card">
+        <h3>Прогресс</h3>
+        <div class="stats" id="summaryStats">Сбор данных…</div>
+        <div class="stats" id="issuesStats"></div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="materials">Материалы</button>
+      <button class="tab-btn" data-tab="printers">Принтеры</button>
+    </div>
+
+    <div class="panels">
+      <div class="panel active" id="materialsPanel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Материал</th>
+                <th>Профили калькулятора</th>
+                <th width="320">Профиль Orca</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody id="materialsBody">
+              <tr><td colspan="4" class="empty-state">Данные загружаются…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="printersPanel">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Принтер</th>
+                <th>Профили калькулятора</th>
+                <th width="320">Профиль Orca</th>
+                <th>Статус</th>
+              </tr>
+            </thead>
+            <tbody id="printersBody">
+              <tr><td colspan="4" class="empty-state">Данные загружаются…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="log" id="syncLog">Готово к синхронизации.</div>
+      <button class="btn btn-primary" id="btnApply">Синхронизировать и обновить калькулятор</button>
+    </footer>
+  </div>
+
+  <script>
+    const state = {
+      loading: true,
+      calc: { exportPath: '', exportedAt: '' },
+      orca: { path: '', exists: false, filamentCount: 0, machineCount: 0 },
+      preview: { materials: [], printers: [], filamentOptions: [], machineOptions: [] }
+    };
+
+    const dom = {
+      calcStatus: document.getElementById('calcStatus'),
+      calcPath: document.getElementById('calcPath'),
+      orcaStatus: document.getElementById('orcaStatus'),
+      orcaCounts: document.getElementById('orcaCounts'),
+      orcaInput: document.getElementById('orcaPathInput'),
+      summaryStats: document.getElementById('summaryStats'),
+      issuesStats: document.getElementById('issuesStats'),
+      materialsBody: document.getElementById('materialsBody'),
+      printersBody: document.getElementById('printersBody'),
+      log: document.getElementById('syncLog'),
+      applyBtn: document.getElementById('btnApply')
+    };
+
+    function setLog(text, tone = 'neutral') {
+      dom.log.textContent = text;
+      if (tone === 'error') dom.log.style.color = '#fca5a5';
+      else if (tone === 'success') dom.log.style.color = '#a7f3d0';
+      else dom.log.style.color = '';
+    }
+
+    function updateCards() {
+      if (state.calc.exportedAt) {
+        dom.calcStatus.textContent = 'Экспортировано';
+        dom.calcStatus.className = 'status-chip ok';
+        dom.calcPath.textContent = `${state.calc.exportPath || ''}`;
+      } else {
+        dom.calcStatus.textContent = 'Нет данных';
+        dom.calcStatus.className = 'status-chip warn';
+        dom.calcPath.textContent = '';
+      }
+      if (state.orca.path) {
+        dom.orcaInput.value = state.orca.path;
+        if (state.orca.exists && (state.orca.filamentCount + state.orca.machineCount) > 0) {
+          dom.orcaStatus.textContent = 'Профили найдены';
+          dom.orcaStatus.className = 'status-chip ok';
+        } else if (state.orca.exists) {
+          dom.orcaStatus.textContent = 'Папка пуста';
+          dom.orcaStatus.className = 'status-chip warn';
+        } else {
+          dom.orcaStatus.textContent = 'Папка не найдена';
+          dom.orcaStatus.className = 'status-chip danger';
+        }
+        dom.orcaCounts.textContent = `Материалов: ${state.orca.filamentCount}, принтеров: ${state.orca.machineCount}`;
+      } else {
+        dom.orcaStatus.textContent = 'Путь не задан';
+        dom.orcaStatus.className = 'status-chip warn';
+        dom.orcaCounts.textContent = '';
+      }
+
+      const pendingMaterials = state.preview.materials.filter(x => !x.selections || x.selections.length === 0).length;
+      const pendingPrinters = state.preview.printers.filter(x => !x.selections || x.selections.length === 0).length;
+      dom.summaryStats.textContent = `Материалов: ${state.preview.materials.length}, принтеров: ${state.preview.printers.length}`;
+      dom.issuesStats.textContent = `Нужно внимание: материалов ${pendingMaterials}, принтеров ${pendingPrinters}`;
+    }
+
+    function createOptionList(options) {
+      const fragment = document.createDocumentFragment();
+      options.forEach((opt) => {
+        const option = document.createElement('option');
+        option.value = opt.key;
+        option.textContent = opt.hostLabel ? `${opt.label} · ${opt.hostLabel}` : opt.label;
+        option.dataset.filename = opt.fileName || '';
+        fragment.appendChild(option);
+      });
+      return fragment;
+    }
+
+    function renderTable(bodyEl, rows, options, type) {
+      bodyEl.innerHTML = '';
+      if (!rows.length) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 4;
+        td.className = 'empty-state';
+        td.textContent = state.loading ? 'Данные загружаются…' : 'Нет элементов для отображения.';
+        tr.appendChild(td);
+        bodyEl.appendChild(tr);
+        return;
+      }
+      rows.forEach((row) => {
+        const tr = document.createElement('tr');
+        if (!row.selections || row.selections.length === 0) tr.classList.add('needs-action');
+        const nameTd = document.createElement('td');
+        nameTd.textContent = row.name;
+
+        const currentTd = document.createElement('td');
+        currentTd.textContent = row.currentProfiles.length ? row.currentProfiles.join(', ') : '—';
+
+        const selectTd = document.createElement('td');
+        const select = document.createElement('select');
+        select.className = 'select';
+        select.multiple = true;
+        select.size = Math.min(6, options.length || 6);
+        select.appendChild(createOptionList(options));
+        if (Array.isArray(row.selections)) {
+          for (const value of row.selections) {
+            Array.from(select.options).forEach(opt => { if (opt.value === value) opt.selected = true; });
+          }
+        }
+        select.addEventListener('change', () => {
+          row.selections = Array.from(select.selectedOptions).map(o => o.value).filter(Boolean);
+          updateRowState(tr, row);
+          updateCards();
+        });
+        selectTd.appendChild(select);
+
+        const statusTd = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = `pill ${row.selections && row.selections.length ? (row.status === 'linked' ? 'linked' : 'auto') : 'none'}`;
+        pill.textContent = row.selections && row.selections.length
+          ? (row.status === 'linked' ? 'Связано' : 'Автоподбор')
+          : 'Нужно выбрать';
+        statusTd.appendChild(pill);
+
+        tr.appendChild(nameTd);
+        tr.appendChild(currentTd);
+        tr.appendChild(selectTd);
+        tr.appendChild(statusTd);
+        bodyEl.appendChild(tr);
+      });
+    }
+
+    function updateRowState(tr, row) {
+      if (row.selections && row.selections.length) tr.classList.remove('needs-action');
+      else tr.classList.add('needs-action');
+      row.status = row.selections && row.selections.length ? (row.status === 'linked' ? 'linked' : 'manual') : 'none';
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      document.getElementById('materialsPanel').classList.toggle('active', tab === 'materials');
+      document.getElementById('printersPanel').classList.toggle('active', tab === 'printers');
+    }
+
+    async function loadData(overridePath) {
+      state.loading = true;
+      setLog('Собираю данные калькулятора и Orca…');
+      const res = await window.syncApi.loadInitial({ orcaPath: overridePath || state.orca.path });
+      state.loading = false;
+      if (!res || !res.ok) {
+        setLog(res?.error || 'Не удалось подготовить данные', 'error');
+        return;
+      }
+      state.calc = res.calc;
+      state.orca = res.orca;
+      state.preview = res.preview || { materials: [], printers: [], filamentOptions: [], machineOptions: [] };
+      updateCards();
+      renderTable(dom.materialsBody, state.preview.materials, state.preview.filamentOptions, 'materials');
+      renderTable(dom.printersBody, state.preview.printers, state.preview.machineOptions, 'printers');
+      setLog('Готово. Проверьте сопоставления и запустите синхронизацию.', 'success');
+    }
+
+    async function onApply() {
+      dom.applyBtn.disabled = true;
+      setLog('Запускаю синхронизацию…');
+      try {
+        const payload = {
+          orcaPath: dom.orcaInput.value.trim(),
+          materials: state.preview.materials.map(m => ({ materialId: m.materialId, selectedKeys: Array.isArray(m.selections) ? m.selections : [] })),
+          printers: state.preview.printers.map(p => ({ printerId: p.printerId, selectedKeys: Array.isArray(p.selections) ? p.selections : [] }))
+        };
+        const res = await window.syncApi.applyChanges(payload);
+        if (!res || !res.ok) {
+          setLog(res?.error || 'Синхронизация не удалась', 'error');
+          return;
+        }
+        setLog(`Готово! Обновлено материалов: ${res.summary.updatedMaterials}, принтеров: ${res.summary.updatedPrinters}.`, 'success');
+        await loadData(dom.orcaInput.value.trim());
+      } catch (err) {
+        setLog(err?.message || 'Ошибка синхронизации', 'error');
+      } finally {
+        dom.applyBtn.disabled = false;
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    document.getElementById('btnRescan').addEventListener('click', () => loadData(dom.orcaInput.value.trim()));
+    document.getElementById('btnBrowse').addEventListener('click', async () => {
+      const result = await window.syncApi.pickOrcaPath();
+      if (result) {
+        dom.orcaInput.value = result;
+        loadData(result);
+      }
+    });
+    dom.applyBtn.addEventListener('click', onApply);
+
+    loadData();
+  </script>
+</body>
+</html>
