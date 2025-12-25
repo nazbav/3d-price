@@ -16,17 +16,31 @@ const APP_ID = 'com.n4v.nprintcalc';
 
 function resolveWindowIconPath() {
   // Prefer Windows ICO, fallback to PNGs (useful for Linux/titlebar).
-  const candidates = [];
-  if (process.platform === 'win32') {
-    candidates.push(path.join(__dirname, 'build', 'win', 'icon.ico'));
-  }
-  candidates.push(path.join(__dirname, 'build', 'png', '512x512.png'));
-  candidates.push(path.join(__dirname, 'build', 'png', '256x256.png'));
+  // В packaged-сборке ресурсы лежат в process.resourcesPath, а не рядом с __dirname.
+  const relCandidates = [];
+  if (process.platform === 'win32') relCandidates.push(path.join('build', 'win', 'icon.ico'));
+  relCandidates.push(path.join('build', 'png', '512x512.png'));
+  relCandidates.push(path.join('build', 'png', '256x256.png'));
 
-  for (const p of candidates) {
-    try {
-      if (p && fs.existsSync(p)) return p;
-    } catch {}
+  const roots = [];
+  try { roots.push(__dirname); } catch {}
+  try { if (process.resourcesPath) roots.push(process.resourcesPath); } catch {}
+  try { if (process.resourcesPath) roots.push(path.join(process.resourcesPath, 'app')); } catch {}
+  try { if (typeof app?.getAppPath === 'function') roots.push(app.getAppPath()); } catch {}
+  try { if (process.execPath) roots.push(path.dirname(process.execPath)); } catch {}
+
+  const uniq = Array.from(new Set(roots.filter(Boolean)));
+  const rootCandidates = [];
+  for (const r of uniq) {
+    rootCandidates.push(r);
+    rootCandidates.push(path.join(r, '..'));
+  }
+
+  for (const rel of relCandidates) {
+    for (const root of rootCandidates) {
+      const p = path.join(root, rel);
+      try { if (p && fs.existsSync(p)) return p; } catch {}
+    }
   }
   return undefined;
 }
@@ -45,6 +59,7 @@ let contentView = null;
 const TOOLBAR_BASE_HEIGHT = 46;
 let toolbarHeight = TOOLBAR_BASE_HEIGHT;
 let syncWin = null;
+let paramsWin = null;
 
 let pendingPayload = null;
 
@@ -580,11 +595,19 @@ function buildStatusPayload(message) {
   };
 }
 
+function broadcastToUi(channel, payload) {
+  // Toolbar is a BrowserView; params is a modal BrowserWindow.
+  try {
+    if (toolbarView && toolbarView.webContents) toolbarView.webContents.send(channel, payload);
+  } catch {}
+  try {
+    if (paramsWin && !paramsWin.isDestroyed?.() && paramsWin.webContents) paramsWin.webContents.send(channel, payload);
+  } catch {}
+}
+
 function broadcastStatus(message) {
   const s = buildStatusPayload(message);
-  if (toolbarView && toolbarView.webContents) {
-    toolbarView.webContents.send('toolbar:status', s);
-  }
+  broadcastToUi('toolbar:status', s);
 }
 
 function setMode(newMode, message) {
@@ -832,6 +855,41 @@ function openSyncWindow() {
   return syncWin;
 }
 
+function openParamsWindow() {
+  if (paramsWin && !paramsWin.isDestroyed()) {
+    paramsWin.focus();
+    return paramsWin;
+  }
+
+  const opts = {
+    width: 620,
+    height: 620,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    backgroundColor: '#0b1220',
+    autoHideMenuBar: true,
+    parent: win || undefined,
+    modal: !!win,
+    webPreferences: {
+      preload: path.join(__dirname, 'toolbarPreload.js'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false
+    }
+  };
+
+  if (WINDOW_ICON) opts.icon = WINDOW_ICON;
+
+  paramsWin = new BrowserWindow(opts);
+  paramsWin.loadFile(path.join(__dirname, 'params.html'));
+  paramsWin.once('ready-to-show', () => {
+    try { paramsWin.show(); } catch {}
+  });
+  paramsWin.on('closed', () => { paramsWin = null; });
+  return paramsWin;
+}
+
 
 // ---------- Content load ----------
 async function refreshOfflineAvailability() {
@@ -950,6 +1008,77 @@ function handleIncomingGcode(fp) {
 ipcMain.on('debug:log', (_e, payload) => log('renderer.debug', payload));
 
 // ---------- Offline builder ----------
+async function copyDirRecursive(srcDir, dstDir) {
+  await fsp.mkdir(dstDir, { recursive: true });
+  const entries = await fsp.readdir(srcDir, { withFileTypes: true });
+  for (const e of entries) {
+    const src = path.join(srcDir, e.name);
+    const dst = path.join(dstDir, e.name);
+    if (e.isDirectory()) {
+      await copyDirRecursive(src, dst);
+    } else if (e.isFile()) {
+      await fsp.mkdir(path.dirname(dst), { recursive: true });
+      await fsp.copyFile(src, dst);
+    }
+  }
+}
+
+function resolvePackagedOfflineSeedSiteDir() {
+  const relCandidates = [
+    path.join('build', 'offline', 'site'),
+    path.join('offline', 'site'),
+  ];
+  const roots = [];
+  try { roots.push(__dirname); } catch {}
+  try { if (process.resourcesPath) roots.push(process.resourcesPath); } catch {}
+  try { if (process.resourcesPath) roots.push(path.join(process.resourcesPath, 'app')); } catch {}
+  try { if (typeof app?.getAppPath === 'function') roots.push(app.getAppPath()); } catch {}
+  try { if (process.execPath) roots.push(path.dirname(process.execPath)); } catch {}
+
+  const uniq = Array.from(new Set(roots.filter(Boolean)));
+  const rootCandidates = [];
+  for (const r of uniq) {
+    rootCandidates.push(r);
+    rootCandidates.push(path.join(r, '..'));
+  }
+
+  for (const rel of relCandidates) {
+    for (const root of rootCandidates) {
+      const p = path.join(root, rel);
+      try {
+        if (fs.existsSync(path.join(p, 'index.html'))) return p;
+      } catch {}
+    }
+  }
+  return null;
+}
+
+async function seedOfflineFromPackagedAssets() {
+  // Задача: если в сборке лежит готовая офлайн-копия (например build/offline/site),
+  // копируем её в userData/offline/site, чтобы приложение стартовало офлайн сразу.
+  try {
+    await refreshOfflineAvailability();
+    if (offlineAvailable) return false;
+
+    const seedSiteDir = resolvePackagedOfflineSeedSiteDir();
+    if (!seedSiteDir) return false;
+
+    await fsp.mkdir(offlineRootPath, { recursive: true });
+    await fsp.rm(offlineSiteDir, { recursive: true, force: true }).catch(() => {});
+    await copyDirRecursive(seedSiteDir, offlineSiteDir);
+
+    await refreshOfflineAvailability();
+    if (offlineAvailable) {
+      log('offline.seededFromResources', { seedSiteDir, offlineSiteDir });
+      hydrateOfflineMetaFromDisk();
+      return true;
+    }
+  } catch (e) {
+    log('offline.seed.failed', { error: e?.message || String(e) });
+  }
+  return false;
+}
+
 async function buildOffline(options = {}) {
   const { silent = false, reason = 'manual', skipConfirm = false, reload = true } = options;
   await refreshOfflineAvailability();
@@ -957,8 +1086,8 @@ async function buildOffline(options = {}) {
 
   const onProgress = (p) => {
     log('offline.progress', { ...p, reason });
-    if (!silent && toolbarView && toolbarView.webContents) {
-      toolbarView.webContents.send('offline:progress', p);
+    if (!silent) {
+      broadcastToUi('offline:progress', p);
     }
     if (!silent) broadcastStatus(p.message || '');
   };
@@ -1099,17 +1228,26 @@ ipcMain.handle('settings:updatePaths', async (_event, payload = {}) => {
   }
 });
 
-ipcMain.handle('settings:pickFolder', async (_event, initialPath) => {
-  const owner = win || undefined;
+ipcMain.handle('settings:pickFolder', async (event, initialPath) => {
+  // Важно: привязываем нативный диалог к окну, которое его открыло (модалка параметров),
+  // иначе Windows может оставить blur на активном инпуте и выделение становится "серым".
+  const owner = BrowserWindow.fromWebContents(event.sender) || win || undefined;
   if (!owner) return null;
-  const options = {
-    properties: ['openDirectory']
-  };
-  if (typeof initialPath === 'string' && initialPath.trim()) {
-    options.defaultPath = initialPath.trim();
-  }
+
+  const options = { properties: ['openDirectory'] };
+  if (typeof initialPath === 'string' && initialPath.trim()) options.defaultPath = initialPath.trim();
+
   const res = await dialog.showOpenDialog(owner, options);
-  refocusMainViews();
+
+  // Возвращаем фокус обратно в то же окно (без refocusMainViews(), чтобы не ломать модалку).
+  setTimeout(() => {
+    try {
+      if (owner.isDestroyed()) return;
+      owner.focus();
+      if (owner.webContents && !owner.webContents.isDestroyed()) owner.webContents.focus();
+    } catch {}
+  }, 0);
+
   if (res.canceled || !res.filePaths.length) return null;
   return res.filePaths[0];
 });
@@ -1151,6 +1289,12 @@ ipcMain.handle('offline:build', async () => {
     log('offline.build.failed', { error: e?.message || String(e) });
     throw e;
   }
+});
+
+ipcMain.handle('params:openWindow', async (event) => {
+  log('params.openWindow', { senderId: event?.sender?.id });
+  openParamsWindow();
+  return true;
 });
 
 ipcMain.handle('sync:openWindow', async (event) => {
@@ -1293,6 +1437,12 @@ if (maybeDetachLauncher()) {
 async function ensureOfflineReady(options = {}) {
   await refreshOfflineAvailability();
   if (offlineAvailable) return false;
+
+  // 1) Пробуем поднять офлайн из ресурсов сборки (build/offline/site), если оно туда уложено.
+  const seeded = await seedOfflineFromPackagedAssets();
+  await refreshOfflineAvailability();
+  if (offlineAvailable) return seeded;
+
   const { silent = false, reason = 'auto-init' } = options;
   await buildOffline({ silent, reason, skipConfirm: true, reload: false });
   await refreshOfflineAvailability();

@@ -6,165 +6,26 @@
   <style>
     body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     .bar { height:46px; display:flex; align-items:center; gap:10px; padding:0 10px; background:#111827; color:#e5e7eb; user-select:none; }
-    .pill { font-size:12px; padding:3px 8px; border-radius:999px; background:#374151; }
     .btn { font-size:12px; padding:7px 10px; border-radius:8px; border:1px solid #374151; background:#1f2937; color:#e5e7eb; cursor:pointer; }
     .btn:disabled { opacity:.55; cursor:not-allowed; }
     .spacer { flex:1; }
     .msg { font-size:12px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
     .ok { background:#065f46; border-color:#064e3b; }
     .warn { background:#7c2d12; border-color:#7c2d12; }
-
-    .menuWrap { position: relative; }
-    .menu { position:absolute; right:0; top: 44px; width: 330px; background:#0b1220; border:1px solid #1f2937; border-radius:12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); padding:10px; display:none; z-index: 9999; }
-    .menu.open { display:block; }
-    .menu h4 { margin:0 0 8px; font-size:12px; color:#e5e7eb; }
-    .row { display:flex; gap:8px; align-items:center; margin:8px 0; }
-    .row label { font-size:12px; color:#cbd5e1; }
-    .radio { display:flex; gap:10px; align-items:center; font-size:12px; color:#cbd5e1; }
-    .radio input { transform: translateY(1px); }
-    .hint { font-size:11px; color:#94a3b8; line-height:1.25; }
-    .sep { height:1px; background:#1f2937; margin:8px 0; }
-    .switch-line { display:flex; align-items:center; gap:10px; font-size:12px; color:#cbd5e1; }
-    .switch-line input { transform: scale(1.1); }
-    .path-row { display:flex; gap:8px; align-items:center; font-size:12px; color:#cbd5e1; flex-wrap:wrap; }
-    .path-row input { flex:1 1 220px; min-width:180px; background:#0f172a; border:1px solid #1f2937; border-radius:8px; padding:6px 8px; color:#e5e7eb; font-size:12px; }
-    .path-row .btn { flex:0 0 auto; }
   </style>
 </head>
 <body>
   <div class="bar">
-    <span id="mode" class="pill">режим: ...</span>
-    <span id="offline" class="pill">кэш: ...</span>
-    <span id="buildInfo" class="pill">обновлено: ...</span>
     <span class="msg" id="msg"></span>
     <span class="spacer"></span>
 
-    <button type="button" class="btn ok" id="btnBuild">Обновить офлайн версию</button>
-    <button type="button" class="btn" id="btnOpen">Папка офлайна</button>
-    <button type="button" class="btn" id="btnSync">Синхронизация Orca</button>
-
-    <div class="menuWrap">
-      <button type="button" class="btn" id="btnSettings">Настройки ▾</button>
-      <div class="menu" id="menu">
-        <h4>Пути и источники</h4>
-        <div class="hint">Оффлайн интерфейс собирается из указанного источника. Папку можно перенести на другой диск.</div>
-
-        <div class="row">
-          <div style="width:100%;">
-            <div class="hint">URL онлайн версии (HTTP(S) или путь к локальному HTML).</div>
-            <div class="path-row">
-              <input type="text" id="remoteUrlInput" placeholder="https://c.n4v.ru/test.html">
-              <button type="button" class="btn" id="btnSaveRemote">Сохранить</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="width:100%;">
-            <div class="hint">Папка офлайн версии.</div>
-            <div class="path-row">
-              <input type="text" id="offlinePathInput" placeholder="C:\\Users\\...\\offline">
-              <button type="button" class="btn" id="btnBrowseOffline">Обзор</button>
-              <button type="button" class="btn" id="btnSaveOffline">Сохранить</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="width:100%;">
-            <div class="hint">Папка OrcaSlicer (для профилей и синхронизации).</div>
-            <div class="path-row">
-              <input type="text" id="orcaPathInput" placeholder="%APPDATA%\\OrcaSlicer\\user\\default">
-              <button type="button" class="btn" id="btnBrowseOrca">Обзор</button>
-              <button type="button" class="btn" id="btnSaveOrca">Сохранить</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="sep"></div>
-
-        <div class="row">
-          <div style="width:100%;">
-            <div style="font-size:12px;color:#cbd5e1;margin-bottom:4px;">Путь к приложению (для Orca):</div>
-            <div class="path-row">
-              <input type="text" id="appPathInput" readonly value="...">
-              <button type="button" class="btn" id="btnCopyPath">Копировать</button>
-              <button type="button" class="btn" id="btnCopyOrcaCmd">Команда Orca</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="sep"></div>
-
-        <div class="row">
-          <button type="button" class="btn" id="btnCloseMenu">Закрыть</button>
-        </div>
-      </div>
-    </div>
+    <button type="button" class="btn" id="btnParams">Параметры</button>
   </div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const BASE_HEIGHT = 46;
-  const menuEl = $("menu");
-  const appPathInput = $("appPathInput");
-  const btnCopyPath = $("btnCopyPath");
-  const btnCopyOrcaCmd = $("btnCopyOrcaCmd");
-  const buildInfoPill = $("buildInfo");
-  const remoteUrlInput = $("remoteUrlInput");
-  const offlinePathInput = $("offlinePathInput");
-  const orcaPathInput = $("orcaPathInput");
-  const btnSaveRemote = $("btnSaveRemote");
-  const btnSaveOffline = $("btnSaveOffline");
-  const btnSaveOrca = $("btnSaveOrca");
-  const btnBrowseOffline = $("btnBrowseOffline");
-  const btnBrowseOrca = $("btnBrowseOrca");
-
-  function adjustToolbarHeightForMenu() {
-    if (!menuEl.classList.contains('open')) {
-      window.toolbarApi.setToolbarHeight(BASE_HEIGHT);
-      return;
-    }
-    requestAnimationFrame(() => {
-      const rect = menuEl.getBoundingClientRect();
-      const extra = rect?.height || 0;
-      window.toolbarApi.setToolbarHeight(BASE_HEIGHT + extra + 10);
-    });
-  }
-
-  function formatDateLabel(value) {
-    if (!value) return '—';
-    try {
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return value;
-      return d.toLocaleString('ru-RU');
-    } catch {
-      return value;
-    }
-  }
-
   function setStatus(s){
-    const mode = s.mode || 'unknown';
-    $("mode").textContent = `режим: ${mode}`;
-    $("mode").className = "pill " + (mode === 'offline' ? 'ok' : '');
-
-    $("offline").textContent = "кэш: " + (s.offlineAvailable ? "готов" : "нет");
-    $("offline").className = "pill " + (s.offlineAvailable ? 'ok' : 'warn');
-    if (buildInfoPill) {
-      buildInfoPill.textContent = "обновлено: " + formatDateLabel(s.lastOfflineBuiltAt);
-      buildInfoPill.title = s.offlineHash ? `hash: ${s.offlineHash}` : '';
-    }
-
     $("msg").textContent = s.message || "";
-
-    if (appPathInput && typeof s.appPath === 'string') {
-      appPathInput.value = s.appPath;
-    }
-    if (s.paths) {
-      if (remoteUrlInput) remoteUrlInput.value = s.paths.remoteSource || s.paths.remoteUrl || '';
-      if (offlinePathInput) offlinePathInput.value = s.paths.offlinePath || '';
-      if (orcaPathInput) orcaPathInput.value = s.paths.orcaPath || '';
-    }
   }
 
   async function refresh(){
@@ -172,150 +33,16 @@
     setStatus(s);
   }
 
-  // menu toggle
-  function openMenu() {
-    menuEl.classList.add('open');
-    adjustToolbarHeightForMenu();
-  }
-  function closeMenu() {
-    if (!menuEl.classList.contains('open')) return;
-    menuEl.classList.remove('open');
-    window.toolbarApi.setToolbarHeight(BASE_HEIGHT);
-  }
-  $("btnSettings").onclick = (e) => {
-    e.stopPropagation();
-    if (menuEl.classList.contains('open')) closeMenu();
-    else openMenu();
-  };
-  $("btnCloseMenu").onclick = () => closeMenu();
-  menuEl.addEventListener('click', (e) => e.stopPropagation());
-  document.addEventListener('click', (event) => {
-    if (menuEl.contains(event.target) || event.target === $("btnSettings")) return;
-    closeMenu();
-  });
-  window.addEventListener('resize', adjustToolbarHeightForMenu);
-
-  $("btnBuild").onclick = async () => {
-    $("btnBuild").disabled = true;
-    $("msg").textContent = "Подготовка…";
-    try{
-      const r = await window.toolbarApi.buildOffline();
-      $("msg").textContent = "Готово: " + (r && r.summary ? r.summary : "офлайн версия обновлена");
-    }catch(e){
-      $("msg").textContent = "Отмена/ошибка: " + (e && e.message ? e.message : e);
-    }finally{
-      $("btnBuild").disabled = false;
-      refresh();
-    }
-  };
-
-  $("btnOpen").onclick = () => window.toolbarApi.openOfflineFolder();
-  $("btnSync").addEventListener('click', (event) => {
+  $("btnParams").addEventListener('click', (event) => {
     if (!event.isTrusted) return;
-    window.toolbarApi.openSync();
+    window.toolbarApi.openParams();
   });
-
-  if (btnCopyPath) {
-    btnCopyPath.addEventListener('click', async () => {
-      btnCopyPath.disabled = true;
-      try {
-        const res = await window.toolbarApi.copyAppPath();
-        if (res && res.path) {
-          $("msg").textContent = "Скопировано: " + res.path;
-        }
-      } catch (e) {
-        console.error('copy path failed', e);
-        $("msg").textContent = "Не удалось скопировать путь";
-      } finally {
-        btnCopyPath.disabled = false;
-      }
-    });
-  }
 
   window.toolbarApi.onProgress((p) => {
     $("msg").textContent = p && p.message ? p.message : "…";
   });
 
   window.toolbarApi.onStatus((s) => setStatus(s));
-
-  if (btnCopyOrcaCmd) {
-    btnCopyOrcaCmd.addEventListener('click', async () => {
-      btnCopyOrcaCmd.disabled = true;
-      try {
-        const res = await window.toolbarApi.copyOrcaCommand();
-        if (res && res.command) {
-          $("msg").textContent = "Команда скопирована: " + res.command;
-        }
-      } catch (e) {
-        console.error('copy orca cmd failed', e);
-        $("msg").textContent = "Не удалось скопировать команду";
-      } finally {
-        btnCopyOrcaCmd.disabled = false;
-      }
-    });
-  }
-
-  async function updatePaths(payload, okMsg) {
-    const res = await window.toolbarApi.updatePaths(payload);
-    if (!res || !res.ok) {
-      throw new Error(res?.error || 'Не удалось обновить путь');
-    }
-    if (okMsg) $("msg").textContent = okMsg;
-    refresh();
-  }
-
-  if (btnSaveRemote) {
-    btnSaveRemote.addEventListener('click', async () => {
-      btnSaveRemote.disabled = true;
-      try {
-        await updatePaths({ remoteSource: remoteUrlInput.value || '' }, 'URL онлайн версии обновлён');
-      } catch (e) {
-        $("msg").textContent = e?.message || 'Ошибка обновления URL';
-      } finally {
-        btnSaveRemote.disabled = false;
-      }
-    });
-  }
-
-  if (btnBrowseOffline) {
-    btnBrowseOffline.addEventListener('click', async () => {
-      const selected = await window.toolbarApi.pickFolder(offlinePathInput.value);
-      if (selected) offlinePathInput.value = selected;
-    });
-  }
-
-  if (btnSaveOffline) {
-    btnSaveOffline.addEventListener('click', async () => {
-      btnSaveOffline.disabled = true;
-      try {
-        await updatePaths({ offlinePath: offlinePathInput.value || '' }, 'Папка офлайна обновлена');
-      } catch (e) {
-        $("msg").textContent = e?.message || 'Ошибка изменения папки';
-      } finally {
-        btnSaveOffline.disabled = false;
-      }
-    });
-  }
-
-  if (btnBrowseOrca) {
-    btnBrowseOrca.addEventListener('click', async () => {
-      const selected = await window.toolbarApi.pickFolder(orcaPathInput.value);
-      if (selected) orcaPathInput.value = selected;
-    });
-  }
-
-  if (btnSaveOrca) {
-    btnSaveOrca.addEventListener('click', async () => {
-      btnSaveOrca.disabled = true;
-      try {
-        await updatePaths({ orcaPath: orcaPathInput.value || '' }, 'Путь OrcaSlicer обновлён');
-      } catch (e) {
-        $("msg").textContent = e?.message || 'Ошибка обновления Orca';
-      } finally {
-        btnSaveOrca.disabled = false;
-      }
-    });
-  }
 
   refresh();
 </script>

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('toolbarApi', {
   setToolbarHeight: (height) => ipcRenderer.send('toolbar:setHeight', height),
   updatePaths: (payload) => ipcRenderer.invoke('settings:updatePaths', payload),
   pickFolder: (initialPath) => ipcRenderer.invoke('settings:pickFolder', initialPath),
+  openParams: () => ipcRenderer.invoke('params:openWindow'),
   openSync: () => ipcRenderer.invoke('sync:openWindow'),
   copyAppPath: () => ipcRenderer.invoke('app:copyExecutablePath'),
   copyOrcaCommand: () => ipcRenderer.invoke('app:copyOrcaCommand'),

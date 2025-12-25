@@ -52,7 +52,14 @@
   },
   "build": {
     "appId": "com.n4v.nprintcalc",
-    "asar": false,
+    "asar": true,
+    "extraResources": [
+      {
+        "from": "build",
+        "to": "build",
+        "filter": ["**/*"]
+      }
+    ],
     "icon": "build/png/256x256.png",
     "mac": {
       "icon": "build/mac/icon.icns"
@@ -62,7 +69,7 @@
     },
     "win": {
       "icon": "build/win/icon.ico",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": true
     }
   },
   "license": "MIT"
