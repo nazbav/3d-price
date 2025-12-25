@@ -255,77 +255,94 @@
 <body>
 
 <div class="container-fluid">
-    <nav class="navbar app-navbar flex-column flex-md-row align-items-start align-items-md-center gap-3"
-         role="navigation">
-        <span class="navbar-brand mb-0">Калькулятор 3D-печати</span>
-        <div class="ms-md-auto d-flex flex-wrap navbar-actions align-items-center mt-2 mt-md-0">
-            <button class="btn btn-outline-primary d-flex align-items-center gap-1" onclick="openSettingsTab()">
-                <span>⚙️</span><span>Настройки</span>
-            </button>
-            <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
-        </div>
-    </nav>
-    <div class="app-panel">
-        <ul class="nav nav-tabs" id="mainTab" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
-                        data-bs-target="#calculatePane" type="button" role="tab" aria-selected="true"
-                        aria-controls="calculatePane" aria-selected="false">
-                    Калькулятор
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="history-tab" data-bs-toggle="tab"
-                        data-bs-target="#historyPane" type="button" role="tab"
-                        aria-controls="historyPane" aria-selected="false">
-                    История
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
-                        data-bs-target="#clientsPane" type="button" role="tab"
-                        aria-controls="clientsPane" aria-selected="false">
-                    Клиенты
-                </button>
-            </li>
 
-            <li class="nav-item">
-                <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
-                        data-bs-target="#printersPane" type="button" role="tab" aria-controls="printersPane" >
-                    Принтеры
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
-                        data-bs-target="#globalMaterialsPane" type="button" role="tab"
-                        aria-controls="globalMaterialsPane" aria-selected="false">
-                    Общие материалы
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
-                        data-bs-target="#globalAdditionalPane" type="button" role="tab"
-                        aria-controls="globalAdditionalPane" aria-selected="false">
-                    Накладные расходы
-                </button>
-            </li>
-            <li class="nav-item d-none">
-                <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
-                        data-bs-target="#settingsPane" type="button" role="tab"
-                        aria-controls="settingsPane" aria-selected="false">
-                    Настройки
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
-                        data-bs-target="#summaryPane" type="button" role="tab"
-                        aria-controls="summaryPane" aria-selected="false">
-                    Статистика
-                </button>
-            </li>
+        <div class="app-panel">
+            <!-- ОДНА СТРОКА: табы слева (растягиваются), кнопки справа (по ширине) -->
+            <div class="row align-items-center g-2">
+
+                <!-- TABLIST -->
+                <div class="col">
+                    <ul class="nav nav-tabs flex-nowrap" id="mainTab" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
+                                    data-bs-target="#calculatePane" type="button" role="tab"
+                                    aria-controls="calculatePane" aria-selected="true">
+                                Калькулятор
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link" id="history-tab" data-bs-toggle="tab"
+                                    data-bs-target="#historyPane" type="button" role="tab"
+                                    aria-controls="historyPane" aria-selected="false">
+                                История
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
+                                    data-bs-target="#clientsPane" type="button" role="tab"
+                                    aria-controls="clientsPane" aria-selected="false">
+                                Клиенты
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
+                                    data-bs-target="#printersPane" type="button" role="tab"
+                                    aria-controls="printersPane" aria-selected="false">
+                                Принтеры
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
+                                    data-bs-target="#globalMaterialsPane" type="button" role="tab"
+                                    aria-controls="globalMaterialsPane" aria-selected="false">
+                                Общие материалы
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
+                                    data-bs-target="#globalAdditionalPane" type="button" role="tab"
+                                    aria-controls="globalAdditionalPane" aria-selected="false">
+                                Накладные расходы
+                            </button>
+                        </li>
+
+                        <li class="nav-item d-none">
+                            <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
+                                    data-bs-target="#settingsPane" type="button" role="tab"
+                                    aria-controls="settingsPane" aria-selected="false">
+                                Настройки
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
+                                    data-bs-target="#summaryPane" type="button" role="tab"
+                                    aria-controls="summaryPane" aria-selected="false">
+                                Статистика
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- ACTIONS -->
+                <div class="col-auto">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                        <button class="btn btn-outline-primary d-flex align-items-center gap-1" onclick="openSettingsTab()">
+                            <span>⚙️</span><span>Настройки</span>
+                        </button>
+                        <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
+                    </div>
+                </div>
+
+            </div>
 
 
-        </ul>
+
 
         <div class="tab-content" id="mainTabContent">
             <!-- Принтеры -->
