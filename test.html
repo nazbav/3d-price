@@ -256,90 +256,90 @@
 
 <div class="container-fluid">
 
-        <div class="app-panel">
-            <!-- ОДНА СТРОКА: табы слева (растягиваются), кнопки справа (по ширине) -->
-            <div class="row align-items-center g-2">
+    <div class="app-panel">
+        <!-- ОДНА СТРОКА: табы слева (растягиваются), кнопки справа (по ширине) -->
+        <div class="row align-items-center g-2">
 
-                <!-- TABLIST -->
-                <div class="col">
-                    <ul class="nav nav-tabs flex-nowrap" id="mainTab" role="tablist">
-                        <li class="nav-item">
-                            <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
-                                    data-bs-target="#calculatePane" type="button" role="tab"
-                                    aria-controls="calculatePane" aria-selected="true">
-                                Калькулятор
-                            </button>
-                        </li>
-
-                        <li class="nav-item">
-                            <button class="nav-link" id="history-tab" data-bs-toggle="tab"
-                                    data-bs-target="#historyPane" type="button" role="tab"
-                                    aria-controls="historyPane" aria-selected="false">
-                                История
-                            </button>
-                        </li>
-
-                        <li class="nav-item">
-                            <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
-                                    data-bs-target="#clientsPane" type="button" role="tab"
-                                    aria-controls="clientsPane" aria-selected="false">
-                                Клиенты
-                            </button>
-                        </li>
-
-                        <li class="nav-item">
-                            <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
-                                    data-bs-target="#printersPane" type="button" role="tab"
-                                    aria-controls="printersPane" aria-selected="false">
-                                Принтеры
-                            </button>
-                        </li>
-
-                        <li class="nav-item">
-                            <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
-                                    data-bs-target="#globalMaterialsPane" type="button" role="tab"
-                                    aria-controls="globalMaterialsPane" aria-selected="false">
-                                Общие материалы
-                            </button>
-                        </li>
-
-                        <li class="nav-item">
-                            <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
-                                    data-bs-target="#globalAdditionalPane" type="button" role="tab"
-                                    aria-controls="globalAdditionalPane" aria-selected="false">
-                                Накладные расходы
-                            </button>
-                        </li>
-
-                        <li class="nav-item d-none">
-                            <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
-                                    data-bs-target="#settingsPane" type="button" role="tab"
-                                    aria-controls="settingsPane" aria-selected="false">
-                                Настройки
-                            </button>
-                        </li>
-
-                        <li class="nav-item">
-                            <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
-                                    data-bs-target="#summaryPane" type="button" role="tab"
-                                    aria-controls="summaryPane" aria-selected="false">
-                                Статистика
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- ACTIONS -->
-                <div class="col-auto">
-                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                        <button class="btn btn-outline-primary d-flex align-items-center gap-1" onclick="openSettingsTab()">
-                            <span>⚙️</span><span>Настройки</span>
+            <!-- TABLIST -->
+            <div class="col">
+                <ul class="nav nav-tabs flex-nowrap" id="mainTab" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="calculate-tab" data-bs-toggle="tab"
+                                data-bs-target="#calculatePane" type="button" role="tab"
+                                aria-controls="calculatePane" aria-selected="true">
+                            Калькулятор
                         </button>
-                        <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
-                    </div>
-                </div>
+                    </li>
 
+                    <li class="nav-item">
+                        <button class="nav-link" id="history-tab" data-bs-toggle="tab"
+                                data-bs-target="#historyPane" type="button" role="tab"
+                                aria-controls="historyPane" aria-selected="false">
+                            История
+                        </button>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link" id="clients-tab" data-bs-toggle="tab"
+                                data-bs-target="#clientsPane" type="button" role="tab"
+                                aria-controls="clientsPane" aria-selected="false">
+                            Клиенты
+                        </button>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link" id="printers-tab" data-bs-toggle="tab"
+                                data-bs-target="#printersPane" type="button" role="tab"
+                                aria-controls="printersPane" aria-selected="false">
+                            Принтеры
+                        </button>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link" id="globalMaterials-tab" data-bs-toggle="tab"
+                                data-bs-target="#globalMaterialsPane" type="button" role="tab"
+                                aria-controls="globalMaterialsPane" aria-selected="false">
+                            Общие материалы
+                        </button>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link" id="globalAdditional-tab" data-bs-toggle="tab"
+                                data-bs-target="#globalAdditionalPane" type="button" role="tab"
+                                aria-controls="globalAdditionalPane" aria-selected="false">
+                            Накладные расходы
+                        </button>
+                    </li>
+
+                    <li class="nav-item d-none">
+                        <button class="nav-link" id="settings-tab" data-bs-toggle="tab"
+                                data-bs-target="#settingsPane" type="button" role="tab"
+                                aria-controls="settingsPane" aria-selected="false">
+                            Настройки
+                        </button>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link" id="summary-tab" data-bs-toggle="tab"
+                                data-bs-target="#summaryPane" type="button" role="tab"
+                                aria-controls="summaryPane" aria-selected="false">
+                            Статистика
+                        </button>
+                    </li>
+                </ul>
             </div>
+
+            <!-- ACTIONS -->
+            <div class="col-auto">
+                <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                    <button class="btn btn-outline-primary d-flex align-items-center gap-1" onclick="openSettingsTab()">
+                        <span>⚙️</span><span>Настройки</span>
+                    </button>
+                    <button class="btn btn-outline-secondary" id="themeToggle">🌙 Темная тема</button>
+                </div>
+            </div>
+
+        </div>
 
 
 
@@ -1427,7 +1427,7 @@
                 });
             }
 
-           appData.counters = appData.counters || {};
+            appData.counters = appData.counters || {};
         }
 
         window.normalizeIds = normalizeIds;
@@ -4543,6 +4543,78 @@
         });
     }
 
+    // --- Model ID hygiene -------------------------------------------------
+    // В расчёте модельный id используется в нескольких местах (таймлайн, группировки, этикетки и т.д.).
+    // Если в таблицах появляются дубли (часто после импорта пачки G-code с одинаковым кодом),
+    // то ломаются DOM-id (thumb_*), а также группировки в расчётах.
+    // Поэтому: (1) при добавлении строки стараемся не допускать дублей; (2) перед расчётом
+    // делаем нормализацию и «перестраиваем» id, если нашли коллизию.
+
+    function __cssEscape(val){
+        try { return (window.CSS && typeof window.CSS.escape === 'function') ? window.CSS.escape(String(val)) : String(val).replace(/[^a-zA-Z0-9_\-]/g, '\\$&'); }
+        catch(e){ return String(val).replace(/[^a-zA-Z0-9_\-]/g, '\\$&'); }
+    }
+
+    function ensureUniqueModelId(desiredId, excludeRow){
+        const id = String(desiredId);
+        const sel = `[data-model-id="${__cssEscape(id)}"]`;
+        const existing = document.querySelectorAll(sel);
+        if (!existing || existing.length === 0) return id;
+        if (excludeRow && existing.length === 1 && existing[0] === excludeRow) return id;
+        // коллизия -> выдаём новый id из models
+        return String(getNextId('models'));
+    }
+
+    function __updateRowModelIdArtifacts(row, oldId, newId){
+        if(!row || String(oldId) === String(newId)) return;
+        row.dataset.modelId = String(newId);
+
+        // Обновляем подпись (в первой колонке small: (id))
+        try {
+            const small = row.querySelector('td small');
+            if(small) small.textContent = `(${newId})`;
+        } catch(e) {}
+
+        // Обновляем миниатюры и file input id/handlers внутри строки
+        const thumb = row.querySelector(`#thumb_${__cssEscape(oldId)}`);
+        if(thumb){
+            thumb.id = `thumb_${newId}`;
+            thumb.setAttribute('onclick', `document.getElementById('thumbFile_${newId}').click()`);
+        }
+        const file = row.querySelector(`#thumbFile_${__cssEscape(oldId)}`);
+        if(file){
+            file.id = `thumbFile_${newId}`;
+            file.setAttribute('onchange', `onModelThumbnailChange(event, '${newId}')`);
+        }
+    }
+
+    function normalizeCalcModelIds(){
+        const seen = new Set();
+        appData.printers.forEach(pr => {
+            const table = document.getElementById(`calcModelsTable_${pr.id}`);
+            if(!table) return;
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const raw = row.dataset.modelId;
+                let id = (raw !== undefined && raw !== null && String(raw).trim() !== '') ? String(raw) : String(getNextId('models'));
+                if(seen.has(id)){
+                    const oldId = id;
+                    id = String(getNextId('models'));
+                    __updateRowModelIdArtifacts(row, oldId, id);
+                } else {
+                    // также проверяем коллизии на уровне DOM (на всякий случай)
+                    const unique = ensureUniqueModelId(id, row);
+                    if(unique !== id){
+                        const oldId = id;
+                        id = unique;
+                        __updateRowModelIdArtifacts(row, oldId, id);
+                    }
+                }
+                seen.add(id);
+            });
+        });
+    }
+
     function renderCalcUrgencySelect(){
         const select = document.getElementById('calcUrgencyProfile');
         const summary = document.getElementById('calcUrgencySummary');
@@ -4608,7 +4680,9 @@
     ${m.name} (ID: ${m.id}${spoolmanText})
   </option>`;
         }).join("");
-        const uniqueId = getNextId('clients');
+        // ВАЖНО: уникальные id моделей и DOM-элементов должны жить в одном неймспейсе.
+        // Раньше тут ошибочно использовался счётчик clients, что приводило к коллизиям/дублям.
+        const uniqueId = getNextId('models');
         const nameId = `modelName_${printerId}_${uniqueId}`;
         const statusId = `modelStatus_${printerId}_${uniqueId}`;
         const hoursId = `modelHours_${printerId}_${uniqueId}`;
@@ -4617,7 +4691,11 @@
         const labelId = `modelLabel_${printerId}_${uniqueId}`;
         const includeLabel = modelData.includeLabel !== false;
         const tr = document.createElement('tr');
-        const code = modelData.id || uniqueId;
+        // Гарантируем уникальность modelId (важно для таймлайна/этикеток/миниатюр).
+        let code = (modelData && modelData.id !== undefined && modelData.id !== null && String(modelData.id).trim() !== '')
+            ? String(modelData.id)
+            : String(uniqueId);
+        code = ensureUniqueModelId(code);
         tr.dataset.modelId = code;
         tr.dataset.thumbnail = modelData.thumbnail || '';
         tr.innerHTML = `
@@ -4825,6 +4903,10 @@
 
         saveToLocalStorage();
 
+        // Санитизация id моделей: убираем дубли и пустые значения перед тем, как собрать calcData и строить расчёт.
+        // Это «перестраивает» id на лету, если пользователь/импорт принесли коллизии.
+        normalizeCalcModelIds();
+
         // Сохраняем исходные данные моделей для каждого принтера
         let calcData = {};
         appData.printers.forEach(pr => {
@@ -4842,8 +4924,13 @@
                 if (!inpName || !selStatus || !inpH || !inpW || !selM) return;
                 const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
                 const w = parseFloat(inpW.value) || 0;
+                let midVal = row.dataset.modelId;
+                if (midVal === undefined || midVal === null || String(midVal).trim() === '') {
+                    midVal = String(getNextId('models'));
+                    row.dataset.modelId = midVal;
+                }
                 modelsData.push({
-                    id: row.dataset.modelId || getNextId('models'),
+                    id: String(midVal),
                     thumbnail: row.dataset.thumbnail || '',
                     name: inpName.value.trim() || "Модель",
                     status: selStatus.value || "new",
