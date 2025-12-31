@@ -160,7 +160,15 @@ function setDocumentTitle(html, titleText) {
   }
 }
 
-async function buildOfflineSite({ sourceUrl = DEFAULT_SOURCE_URL, offlineRootDir, offlineTitle = 'Калькулятор 3D-печати (оффлайн)', onProgress = () => {} }) {
+// fetchBufferImpl(urlStr, timeoutMs) => Promise<{ ok, status, headers, buf }>
+async function buildOfflineSite({
+  sourceUrl = DEFAULT_SOURCE_URL,
+  offlineRootDir,
+  offlineTitle = 'Калькулятор 3D-печати (оффлайн)',
+  onProgress = () => {},
+  fetchBufferImpl = fetchBuffer,
+  timeoutMs = 30000
+}) {
   const baseUrl = new URL(sourceUrl);
   const tmpDir = path.join(offlineRootDir, '_tmp_' + Date.now());
   const tmpAssets = path.join(tmpDir, 'assets');
@@ -174,7 +182,7 @@ async function buildOfflineSite({ sourceUrl = DEFAULT_SOURCE_URL, offlineRootDir
   const progress = (message, extra) => onProgress({ message, ...extra });
 
   progress('Скачиваю HTML…', { step: 'html' });
-  const htmlRes = await fetchBuffer(sourceUrl);
+  const htmlRes = await fetchBufferImpl(sourceUrl, timeoutMs);
   if (!htmlRes.ok) throw new Error(`Не удалось скачать HTML (${htmlRes.status})`);
 
   const htmlHash = sha1(htmlRes.buf);
@@ -185,7 +193,7 @@ async function downloadAsset(absUrl) {
     if (mapUrlToLocal.has(absUrl)) return mapUrlToLocal.get(absUrl);
 
     progress('Скачиваю ресурс…', { step: 'asset', url: absUrl });
-    const res = await fetchBuffer(absUrl);
+    const res = await fetchBufferImpl(absUrl, timeoutMs);
     if (!res.ok) {
       progress('Не удалось скачать ресурс (пропускаю)', { step: 'asset-skip', url: absUrl, status: res.status });
       return null;

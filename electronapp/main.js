@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, ipcMain, shell, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, shell, dialog, clipboard, session, screen } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
@@ -7,6 +7,8 @@ const { spawn } = require('node:child_process');
 const crypto = require('node:crypto');
 const http = require('node:http');
 const https = require('node:https');
+const net = require('node:net');
+const tls = require('node:tls');
 const { URL, pathToFileURL, fileURLToPath } = require('node:url');
 
 const { buildOfflineSite, DEFAULT_SOURCE_URL, atomicSwapDir } = require('./offlineBuilder');
@@ -71,6 +73,9 @@ let autoSyncEnabled = false;
 // Settings
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const STORAGE_KEY = 'ThreeDPrintCalc_Extended_v5';
+
+// Proxy settings
+// settings.json: { proxy: { enabled, timeoutMs, rawList, proxies: [...] } }
 
 // Remote source (online UI)
 const DEFAULT_REMOTE_SOURCE = process.env.GCODECALC_REMOTE_URL || DEFAULT_SOURCE_URL;
@@ -150,6 +155,575 @@ function saveSettings(obj) {
   } catch (e) {
     log('saveSettings.failed', { error: e?.message });
   }
+}
+
+// ---------- Proxy settings ----------
+function getProxySettingsRaw() {
+  const s = loadSettings();
+  const p = (s && typeof s === 'object') ? (s.proxy || {}) : {};
+  const enabled = (typeof p.enabled === 'boolean') ? p.enabled : false;
+  const timeoutMs = (typeof p.timeoutMs === 'number' && isFinite(p.timeoutMs)) ? p.timeoutMs : 7000;
+  const rawList = (typeof p.rawList === 'string') ? p.rawList : '';
+  const proxies = Array.isArray(p.proxies) ? p.proxies : [];
+  return { enabled, timeoutMs, rawList, proxies };
+}
+
+function setProxySettingsRaw({ enabled, timeoutMs, rawList } = {}) {
+  const s = loadSettings();
+  if (!s || typeof s !== 'object') return getProxySettingsRaw();
+  const next = s.proxy && typeof s.proxy === 'object' ? s.proxy : {};
+  if (typeof enabled === 'boolean') next.enabled = enabled;
+  if (typeof timeoutMs === 'number' && isFinite(timeoutMs)) next.timeoutMs = Math.max(3000, Math.min(60000, Math.round(timeoutMs)));
+  if (typeof rawList === 'string') next.rawList = rawList;
+  next.proxies = normalizeProxyList(next.rawList);
+  s.proxy = next;
+  saveSettings(s);
+  return getProxySettingsRaw();
+}
+
+function normalizeProxyList(rawList) {
+  const lines = String(rawList || '')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('#'));
+
+  const out = [];
+  for (const line of lines) {
+    const parsed = parseProxyLine(line);
+    if (parsed) out.push(parsed);
+  }
+
+  // Дедуп по raw
+  const seen = new Set();
+  return out.filter((p) => {
+    if (!p.raw) return false;
+    const key = p.raw;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function parseProxyLine(line) {
+  const s = String(line || '').trim();
+  if (!s) return null;
+
+  // Telegram format
+  // https://t.me/socks?server=IP&port=80&user=USER&pass=PASS
+  if (/^https?:\/\/t\.me\/socks\?/i.test(s)) {
+    try {
+      const u = new URL(s);
+      const server = u.searchParams.get('server') || '';
+      const port = Number(u.searchParams.get('port') || '0');
+      const user = u.searchParams.get('user') || '';
+      const pass = u.searchParams.get('pass') || '';
+      if (!server || !port) return null;
+      const auth = user ? `${encodeURIComponent(user)}:${encodeURIComponent(pass)}` : '';
+      const raw = `socks5://${auth ? auth + '@' : ''}${server}:${port}`;
+      return { type: 'socks5', host: server, port, username: user || null, password: pass || null, raw, display: raw, bad: false, pingMs: null, lastError: '' };
+    } catch {
+      return null;
+    }
+  }
+
+  // ip:port => socks5
+  if (/^[^\s:]+:\d{2,5}$/.test(s) && !/^[a-z]+:\/\//i.test(s)) {
+    const [host, portStr] = s.split(':');
+    const port = Number(portStr);
+    if (!host || !port) return null;
+    const raw = `socks5://${host}:${port}`;
+    return { type: 'socks5', host, port, username: null, password: null, raw, display: raw, bad: false, pingMs: null, lastError: '' };
+  }
+
+  // URL form
+  if (/^[a-z]+:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      const type = (u.protocol || '').replace(':', '').toLowerCase();
+      if (type !== 'socks5' && type !== 'http') return null;
+      const host = u.hostname;
+      const port = Number(u.port || (type === 'http' ? 3128 : 1080));
+      if (!host || !port) return null;
+      const username = u.username ? decodeURIComponent(u.username) : null;
+      const password = u.password ? decodeURIComponent(u.password) : null;
+      const auth = username ? `${encodeURIComponent(username)}:${encodeURIComponent(password || '')}@` : '';
+      const raw = `${type}://${auth}${host}:${port}`;
+      return { type, host, port, username, password, raw, display: raw, bad: false, pingMs: null, lastError: '' };
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function updateProxyRuntimeState(mutator) {
+  const s = loadSettings();
+  const p = (s && typeof s === 'object') ? (s.proxy || {}) : {};
+  const proxies = Array.isArray(p.proxies) ? p.proxies : [];
+  const next = proxies.map((x) => ({ ...x }));
+  mutator(next);
+  p.proxies = next;
+  s.proxy = p;
+  saveSettings(s);
+  return getProxySettingsRaw();
+}
+
+function isHttpLikeUrl(urlStr) {
+  try {
+    const u = new URL(String(urlStr || ''));
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+async function requestProbe(urlStr, { timeoutMs = 7000, proxy = null, maxRedirects = 3 } = {}) {
+  const doProbe = async (currentUrl, redirectsLeft) => {
+    const uu = new URL(currentUrl);
+    if (uu.protocol !== 'http:' && uu.protocol !== 'https:') throw new Error('Unsupported protocol');
+
+    const isHttps = uu.protocol === 'https:';
+    const port = Number(uu.port || (isHttps ? 443 : 80));
+    const hostname = uu.hostname;
+
+    const headers = {
+      'User-Agent': 'NPrintCalc',
+      'Accept': '*/*'
+    };
+
+    let createConnection = null;
+    let hostForHttpModule = hostname;
+    let portForHttpModule = port;
+    let pathForRequest = uu.pathname + (uu.search || '');
+
+    if (proxy) {
+      if (proxy.type === 'http') {
+        if (isHttps) {
+          createConnection = async () => {
+            const tunnel = await httpProxyConnectTunnel({ proxy, host: hostname, port, timeoutMs });
+            return tls.connect({ socket: tunnel, servername: hostname, rejectUnauthorized: true });
+          };
+        } else {
+          // Plain HTTP over HTTP proxy: absolute-form request
+          hostForHttpModule = proxy.host;
+          portForHttpModule = proxy.port;
+          pathForRequest = currentUrl;
+          headers['Host'] = hostname;
+          const auth = proxyAuthHeader(proxy);
+          if (auth) headers['Proxy-Authorization'] = auth;
+        }
+      } else if (proxy.type === 'socks5') {
+        createConnection = async () => {
+          const sock = await socks5Connect({ proxy, host: hostname, port, timeoutMs });
+          if (isHttps) return tls.connect({ socket: sock, servername: hostname, rejectUnauthorized: true });
+          return sock;
+        };
+      }
+    }
+
+    const mod = isHttps ? https : http;
+
+    const started = Date.now();
+    const res = await new Promise((resolve, reject) => {
+      const opts = {
+        method: 'HEAD',
+        host: hostForHttpModule,
+        port: portForHttpModule,
+        path: pathForRequest,
+        headers,
+        agent: false
+      };
+
+      if (createConnection) {
+        opts.createConnection = (o, cb) => {
+          Promise.resolve()
+            .then(createConnection)
+            .then((sock) => cb(null, sock))
+            .catch((e) => cb(e));
+        };
+      }
+
+      const req = mod.request(opts, (r) => resolve(r));
+      req.on('error', reject);
+      req.setTimeout(timeoutMs, () => req.destroy(new Error('timeout')));
+      req.end();
+    });
+
+    const ttfbMs = Date.now() - started;
+    const status = res.statusCode || 0;
+    const loc = res.headers?.location || res.headers?.Location;
+
+    // Drain & close quickly (we only need headers/status for probe).
+    try { res.resume(); } catch {}
+
+    if (status >= 300 && status < 400 && loc && redirectsLeft > 0) {
+      const nextUrl = new URL(String(loc), uu).toString();
+      return doProbe(nextUrl, redirectsLeft - 1);
+    }
+
+    return { status, headers: res.headers || {}, elapsedMs: ttfbMs };
+  };
+
+  return doProbe(urlStr, maxRedirects);
+}
+
+async function pingProxyTcp(proxy, timeoutMs = 3000) {
+  const started = Date.now();
+  return new Promise((resolve) => {
+    const sock = net.connect({ host: proxy.host, port: proxy.port });
+    const done = (ok, err) => {
+      try { sock.destroy(); } catch {}
+      const ms = Date.now() - started;
+      resolve({ ok, ms, error: err ? String(err.message || err) : '' });
+    };
+    sock.setTimeout(timeoutMs, () => done(false, new Error('timeout')));
+    sock.once('error', (e) => done(false, e));
+    sock.once('connect', () => done(true, null));
+  });
+}
+
+async function pingProxyToTarget(proxy, targetUrl, timeoutMs) {
+  // Пингуем ДО источника интерфейса по его протоколу (http/https) через прокси.
+  // Любой HTTP-статус (в т.ч. 404) считаем признаком доступности, если дошли до ответа.
+  try {
+    const r = await requestProbe(targetUrl, { timeoutMs, proxy, maxRedirects: 3 });
+    const status = r.status || 0;
+    const ok = status > 0 && status !== 407; // 407 = прокси требует/не принял авторизацию
+    return { ok, ms: r.elapsedMs, status };
+  } catch (e) {
+    return { ok: false, ms: null, status: 0, error: String(e?.message || e) };
+  }
+}
+
+async function pingAllProxies() {
+  const { proxies, timeoutMs } = getProxySettingsRaw();
+  const results = [];
+
+  const target = isHttpLikeUrl(remoteUrl) ? remoteUrl : null;
+
+  for (const p of proxies) {
+    if (target) {
+      const r = await pingProxyToTarget(p, target, timeoutMs);
+      results.push({ raw: p.raw, ok: r.ok, pingMs: r.ok ? r.ms : null, status: r.status, err: r.error || '' });
+    } else {
+      // Если источник не HTTP(S), прокси для него не используются — делаем базовый TCP-пинг до прокси.
+      const r = await pingProxyTcp(p, Math.min(3000, timeoutMs));
+      results.push({ raw: p.raw, ok: r.ok, pingMs: r.ok ? r.ms : null, status: 0, err: r.error || '' });
+    }
+  }
+
+  return updateProxyRuntimeState((list) => {
+    for (const p of list) {
+      const r = results.find((x) => x.raw === p.raw);
+      if (!r) continue;
+      p.pingMs = r.pingMs;
+      if (r.ok) {
+        p.bad = false;
+        // 404 и любые коды считаем ОК, но код оставляем как подсказку.
+        p.lastError = r.status && r.status !== 200 ? `HTTP ${r.status}` : '';
+      } else {
+        p.bad = true;
+        p.lastError = r.err || 'ping failed';
+      }
+    }
+  });
+}
+
+function importProxyRawText(text) {
+  const current = getProxySettingsRaw();
+  const merged = [String(current.rawList || '').trim(), String(text || '').trim()]
+    .filter(Boolean)
+    .join('\n');
+  return setProxySettingsRaw({ rawList: merged });
+}
+
+function removeProxyByRaw(raw) {
+  const p = getProxySettingsRaw();
+  const list = Array.isArray(p.proxies) ? p.proxies : [];
+  const next = list.filter((x) => x.raw !== raw);
+  const rawList = next.map((x) => x.raw).filter(Boolean).join('\n');
+  return setProxySettingsRaw({ rawList });
+}
+
+async function applyElectronProxyFromSettings() {
+  try {
+    if (!app?.isReady?.() || !session?.defaultSession) return;
+    const { enabled, proxies } = getProxySettingsRaw();
+    const list = pickProxyRotationOrder(Array.isArray(proxies) ? proxies : []);
+    if (!list.length) {
+      await session.defaultSession.setProxy({ mode: 'direct' });
+      return;
+    }
+    const chain = list.map((p) => {
+      if (p.type === 'socks5') return `SOCKS5 ${p.host}:${p.port}`;
+      return `PROXY ${p.host}:${p.port}`;
+    });
+    chain.push('DIRECT');
+    const pac = `function FindProxyForURL(url, host) { return "${chain.join('; ')}"; }`;
+    const pacUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(pac);
+    await session.defaultSession.setProxy({ pacScript: pacUrl });
+  } catch (e) {
+    log('proxy.applySession.failed', { error: e?.message || String(e) });
+  }
+}
+
+function pickProxyRotationOrder(proxies) {
+  const good = proxies.filter((p) => !p.bad);
+  const bad = proxies.filter((p) => !!p.bad);
+  return [...good, ...bad];
+}
+
+function proxyAuthHeader(proxy) {
+  if (!proxy?.username) return null;
+  const token = Buffer.from(`${proxy.username}:${proxy.password || ''}`, 'utf8').toString('base64');
+  return `Basic ${token}`;
+}
+
+async function socks5Connect({ proxy, host, port, timeoutMs }) {
+  const socket = net.connect({ host: proxy.host, port: proxy.port });
+  socket.setTimeout(timeoutMs, () => socket.destroy(new Error('timeout')));
+
+  const readBytes = (n) => new Promise((resolve, reject) => {
+    let bufs = [];
+    let len = 0;
+    const onData = (d) => {
+      bufs.push(d);
+      len += d.length;
+      if (len >= n) {
+        socket.off('data', onData);
+        const all = Buffer.concat(bufs, len);
+        const head = all.subarray(0, n);
+        const tail = all.subarray(n);
+        if (tail.length) socket.unshift(tail);
+        resolve(head);
+      }
+    };
+    socket.on('data', onData);
+    socket.once('error', reject);
+  });
+
+  await new Promise((resolve, reject) => {
+    socket.once('connect', resolve);
+    socket.once('error', reject);
+  });
+
+  const hasAuth = !!proxy.username;
+  // greeting: VER, NMETHODS, METHODS...
+  socket.write(Buffer.from([0x05, hasAuth ? 0x02 : 0x01, 0x00, ...(hasAuth ? [0x02] : [])]));
+  const resp = await readBytes(2);
+  if (resp[0] !== 0x05) throw new Error('SOCKS5: bad version');
+  if (resp[1] === 0xFF) throw new Error('SOCKS5: no acceptable auth');
+
+  if (resp[1] === 0x02) {
+    const u = Buffer.from(String(proxy.username || ''), 'utf8');
+    const p = Buffer.from(String(proxy.password || ''), 'utf8');
+    if (u.length > 255 || p.length > 255) throw new Error('SOCKS5: credentials too long');
+    socket.write(Buffer.concat([Buffer.from([0x01, u.length]), u, Buffer.from([p.length]), p]));
+    const a = await readBytes(2);
+    if (a[1] !== 0x00) throw new Error('SOCKS5: auth failed');
+  }
+
+  const hostBuf = Buffer.from(String(host), 'utf8');
+  if (hostBuf.length > 255) throw new Error('SOCKS5: host too long');
+  const portBuf = Buffer.alloc(2);
+  portBuf.writeUInt16BE(port, 0);
+  // CONNECT
+  socket.write(Buffer.concat([Buffer.from([0x05, 0x01, 0x00, 0x03, hostBuf.length]), hostBuf, portBuf]));
+
+  const head = await readBytes(4);
+  if (head[0] !== 0x05) throw new Error('SOCKS5: bad version');
+  if (head[1] !== 0x00) throw new Error(`SOCKS5: connect failed (${head[1]})`);
+
+  const atyp = head[3];
+  if (atyp === 0x01) {
+    await readBytes(4 + 2);
+  } else if (atyp === 0x03) {
+    const l = (await readBytes(1))[0];
+    await readBytes(l + 2);
+  } else if (atyp === 0x04) {
+    await readBytes(16 + 2);
+  }
+
+  socket.setTimeout(0);
+  return socket;
+}
+
+async function httpProxyConnectTunnel({ proxy, host, port, timeoutMs }) {
+  const auth = proxyAuthHeader(proxy);
+  const socket = net.connect({ host: proxy.host, port: proxy.port });
+  socket.setTimeout(timeoutMs, () => socket.destroy(new Error('timeout')));
+  await new Promise((resolve, reject) => {
+    socket.once('connect', resolve);
+    socket.once('error', reject);
+  });
+  const lines = [
+    `CONNECT ${host}:${port} HTTP/1.1`,
+    `Host: ${host}:${port}`,
+    'Connection: close'
+  ];
+  if (auth) lines.push(`Proxy-Authorization: ${auth}`);
+  const req = lines.join('\r\n') + '\r\n\r\n';
+  socket.write(req);
+
+  const data = await new Promise((resolve, reject) => {
+    let buf = Buffer.alloc(0);
+    const onData = (d) => {
+      buf = Buffer.concat([buf, d]);
+      if (buf.includes(Buffer.from('\r\n\r\n'))) {
+        socket.off('data', onData);
+        resolve(buf);
+      }
+    };
+    socket.on('data', onData);
+    socket.once('error', reject);
+  });
+  const head = data.toString('latin1');
+  const statusLine = head.split('\r\n')[0] || '';
+  const m = statusLine.match(/\s(\d{3})\s/);
+  const code = m ? Number(m[1]) : 0;
+  if (code !== 200) throw new Error(`HTTP proxy CONNECT failed (${code || 'unknown'})`);
+
+  socket.setTimeout(0);
+  return socket;
+}
+
+async function requestBuffer(urlStr, { timeoutMs = 7000, proxy = null, maxRedirects = 5 } = {}) {
+  const u = new URL(urlStr);
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Unsupported protocol');
+
+  const doRequest = async (currentUrl, redirectsLeft) => {
+    const uu = new URL(currentUrl);
+    const isHttps = uu.protocol === 'https:';
+    const port = Number(uu.port || (isHttps ? 443 : 80));
+    const hostname = uu.hostname;
+
+    const headers = {
+      'User-Agent': 'NPrintCalc',
+      'Accept': '*/*'
+    };
+
+    let createConnection = null;
+    let hostForHttpModule = hostname;
+    let portForHttpModule = port;
+    let pathForRequest = uu.pathname + (uu.search || '');
+
+    if (proxy) {
+      if (proxy.type === 'http') {
+        if (isHttps) {
+          createConnection = async () => {
+            const tunnel = await httpProxyConnectTunnel({ proxy, host: hostname, port, timeoutMs });
+            return tls.connect({ socket: tunnel, servername: hostname, rejectUnauthorized: true });
+          };
+        } else {
+          // Plain HTTP over HTTP proxy: absolute-form request
+          hostForHttpModule = proxy.host;
+          portForHttpModule = proxy.port;
+          pathForRequest = currentUrl;
+          headers['Host'] = hostname;
+          const auth = proxyAuthHeader(proxy);
+          if (auth) headers['Proxy-Authorization'] = auth;
+        }
+      } else if (proxy.type === 'socks5') {
+        createConnection = async () => {
+          const sock = await socks5Connect({ proxy, host: hostname, port, timeoutMs });
+          if (isHttps) return tls.connect({ socket: sock, servername: hostname, rejectUnauthorized: true });
+          return sock;
+        };
+      }
+    }
+
+    const mod = isHttps ? https : http;
+    const started = Date.now();
+
+    const res = await new Promise((resolve, reject) => {
+      const opts = {
+        method: 'GET',
+        host: hostForHttpModule,
+        port: portForHttpModule,
+        path: pathForRequest,
+        headers,
+        agent: false
+      };
+
+      if (createConnection) {
+        opts.createConnection = (o, cb) => {
+          Promise.resolve()
+            .then(createConnection)
+            .then((sock) => cb(null, sock))
+            .catch((e) => cb(e));
+        };
+      }
+
+      const req = mod.request(opts, (r) => resolve(r));
+      req.on('error', reject);
+      req.setTimeout(timeoutMs, () => req.destroy(new Error('timeout')));
+      req.end();
+    });
+
+    const status = res.statusCode || 0;
+    const loc = res.headers?.location || res.headers?.Location;
+    if (status >= 300 && status < 400 && loc && redirectsLeft > 0) {
+      res.resume();
+      const nextUrl = new URL(String(loc), uu).toString();
+      return doRequest(nextUrl, redirectsLeft - 1);
+    }
+
+    const chunks = [];
+    const buf = await new Promise((resolve, reject) => {
+      res.on('data', (d) => chunks.push(d));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
+    });
+
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      headers: res.headers || {},
+      buf,
+      elapsedMs: Date.now() - started
+    };
+  };
+
+  return doRequest(urlStr, maxRedirects);
+}
+
+async function requestBufferWithProxyFailover(urlStr, { timeoutMs } = {}) {
+  const { timeoutMs: configuredTimeoutMs, proxies } = getProxySettingsRaw();
+  const perAttempt = (typeof timeoutMs === 'number' && isFinite(timeoutMs)) ? timeoutMs : configuredTimeoutMs;
+  const list = Array.isArray(proxies) ? proxies : [];
+  if (!list.length) {
+    return requestBuffer(urlStr, { timeoutMs: perAttempt, proxy: null });
+  }
+
+  let lastErr = null;
+  const order = pickProxyRotationOrder(list);
+  for (const p of order) {
+    try {
+      const r = await requestBuffer(urlStr, { timeoutMs: perAttempt, proxy: p });
+      if (r.ok) {
+        // Прокси реабилитируем
+        updateProxyRuntimeState((items) => {
+          const it = items.find((x) => x.raw === p.raw);
+          if (it) { it.bad = false; it.lastError = ''; }
+        });
+        return r;
+      }
+      lastErr = new Error(`HTTP ${r.status}`);
+      updateProxyRuntimeState((items) => {
+        const it = items.find((x) => x.raw === p.raw);
+        if (it) { it.bad = true; it.lastError = `HTTP ${r.status}`; }
+      });
+    } catch (e) {
+      lastErr = e;
+      updateProxyRuntimeState((items) => {
+        const it = items.find((x) => x.raw === p.raw);
+        if (it) { it.bad = true; it.lastError = String(e?.message || e); }
+      });
+    }
+  }
+
+  throw lastErr || new Error('proxy failover: all failed');
 }
 
 function getOrcaPathSetting() {
@@ -426,27 +1000,9 @@ async function fetchRemoteHtmlHash() {
       return crypto.createHash('sha1').update(buf).digest('hex');
     }
     if (target.protocol === 'http:' || target.protocol === 'https:') {
-      if (typeof fetch === 'function') {
-        const res = await fetch(remoteUrl, { redirect: 'follow' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const buf = Buffer.from(await res.arrayBuffer());
-        return crypto.createHash('sha1').update(buf).digest('hex');
-      }
-      const mod = target.protocol === 'https:' ? https : http;
-      const buf = await new Promise((resolve, reject) => {
-        const req = mod.get(remoteUrl, (res) => {
-          if (res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(`HTTP ${res.statusCode}`));
-            res.resume();
-            return;
-          }
-          const chunks = [];
-          res.on('data', (chunk) => chunks.push(chunk));
-          res.on('end', () => resolve(Buffer.concat(chunks)));
-        });
-        req.on('error', reject);
-      });
-      return crypto.createHash('sha1').update(buf).digest('hex');
+      const r = await requestBufferWithProxyFailover(remoteUrl, { timeoutMs: 10000 });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return crypto.createHash('sha1').update(r.buf).digest('hex');
     }
   } catch (e) {
     log('update.hash.error', { error: e?.message });
@@ -515,17 +1071,47 @@ function cleanArg(a) {
 }
 function getArgs(argv) { return (argv || []).map(cleanArg).filter(Boolean); }
 function hasFlag(argv, flag) { return getArgs(argv).includes(flag); }
-function isGcodePath(p) { return /\.(gcode|gco)(\.pp)?$/i.test(p); }
+function isGcodePath(p) { return /\.(gcode|gco|bgcode)(\.pp)?$/i.test(String(p || '')); }
 
 function extractGcodePath(argv) {
   const args = getArgs(argv);
+  const execPath = process.execPath ? path.resolve(process.execPath).toLowerCase() : '';
   let lastCandidate = null;
+
   for (let i = args.length - 1; i >= 0; i--) {
     const a = args[i];
+    if (!a) continue;
+    if (a.startsWith('--')) continue;
+
+    // не импортируем сами себя
+    try {
+      if (execPath && path.resolve(a).toLowerCase() === execPath) continue;
+    } catch {}
+
+    const low = String(a).toLowerCase();
+    // не пытаемся импортировать exe
+    if (low.endsWith('.exe') && !isGcodePath(a)) continue;
+
     if (isGcodePath(a)) {
       lastCandidate = a;
-      if (fs.existsSync(a)) return a;
+      try { if (fs.existsSync(a)) return a; } catch {}
+      continue;
     }
+
+    // Orca print-temp (может быть файл ИЛИ папка, и может появиться чуть позже)
+    if (low.includes('.orcaslicer.upload.')) {
+      lastCandidate = a;
+      try { if (fs.existsSync(a)) return a; } catch {}
+      continue;
+    }
+
+    // любой существующий путь (файл/папка) как fallback
+    try {
+      if (fs.existsSync(a)) { lastCandidate = a; return a; }
+    } catch {}
+
+    // как минимум помним последнюю "похожую на путь" строку
+    if (a.includes('\\') || a.includes('/') || /^[a-zA-Z]:\\/.test(a)) lastCandidate = a;
   }
   return lastCandidate;
 }
@@ -557,9 +1143,18 @@ function stashGcodeFile(srcPath) {
     if (!srcPath) return null;
     if (!fs.existsSync(srcPath)) return null;
 
-    const base = path.basename(srcPath)
+    // stash only files
+    const st = fs.statSync(srcPath);
+    if (!st.isFile()) return null;
+
+    let base = path.basename(srcPath)
       .replace(/[\s<>:"/\\|?*]+/g, '_')
       .replace(/\.pp$/i, '');
+
+    // Orca "На печать" может отдавать файл без расширения (.OrcaSlicer.upload.*)
+    // UI импортирует по расширению, поэтому форсим .gcode
+    if (!/\.(gcode|gco|bgcode)$/i.test(base)) base = (base || 'import') + '.gcode';
+
     const dst = path.join(STASH_DIR, `${Date.now()}_${process.pid}_${base}`);
 
     fs.copyFileSync(srcPath, dst);
@@ -862,11 +1457,13 @@ function openParamsWindow() {
   }
 
   const opts = {
-    width: 620,
-    height: 620,
-    resizable: false,
+    width: 980,
+    height: 820,
+    minWidth: 780,
+    minHeight: 720,
+    resizable: true,
     minimizable: false,
-    maximizable: false,
+    maximizable: true,
     backgroundColor: '#0b1220',
     autoHideMenuBar: true,
     parent: win || undefined,
@@ -1098,7 +1695,15 @@ async function buildOffline(options = {}) {
     sourceUrl: remoteUrl,
     offlineRootDir: offlineRootPath,
     offlineTitle: 'Калькулятор 3D-печати (оффлайн)',
-    onProgress
+    onProgress,
+    fetchBufferImpl: async (urlStr, timeoutMs) => {
+      try {
+        const r = await requestBufferWithProxyFailover(urlStr, { timeoutMs });
+        return { ok: r.ok, status: r.status, headers: r.headers, buf: r.buf };
+      } catch (e) {
+        return { ok: false, status: 0, headers: {}, buf: Buffer.from(''), error: String(e?.message || e) };
+      }
+    }
   });
 
   await atomicSwapDir(tmpDir, offlineSiteDir);
@@ -1127,6 +1732,15 @@ function createWindow(startSilent) {
   };
 
   if (WINDOW_ICON) winOpts.icon = WINDOW_ICON;
+
+  try {
+    const wa = screen && screen.getPrimaryDisplay ? screen.getPrimaryDisplay().workAreaSize : null;
+    if (wa && wa.width && wa.height) {
+      winOpts.width = Math.max(900, Math.round(wa.width * 0.7));
+      winOpts.height = Math.max(650, Math.round(wa.height * 0.7));
+      winOpts.center = true;
+    }
+  } catch {}
 
   win = new BrowserWindow(winOpts);
 
@@ -1160,7 +1774,7 @@ function createWindow(startSilent) {
 
   const startWindowFlow = async () => {
     layoutViews();
-    win.maximize();
+    // win.maximize();
     if (startSilent && typeof win.showInactive === 'function') win.showInactive();
     else win.show();
 
@@ -1291,6 +1905,52 @@ ipcMain.handle('offline:build', async () => {
   }
 });
 
+ipcMain.handle('proxy:getSettings', async () => {
+  const p = getProxySettingsRaw();
+  return { enabled: p.enabled, timeoutMs: p.timeoutMs, rawList: p.rawList, proxies: p.proxies };
+});
+
+ipcMain.handle('proxy:setSettings', async (_event, payload = {}) => {
+  // payload может содержать только часть полей.
+  const current = getProxySettingsRaw();
+  const enabled = (typeof payload.enabled === 'boolean') ? payload.enabled : current.enabled;
+  const timeoutMs = (payload.timeoutMs != null) ? Number(payload.timeoutMs) : current.timeoutMs;
+  const rawList = (typeof payload.rawList === 'string') ? payload.rawList : undefined;
+  const updated = setProxySettingsRaw({ enabled, timeoutMs, rawList });
+  await applyElectronProxyFromSettings();
+  return { enabled: updated.enabled, timeoutMs: updated.timeoutMs, rawList: updated.rawList, proxies: updated.proxies };
+});
+
+ipcMain.handle('proxy:importText', async (_event, text) => {
+  const updated = importProxyRawText(String(text ?? ''));
+  await applyElectronProxyFromSettings();
+  return { enabled: updated.enabled, timeoutMs: updated.timeoutMs, rawList: updated.rawList, proxies: updated.proxies };
+});
+
+ipcMain.handle('proxy:exportText', async () => {
+  const { enabled, proxies } = getProxySettingsRaw();
+  return (Array.isArray(proxies) ? proxies : []).map((p) => p.raw).filter(Boolean).join('\n');
+});
+
+ipcMain.handle('proxy:remove', async (_event, raw) => {
+  const updated = removeProxyByRaw(String(raw ?? ''));
+  await applyElectronProxyFromSettings();
+  return { enabled: updated.enabled, timeoutMs: updated.timeoutMs, rawList: updated.rawList, proxies: updated.proxies };
+});
+
+ipcMain.handle('proxy:pingAll', async () => {
+  const updated = await pingAllProxies();
+  return { enabled: updated.enabled, timeoutMs: updated.timeoutMs, rawList: updated.rawList, proxies: updated.proxies };
+});
+
+ipcMain.handle('clipboard:readText', async () => {
+  try { return clipboard.readText() || ''; } catch { return ''; }
+});
+
+ipcMain.handle('clipboard:writeText', async (_event, text) => {
+  try { clipboard.writeText(String(text ?? '')); return true; } catch { return false; }
+});
+
 ipcMain.handle('params:openWindow', async (event) => {
   log('params.openWindow', { senderId: event?.sender?.id });
   openParamsWindow();
@@ -1360,34 +2020,162 @@ ipcMain.handle('sync:pickOrcaPath', async () => {
 });
 
 // ---------- Orca post-process launcher mode ----------
+async function waitForStableFile(fp, opts = {}) {
+  const timeoutMs = Math.max(1000, Math.min(60000, Number(opts.timeoutMs ?? 12000)));
+  const pollMs = Math.max(50, Math.min(1000, Number(opts.pollMs ?? 150)));
+  const stableMs = Math.max(100, Math.min(2000, Number(opts.stableMs ?? 400)));
+
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      if (!fs.existsSync(fp)) { await sleep(pollMs); continue; }
+      const s1 = fs.statSync(fp);
+      if (!s1.isFile()) return false;
+      const size1 = s1.size || 0;
+      await sleep(stableMs);
+      if (!fs.existsSync(fp)) { await sleep(pollMs); continue; }
+      const s2 = fs.statSync(fp);
+      if (!s2.isFile()) return false;
+      const size2 = s2.size || 0;
+      if (size1 > 0 && size1 === size2) return true;
+    } catch {}
+    await sleep(pollMs);
+  }
+  return false;
+}
+
+async function findNewestFileInDir(dir, exts, opts = {}) {
+  const timeoutMs = Math.max(1000, Math.min(60000, Number(opts.timeoutMs ?? 12000)));
+  const pollMs = Math.max(50, Math.min(1000, Number(opts.pollMs ?? 200)));
+  const depthMax = Math.max(1, Math.min(8, Number(opts.depthMax ?? 4)));
+
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      if (!fs.existsSync(dir)) { await sleep(pollMs); continue; }
+      const st = fs.statSync(dir);
+      if (!st.isDirectory()) return null;
+
+      const candidates = [];
+      const q = [{ d: dir, depth: 0 }];
+
+      while (q.length) {
+        const { d, depth } = q.shift();
+        let entries = [];
+        try { entries = await fsp.readdir(d, { withFileTypes: true }); } catch { continue; }
+
+        for (const e of entries) {
+          const p = path.join(d, e.name);
+          if (e.isDirectory()) {
+            if (depth < depthMax) q.push({ d: p, depth: depth + 1 });
+            continue;
+          }
+          if (!e.isFile()) continue;
+
+          const low = e.name.toLowerCase();
+          const ok = exts.some((x) => low.endsWith(x));
+          if (!ok) continue;
+
+          try {
+            const stf = await fsp.stat(p);
+            candidates.push({ p, m: stf.mtimeMs || 0, s: stf.size || 0 });
+          } catch {}
+        }
+      }
+
+      candidates.sort((a, b) => (b.m - a.m) || (b.s - a.s));
+      if (candidates.length) return candidates[0].p;
+    } catch {}
+    await sleep(pollMs);
+  }
+  return null;
+}
+
+async function resolveIncomingForPP(fpHint) {
+  if (!fpHint) return null;
+  const p = String(fpHint);
+
+  const start = Date.now();
+  const timeoutMs = 12000;
+  const pollMs = 150;
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      if (!fs.existsSync(p)) { await sleep(pollMs); continue; }
+      const st = fs.statSync(p);
+
+      if (st.isFile()) {
+        const ok = await waitForStableFile(p, { timeoutMs: timeoutMs - (Date.now() - start) });
+        return ok ? p : p;
+      }
+
+      if (st.isDirectory()) {
+        const candidate = await findNewestFileInDir(
+          p,
+          ['.gcode', '.gco', '.bgcode', '.gcode.pp', '.gco.pp', '.bgcode.pp'],
+          { timeoutMs: timeoutMs - (Date.now() - start) }
+        );
+        if (candidate) {
+          const ok = await waitForStableFile(candidate, { timeoutMs: timeoutMs - (Date.now() - start) });
+          return ok ? candidate : candidate;
+        }
+      }
+    } catch {}
+    await sleep(pollMs);
+  }
+
+  return null;
+}
+
 function maybeDetachLauncher() {
   const isPP = hasFlag(process.argv, '--pp');
   if (!isPP) return false;
 
   const silent = hasFlag(process.argv, '--silent');
-  const fp = extractGcodePath(process.argv);
-  log('launcher.mode', { isPP, silent, fp });
+  const fpHint = extractGcodePath(process.argv);
+  log('launcher.mode', { isPP, silent, fp: fpHint });
 
-  const stashPath = fp ? (stashGcodeFile(fp) || fp) : null;
-  const additionalData = { deliverPath: stashPath, fromPP: true, silent };
+  app.whenReady().then(async () => {
+    let resolved = null;
+    try { resolved = await resolveIncomingForPP(fpHint); } catch {}
+    const srcForStash = resolved || fpHint;
 
-  const gotLock = app.requestSingleInstanceLock(additionalData);
-  log('launcher.requestSingleInstanceLock', { gotLock, additionalData });
+    let stashPath = null;
+    if (srcForStash) {
+      stashPath = stashGcodeFile(srcForStash) || null;
+      if (!stashPath && isGcodePath(srcForStash)) stashPath = srcForStash;
+    }
 
-  if (!gotLock) { app.quit(); return true; }
+    const additionalData = { deliverPath: stashPath, fromPP: true, silent };
+    const gotLock = app.requestSingleInstanceLock(additionalData);
+    log('launcher.requestSingleInstanceLock', { gotLock, additionalData });
 
-  try { app.releaseSingleInstanceLock(); } catch {}
+    if (!gotLock) {
+      app.quit();
+      return;
+    }
 
-  const args = [];
-  if (silent) args.push('--silent');
-  if (stashPath) args.push(stashPath);
+    try { app.releaseSingleInstanceLock(); } catch {}
 
-  log('launcher.spawnUI', { args });
-  const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
-  child.unref();
-  log('launcher.spawnedUI', { childPid: child.pid });
+    const args = [];
+    if (silent) args.push('--silent');
+    if (stashPath) args.push(stashPath);
 
-  app.quit();
+    log('launcher.spawnUI', { args });
+    try {
+      const child = spawn(process.execPath, args, { detached: true, stdio: 'ignore' });
+      child.unref();
+      log('launcher.spawnedUI', { childPid: child.pid });
+    } catch (e) {
+      log('launcher.spawn.failed', { error: e?.message });
+    }
+
+    app.quit();
+  }).catch((e) => {
+    log('launcher.whenReady.failed', { error: e?.message });
+    app.quit();
+  });
+
   return true;
 }
 
@@ -1415,8 +2203,10 @@ if (maybeDetachLauncher()) {
       if (fp) handleIncomingGcode(fp);
     });
 
-    app.whenReady().then(() => {
+    app.whenReady().then(async () => {
       const startSilent = hasFlag(process.argv, '--silent');
+      // Прокси должны примениться до загрузки любого контента.
+      await applyElectronProxyFromSettings();
       createWindow(startSilent);
 
       if (!hasFlag(process.argv, '--pp')) {
