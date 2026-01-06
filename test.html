@@ -610,7 +610,6 @@
                     <p class="small-text">
                         Прошлые расчёты. «Редакт.» — загрузить данные обратно в калькулятор.
                     </p>
-                    <button class="btn btn-danger mb-3" onclick="onClearCalcHistory()">Очистить историю</button>
                     <div class="table-responsive">
                         <input type="text" class="form-control form-control-sm mb-2" placeholder="Поиск..." oninput="filterTable('historyTable', this.value)">
                         <table class="table table-bordered table-hover" id="historyTable">
@@ -6100,14 +6099,6 @@
         renderHistoryTable();
         updateHistoryStats();
     }
-    function onClearCalcHistory(){
-        if(!confirm("Очистить всю историю?")) return;
-        appData.calcHistory = [];
-        saveToLocalStorage();
-        renderHistoryTable();
-        updateHistoryStats();
-    }
-
 
     function onChangeCalcHistoryStatus(timestamp, newStatus){
         const it = appData.calcHistory.find(x => x.timestamp === timestamp);
