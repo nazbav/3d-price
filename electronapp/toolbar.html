@@ -12,10 +12,12 @@
     .msg { font-size:12px; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46vw; }
     .ok { background:#065f46; border-color:#064e3b; }
     .warn { background:#7c2d12; border-color:#7c2d12; }
+    .version { font-size:12px; color:#9ca3af; white-space:nowrap; }
   </style>
 </head>
 <body>
   <div class="bar">
+    <span class="version" id="appVersion"></span>
     <span class="msg" id="msg"></span>
     <span class="spacer"></span>
 
@@ -25,6 +27,8 @@
 <script>
   const $ = (id) => document.getElementById(id);
   function setStatus(s){
+    const ver = (s && s.appVersion) ? `v${s.appVersion}` : '';
+    $("appVersion").textContent = ver;
     $("msg").textContent = s.message || "";
   }
 

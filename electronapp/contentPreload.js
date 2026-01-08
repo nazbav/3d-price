@@ -20,3 +20,21 @@ contextBridge.exposeInMainWorld('gcodeBridge', {
   },
   debug: (msg, extra) => ipcRenderer.send('debug:log', { msg, extra }),
 });
+
+contextBridge.exposeInMainWorld('backupBridge', {
+  getSettings: () => ipcRenderer.invoke('backups:getSettings'),
+  updateSettings: (payload) => ipcRenderer.invoke('backups:updateSettings', payload || {}),
+  pickDirectory: (initialPath) => ipcRenderer.invoke('backups:pickDir', initialPath || ''),
+  runNow: (reason) => ipcRenderer.invoke('backups:runNow', { reason }),
+  openFolder: () => ipcRenderer.invoke('backups:openFolder'),
+  list: () => ipcRenderer.invoke('backups:list'),
+  notify: (payload) => ipcRenderer.send('backups:notify', payload || {}),
+  onStatus: (cb) => {
+    if (typeof cb !== 'function') return () => {};
+    const listener = (_event, data) => {
+      try { cb(data); } catch (e) {}
+    };
+    ipcRenderer.on('backups:status', listener);
+    return () => ipcRenderer.removeListener('backups:status', listener);
+  }
+});

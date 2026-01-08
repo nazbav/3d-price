@@ -159,6 +159,40 @@
             background-color: rgba(255, 193, 7, 0.25);
             font-weight: 600;
         }
+        .schema-migration-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 1rem;
+        }
+        .schema-migration-overlay.show {
+            display: flex;
+        }
+        .schema-migration-card {
+            width: min(560px, 100%);
+            background: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
+        }
+        .schema-migration-card h2 {
+            font-size: 1.35rem;
+            margin-bottom: 0.5rem;
+        }
+        .schema-migration-card ol {
+            padding-left: 1.25rem;
+        }
+        .schema-migration-card li + li {
+            margin-top: 0.75rem;
+        }
+        .schema-migration-card .status {
+            font-size: 0.9rem;
+        }
 
         [data-bs-theme="dark"] .timeline-day-container {
             border-left-color: rgba(255, 255, 255, 0.25);
@@ -253,6 +287,23 @@
     </style>
 </head>
 <body>
+<div id="schemaMigrationOverlay" class="schema-migration-overlay">
+    <div class="schema-migration-card">
+        <h2>Обновление формата данных</h2>
+        <p>Мы переходим на новый формат хранения. Чтобы ничего не потерять, сначала сделаем резервную копию ваших данных на компьютер, затем автоматически обновим их. Процедура выполняется один раз.</p>
+        <ol>
+            <li>
+                <button id="schemaMigrationBackupBtn" class="btn btn-primary btn-sm">Скачать резервную копию</button>
+                <div id="schemaMigrationBackupStatus" class="status mt-1 text-muted">Шаг 1: сохраните текущие данные.</div>
+            </li>
+            <li>
+                <button id="schemaMigrationStartBtn" class="btn btn-success btn-sm mt-2" disabled>Обновить данные</button>
+                <div id="schemaMigrationProgress" class="status mt-1 text-muted"></div>
+            </li>
+        </ol>
+        <div id="schemaMigrationError" class="text-danger small mt-2"></div>
+    </div>
+</div>
 
 <div class="container-fluid">
 
@@ -1164,6 +1215,25 @@
     </div>
 </div>
 
+<!-- Модальное окно с ссылкой на чек -->
+<div class="modal fade" id="checkLinkModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ссылка на чек</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body">
+                <label for="checkLinkInput" class="form-label">Ссылка для копирования:</label>
+                <div class="input-group mb-3">
+                    <input type="text" readonly class="form-control" id="checkLinkInput">
+                    <button class="btn btn-outline-secondary" type="button" id="copyCheckLinkBtn">Копировать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     /**
@@ -1431,8 +1501,56 @@
         return String(next);
     }
 
+    const LEGACY_CALC_SETTINGS_FIELDS = ['workHoursDay', 'startDate', 'modelingRate', 'modelingCost'];
+    const LEGACY_MATERIAL_FIELDS = ['waste_percent', 'spoolmanId'];
+    const LEGACY_HISTORY_FIELDS = [
+        'timelineScheduleSummary',
+        'actualFinishDate',
+        'deadlineMet',
+        'autoSelectedUrgencyId',
+        'urgencyProfileTitle',
+        'profileMarkupPercent',
+        'priceBeforeDiscount',
+        'rounding',
+        'operatorWorkCost',
+        'downtimeCost',
+        'preparationCost',
+        'preparationTime',
+        'rejectHours',
+        'rejectWeight'
+    ];
+    const LEGACY_GLOBAL_ADDITIONAL_FIELDS = ['sumGlobalAdd', 'taxAmount'];
+
+    function stripLegacyHistoryFields(entry) {
+        if (!entry || typeof entry !== 'object') return entry;
+        LEGACY_HISTORY_FIELDS.forEach(key => {
+            if (key in entry) delete entry[key];
+        });
+        if (entry.globalAdditional && typeof entry.globalAdditional === 'object') {
+            LEGACY_GLOBAL_ADDITIONAL_FIELDS.forEach(key => {
+                if (key in entry.globalAdditional) delete entry.globalAdditional[key];
+            });
+        }
+        return entry;
+    }
+
+    function cleanupCalcSettings(settings) {
+        if (!settings || typeof settings !== 'object') return;
+        LEGACY_CALC_SETTINGS_FIELDS.forEach(key => {
+            if (key in settings) delete settings[key];
+        });
+    }
+
+    function cleanupMaterialFields(material) {
+        if (!material || typeof material !== 'object') return;
+        LEGACY_MATERIAL_FIELDS.forEach(key => {
+            if (key in material) delete material[key];
+        });
+    }
+
     /* Перенос данных из старого формата */
     function migrateOldData(obj){
+        if(!obj || typeof obj !== 'object') obj = {};
         if(!Array.isArray(obj.printers)) obj.printers = [];
         if(!Array.isArray(obj.materials)) obj.materials = [];
         if(!Array.isArray(obj.additionalGlobal)) obj.additionalGlobal = [];
@@ -1440,6 +1558,7 @@
         if(!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
 
         if(!obj.calcSettings) obj.calcSettings = {};
+        cleanupCalcSettings(obj.calcSettings);
         if(typeof obj.calcSettings.downtimeCost !== 'number') obj.calcSettings.downtimeCost = 0;
         if(typeof obj.calcSettings.preparationRate !== 'number') obj.calcSettings.preparationRate = 0;
         if(typeof obj.calcSettings.preparationTime !== 'number') obj.calcSettings.preparationTime = 0;
@@ -1564,6 +1683,10 @@
 
         // Обновление истории расчётов и calcData
         obj.calcHistory.forEach(h=>{
+            if(h.nalogInn) delete h.nalogInn;
+            if(Array.isArray(h.nalogReceipts)){
+                h.nalogReceipts = h.nalogReceipts.map(r=>({uuid:r.uuid, canceled: !!r.canceled}));
+            }
             if(!h.markupPercent) h.markupPercent = 0;
             if(!h.discountPercent) h.discountPercent = 0;
             if(!h.globalAdditional) h.globalAdditional = {sumGlobalAdd:0,taxAmount:0,details:[]};
@@ -1622,7 +1745,7 @@
             if(!h.clientId) h.clientId = c.id;
         });
 
-        obj.materials.forEach(m=>{ if(!m.printers) m.printers=[]; });
+        obj.materials.forEach(m=>{ if(!m.printers) m.printers=[]; cleanupMaterialFields(m); });
         if(!Array.isArray(obj.materialProfiles)) obj.materialProfiles=[];
         obj.materials.forEach(m=>{
             if(typeof m.coolingTime !== 'number') m.coolingTime = 0;
@@ -1647,6 +1770,9 @@
             if(h.calcData) Object.keys(h.calcData).forEach(pid=> used.add(String(pid)) );
         });
         obj.printers = obj.printers.filter(p=> !p.isTemp || used.has(String(p.id)) );
+        if(Array.isArray(obj.calcHistory)) obj.calcHistory.forEach(stripLegacyHistoryFields);
+        obj.schemaVersion = CURRENT_SCHEMA_VERSION;
+        obj.migrationInfo = obj.migrationInfo || {};
         return obj;
     }
 
@@ -2131,6 +2257,14 @@
     }
 
     const STORAGE_KEY = "ThreeDPrintCalc_Extended_v5";
+    const STORAGE_HISTORY_KEY = STORAGE_KEY + "_history";
+    const CURRENT_SCHEMA_VERSION = 2;
+    const migrationState = {
+        needsMigration: false,
+        rawData: null,
+        backupDone: false,
+        inProgress: false
+    };
     const OPERATOR_PERIOD_ROWS = 5;
     const DEFAULT_OPERATOR_PERIODS = [
         {start: "10:00", end: "13:00"},
@@ -2249,71 +2383,334 @@
             }))
         },
         clients: [],
-        calcHistory: []
+        calcHistory: [],
+        migrationInfo: {},
+        schemaVersion: CURRENT_SCHEMA_VERSION
     };
 
+    function isLegacySchema(obj){
+        if(!obj || typeof obj !== 'object') return false;
+        const version = parseInt(obj.schemaVersion, 10);
+        if(!version || version < CURRENT_SCHEMA_VERSION) return true;
+        const calcSettings = obj.calcSettings || {};
+        if('workHoursDay' in calcSettings || 'modelingRate' in calcSettings || 'modelingCost' in calcSettings) return true;
+        if(Array.isArray(obj.calcHistory)){
+            for(const entry of obj.calcHistory){
+                if(!entry || typeof entry !== 'object') continue;
+                if('timelineScheduleSummary' in entry ||
+                    'actualFinishDate' in entry ||
+                    'deadlineMet' in entry ||
+                    'priceBeforeDiscount' in entry ||
+                    'rounding' in entry ||
+                    'operatorWorkCost' in entry ||
+                    'downtimeCost' in entry ||
+                    'preparationCost' in entry ||
+                    'rejectHours' in entry ||
+                    'rejectWeight' in entry ||
+                    'autoSelectedUrgencyId' in entry){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function ensureAppDataDefaults(obj){
+        if(!obj || typeof obj !== 'object') obj = {};
+        if(!Array.isArray(obj.printers)) obj.printers = [];
+        if(!Array.isArray(obj.materials)) obj.materials = [];
+        if(!Array.isArray(obj.materialProfiles)) obj.materialProfiles = [];
+        if(!Array.isArray(obj.additionalGlobal)) obj.additionalGlobal = [];
+        if(!Array.isArray(obj.clients)) obj.clients = [];
+        if(!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
+        obj.materials.forEach(m=>{if(!m.printers) m.printers=[];});
+        obj.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
+        if(!obj.labelSettings) obj.labelSettings = {};
+        if('paymentInfo' in obj.labelSettings && !('bankDetails' in obj.labelSettings)){
+            obj.labelSettings.bankDetails = obj.labelSettings.paymentInfo;
+            delete obj.labelSettings.paymentInfo;
+        }
+        if(!('bankDetails' in obj.labelSettings)) obj.labelSettings.bankDetails = '';
+        if (!Array.isArray(obj.labelSettings.urgencyProfiles) || !obj.labelSettings.urgencyProfiles.length) {
+            const legacySchedule = obj.labelSettings.operatorSchedule || createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS);
+            const legacyWorking = Array.isArray(obj.labelSettings.operatorWorkingDays) && obj.labelSettings.operatorWorkingDays.length
+                ? obj.labelSettings.operatorWorkingDays
+                : [...DEFAULT_WORKING_DAYS];
+            const fallback = {
+                id: 'standard',
+                title: 'Стандарт',
+                markupPercent: 0,
+                description: 'Обычные сроки, пятидневка',
+                schedule: Object.keys(legacySchedule).length ? legacySchedule : createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS),
+                workingDays: legacyWorking
+            };
+            const extra = DEFAULT_URGENCY_PROFILES.filter(p => p.id !== 'standard').map(p => ({
+                id: p.id,
+                title: p.title,
+                markupPercent: p.markupPercent,
+                description: p.description,
+                schedule: JSON.parse(JSON.stringify(p.schedule)),
+                workingDays: [...p.workingDays]
+            }));
+            obj.labelSettings.urgencyProfiles = [fallback, ...extra];
+        }
+        delete obj.labelSettings.operatorSchedule;
+        delete obj.labelSettings.operatorWorkingDays;
+        if(!obj.calcSettings) obj.calcSettings = {};
+        if(!obj.calcSettings.currentUrgencyId){
+            const firstProfile = Array.isArray(obj.labelSettings.urgencyProfiles) && obj.labelSettings.urgencyProfiles.length
+                ? obj.labelSettings.urgencyProfiles[0].id
+                : 'standard';
+            obj.calcSettings.currentUrgencyId = firstProfile;
+        }
+        if(!Array.isArray(obj.calcSettings.customServices)) obj.calcSettings.customServices = [];
+        return obj;
+    }
+
+    function buildConfigSnapshotForStorage(data){
+        try{
+            const snapshot = JSON.parse(JSON.stringify(data || {}));
+            if(snapshot && snapshot.calcHistory) delete snapshot.calcHistory;
+            return snapshot;
+        } catch (e){
+            console.warn('buildConfigSnapshotForStorage.failed', e);
+            const fallback = Object.assign({}, data);
+            if(fallback && fallback.calcHistory) delete fallback.calcHistory;
+            return fallback;
+        }
+    }
+
+    function loadHistoryLayer(){
+        try{
+            const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
+            if(!raw) return null;
+            const parsed = JSON.parse(raw);
+            if(Array.isArray(parsed)) return parsed;
+            if(parsed && Array.isArray(parsed.calcHistory)) return parsed.calcHistory;
+        } catch(e){
+            console.warn('historyLayer.load.failed', e);
+        }
+        return null;
+    }
+
+    function persistHistoryLayer(history){
+        try{
+            const payload = Array.isArray(history) ? history : [];
+            localStorage.setItem(STORAGE_HISTORY_KEY, JSON.stringify(payload));
+        } catch(e){
+            console.warn('historyLayer.save.failed', e);
+        }
+    }
+
+    function hydrateCalcHistoryFromLayers(debugInfo){
+        let historySource = 'inline';
+        let historyData = Array.isArray(appData && appData.calcHistory) ? appData.calcHistory : [];
+        const layer = loadHistoryLayer();
+        if(Array.isArray(layer)){
+            historyData = layer;
+            historySource = 'layer';
+        } else if(historyData.length){
+            persistHistoryLayer(historyData);
+        }
+        if(!Array.isArray(historyData)) historyData = [];
+        appData.calcHistory = historyData;
+        if(debugInfo){
+            debugInfo.historyLen = historyData.length;
+            debugInfo.historySource = historySource;
+        }
+    }
+
     function loadFromLocalStorage(){
+        const debugInfo = {
+            rawLen: 0,
+            parsed: false,
+            legacy: false,
+            schemaVersion: null,
+            error: null,
+            needsMigration: false,
+            historySource: 'none',
+            historyLen: 0
+        };
         try{
             const s = localStorage.getItem(STORAGE_KEY);
+            debugInfo.rawLen = s ? s.length : 0;
             if(s){
                 const p = JSON.parse(s);
-                if(p) appData = migrateOldData(p);
-                if(!Array.isArray(appData.printers)) appData.printers = [];
-                if(!Array.isArray(appData.materials)) appData.materials = [];
-                if(!Array.isArray(appData.materialProfiles)) appData.materialProfiles = [];
-                if(!Array.isArray(appData.additionalGlobal)) appData.additionalGlobal = [];
-                if(!Array.isArray(appData.clients)) appData.clients = [];
-                if(!Array.isArray(appData.calcHistory)) appData.calcHistory = [];
-                appData.materials.forEach(m=>{if(!m.printers) m.printers=[];});
-                appData.additionalGlobal.forEach(a=>{if(!a.printers) a.printers=[];});
-                if(!appData.labelSettings) appData.labelSettings = {};
-                if('paymentInfo' in appData.labelSettings && !('bankDetails' in appData.labelSettings)){
-                    appData.labelSettings.bankDetails = appData.labelSettings.paymentInfo;
-                    delete appData.labelSettings.paymentInfo;
+                debugInfo.parsed = true;
+                debugInfo.schemaVersion = (p && p.schemaVersion !== undefined) ? p.schemaVersion : null;
+                migrationState.needsMigration = false;
+                migrationState.rawData = null;
+                migrationState.backupDone = false;
+                migrationState.inProgress = false;
+                if(p && isLegacySchema(p)){
+                    migrationState.needsMigration = true;
+                    migrationState.rawData = s;
+                    debugInfo.legacy = true;
+                    debugInfo.needsMigration = true;
+                    appData = ensureAppDataDefaults(p);
+                    hydrateCalcHistoryFromLayers(debugInfo);
+                    window.__migrationDebug = debugInfo;
+                    return;
                 }
-                if(!('bankDetails' in appData.labelSettings)) appData.labelSettings.bankDetails = '';
-                if (!Array.isArray(appData.labelSettings.urgencyProfiles) || !appData.labelSettings.urgencyProfiles.length) {
-                    const legacySchedule = appData.labelSettings.operatorSchedule || createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS);
-                    const legacyWorking = Array.isArray(appData.labelSettings.operatorWorkingDays) && appData.labelSettings.operatorWorkingDays.length
-                        ? appData.labelSettings.operatorWorkingDays
-                        : [...DEFAULT_WORKING_DAYS];
-                    const fallback = {
-                        id: 'standard',
-                        title: 'Стандарт',
-                        markupPercent: 0,
-                        description: 'Обычные сроки, пятидневка',
-                        schedule: Object.keys(legacySchedule).length ? legacySchedule : createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS),
-                        workingDays: legacyWorking
-                    };
-                    const extra = DEFAULT_URGENCY_PROFILES.filter(p => p.id !== 'standard').map(p => ({
-                        id: p.id,
-                        title: p.title,
-                        markupPercent: p.markupPercent,
-                        description: p.description,
-                        schedule: JSON.parse(JSON.stringify(p.schedule)),
-                        workingDays: [...p.workingDays]
-                    }));
-                    appData.labelSettings.urgencyProfiles = [fallback, ...extra];
+                if(p){
+                    appData = ensureAppDataDefaults(migrateOldData(p));
                 }
-                delete appData.labelSettings.operatorSchedule;
-                delete appData.labelSettings.operatorWorkingDays;
-                if(!appData.calcSettings) appData.calcSettings = {};
-                if(!appData.calcSettings.currentUrgencyId){
-                    const firstProfile = Array.isArray(appData.labelSettings.urgencyProfiles) && appData.labelSettings.urgencyProfiles.length
-                        ? appData.labelSettings.urgencyProfiles[0].id
-                        : 'standard';
-                    appData.calcSettings.currentUrgencyId = firstProfile;
-                }
-                if(!Array.isArray(appData.calcSettings.customServices)) appData.calcSettings.customServices = [];
+                debugInfo.needsMigration = false;
             }
-        } catch(e){}
+        } catch(e){
+            debugInfo.error = e && e.message ? e.message : String(e);
+        }
+        if(!appData.schemaVersion){
+            appData.schemaVersion = CURRENT_SCHEMA_VERSION;
+            appData.migrationInfo = appData.migrationInfo || {};
+        }
+        hydrateCalcHistoryFromLayers(debugInfo);
+        window.__migrationDebug = debugInfo;
     }
-    function saveToLocalStorage(){
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+
+    function saveToLocalStorage(options = {}){
+        if(appData && typeof appData === 'object'){
+            appData.schemaVersion = CURRENT_SCHEMA_VERSION;
+            appData.migrationInfo = appData.migrationInfo || {};
+        }
+        const historySnapshot = Array.isArray(appData && appData.calcHistory) ? appData.calcHistory : [];
+        const configSnapshot = buildConfigSnapshotForStorage(appData);
+        try{
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(configSnapshot));
+        } catch(e){
+            console.error('saveToLocalStorage.config.failed', e);
+        }
+        if(options && options.skipHistory === true) return;
+        persistHistoryLayer(historySnapshot);
+    }
+    function showSchemaMigrationOverlay(){
+        const overlay = document.getElementById('schemaMigrationOverlay');
+        if(!overlay) return;
+        overlay.classList.add('show');
+        updateSchemaMigrationUi();
+    }
+    function hideSchemaMigrationOverlay(){
+        const overlay = document.getElementById('schemaMigrationOverlay');
+        if(!overlay) return;
+        overlay.classList.remove('show');
+    }
+    function updateSchemaMigrationUi(){
+        const backupStatus = document.getElementById('schemaMigrationBackupStatus');
+        const progress = document.getElementById('schemaMigrationProgress');
+        const errorEl = document.getElementById('schemaMigrationError');
+        const backupBtn = document.getElementById('schemaMigrationBackupBtn');
+        const startBtn = document.getElementById('schemaMigrationStartBtn');
+        if(backupStatus){
+            backupStatus.textContent = migrationState.backupDone
+                ? 'Резервная копия сохранена. Можно переходить к шагу 2.'
+                : 'Шаг 1: сохраните текущие данные.';
+        }
+        if(progress){
+            progress.textContent = migrationState.inProgress ? 'Идёт обновление. Пожалуйста, не закрывайте окно.' : '';
+        }
+        if(backupBtn){
+            backupBtn.disabled = migrationState.inProgress;
+        }
+        if(startBtn){
+            startBtn.disabled = !migrationState.backupDone || migrationState.inProgress;
+            startBtn.textContent = migrationState.inProgress ? 'Обновляем...' : 'Обновить данные';
+        }
+        if(errorEl && errorEl.dataset.dismissOnUpdate === 'true'){
+            errorEl.textContent = '';
+            delete errorEl.dataset.dismissOnUpdate;
+        }
+    }
+    function handleSchemaMigrationBackup(){
+        if(!migrationState.rawData) return;
+        const errorEl = document.getElementById('schemaMigrationError');
+        if(errorEl){
+            errorEl.textContent = '';
+        }
+        try{
+            const stamp = new Date().toISOString().replace(/[:.]/g,'-');
+            const blob = new Blob([migrationState.rawData], {type:'application/json'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `gcodecalc_backup_${stamp}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(()=>URL.revokeObjectURL(url), 500);
+            migrationState.backupDone = true;
+            updateSchemaMigrationUi();
+        } catch (e){
+            if(errorEl){
+                errorEl.textContent = 'Не удалось сохранить резервную копию: ' + (e && e.message ? e.message : String(e));
+            }
+        }
+    }
+    function handleSchemaMigrationStart(){
+        const errorEl = document.getElementById('schemaMigrationError');
+        if(errorEl) errorEl.textContent = '';
+        if(!migrationState.backupDone){
+            if(errorEl){
+                errorEl.textContent = 'Сначала скачайте резервную копию.';
+                errorEl.dataset.dismissOnUpdate = 'true';
+            }
+            return;
+        }
+        if(!migrationState.rawData){
+            if(errorEl){
+                errorEl.textContent = 'Нет данных для миграции.';
+            }
+            return;
+        }
+        migrationState.inProgress = true;
+        updateSchemaMigrationUi();
+        setTimeout(()=>{
+            try{
+                const parsed = JSON.parse(migrationState.rawData);
+                let next = ensureAppDataDefaults(migrateOldData(parsed));
+                next.schemaVersion = CURRENT_SCHEMA_VERSION;
+                next.migrationInfo = next.migrationInfo || {};
+                next.migrationInfo.lastMigrationAt = new Date().toISOString();
+                normalizeIds(next);
+                appData = next;
+                saveToLocalStorage();
+                migrationState.needsMigration = false;
+                migrationState.rawData = null;
+                migrationState.backupDone = false;
+                migrationState.inProgress = false;
+                hideSchemaMigrationOverlay();
+                completeAppInitialization();
+                if(window.backupBridge && typeof window.backupBridge.notify === 'function'){
+                    window.backupBridge.notify({ type: 'migrationComplete' });
+                }
+        } catch (e){
+            console.error('schema migration failed', e);
+            window.__lastMigrationError = {
+                message: (e && e.message) ? e.message : String(e),
+                stack: e && e.stack ? e.stack : null
+            };
+            migrationState.inProgress = false;
+            if(errorEl){
+                errorEl.textContent = 'Не удалось обновить данные: ' + (e && e.message ? e.message : String(e)) + '. Резервная копия сохранена у вас. Попробуйте позже или импортируйте файл вручную.';
+            }
+            try{
+                localStorage.removeItem(STORAGE_HISTORY_KEY);
+                if(migrationState.rawData) localStorage.setItem(STORAGE_KEY, migrationState.rawData);
+            } catch {}
+            updateSchemaMigrationUi();
+        }
+        }, 50);
     }
     function initAll(){
         loadFromLocalStorage();
+        if(migrationState.needsMigration){
+            showSchemaMigrationOverlay();
+            return;
+        }
+        completeAppInitialization();
+    }
 
+    function completeAppInitialization(){
+        hideSchemaMigrationOverlay();
         const validationResult = validateUniqueIds(appData);
         if (!validationResult.success) {
             console.log("ID validation failed, auto-normalizing:", validationResult.errors);
@@ -3078,7 +3475,7 @@
                 if (!mid) {
                     const materialOptions = appData.materials.map(m => ({
                         value: String(m.id),
-                        label: `${m.name} (ID: ${m.id})`
+                        label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
                     }));
 
                     if (materialOptions.length > 0) {
@@ -3234,7 +3631,7 @@
         if(!mid){
             const materialOptions = (appData.materials||[]).map(m => ({
                 value: String(m.id),
-                label: `${m.name} (ID: ${m.id})`
+                label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
             }));
 
             if(materialOptions.length === 0){
@@ -3289,7 +3686,14 @@
     }
 
 
-    document.addEventListener("DOMContentLoaded", () => { instrumentFunctions(); initAll(); });
+    document.addEventListener("DOMContentLoaded", () => {
+        instrumentFunctions();
+        const backupBtn = document.getElementById('schemaMigrationBackupBtn');
+        if(backupBtn) backupBtn.addEventListener('click', handleSchemaMigrationBackup);
+        const startBtn = document.getElementById('schemaMigrationStartBtn');
+        if(startBtn) startBtn.addEventListener('click', handleSchemaMigrationStart);
+        initAll();
+    });
 
     /* Функции массовых действий */
     function selectAll(source, type) {
@@ -3586,10 +3990,13 @@
                 col = '#' + col;
             }
 
+            const spoolmanText = m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : '';
+
+
             const tc = textColorForBg(col);
             tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
-      <td style="background-color:${col};color:${tc};">${m.name} (ID: ${m.id})<\/td>
+      <td style="background-color:${col};color:${tc};">${m.name} (ID: ${m.id}${spoolmanText})<\/td>
       <td>${m.materialType}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance * 1000}<\/td>
@@ -4606,8 +5013,9 @@
         ).join("");
         const mats = getAllMaterialsForPrinter(printerId, true);
         const optsMat = mats.map(m => {
+            const spoolmanText = m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : '';
             return `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>
-    ${m.name} (ID: ${m.id})
+    ${m.name} (ID: ${m.id}${spoolmanText})
   </option>`;
         }).join("");
         // ВАЖНО: уникальные id моделей и DOM-элементов должны жить в одном неймспейсе.
@@ -4674,8 +5082,12 @@
 
     let lastSummaryCardHtml = '';
 
+    let myNalogChallengeToken = '';
+
     let clientDropdownVisible = false;
     let currentCalcClientId = "";
+    const MY_NALOG_API = 'https://lknpd.nalog.ru';
+
 
     function setCalcOrderId(value) {
         const input = document.getElementById("calcOrderId");
@@ -5557,6 +5969,16 @@
             htmlRes += `Глобальные расходы: ${safeFixed(sumGlobalAdd)} ₽<br/>`;
         }
 
+        if(lastCalcFullData && Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length){
+            const links = lastCalcFullData.nalogReceipts.map((r,i)=>{
+                const inn = localStorage.getItem('my_nalog_inn') || '';
+                const url = `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${r.uuid}/print`;
+                const cls = (r.canceled || i < lastCalcFullData.nalogReceipts.length-1) ? 'class="text-danger"' : '';
+                return `<a href="${url}" target="_blank" ${cls}>Чек${lastCalcFullData.nalogReceipts.length>1?' '+(i+1):''}<\/a>`;
+            }).join('<br/>');
+            htmlRes += '<br/>'+links;
+        }
+
         document.getElementById("calcResult").style.display = "block";
         document.getElementById("calcResult").innerHTML = htmlRes;
         const qrTarget=document.getElementById("orderSummaryQr");
@@ -5565,8 +5987,14 @@
         }
         const summaryBtn=document.getElementById("downloadSummaryCardBtn");
         if(summaryBtn) summaryBtn.style.display='inline-block';
+        const myNalogBtn=document.getElementById("sendMyNalogBtn");
+        if(myNalogBtn) myNalogBtn.style.display='inline-block';
+        const myNalogBillBtn=document.getElementById("sendMyNalogBillBtn");
+        if(myNalogBillBtn) myNalogBillBtn.style.display='inline-block';
+        const myNalogCancelBtn=document.getElementById("cancelMyNalogBtn");
+        if(myNalogCancelBtn) myNalogCancelBtn.style.display='none';
 
-        lastCalcFullData = {
+        lastCalcFullData = stripLegacyHistoryFields({
             id: orderId,
             calcName,
             clientName,
@@ -5585,41 +6013,45 @@
             costKwh: cKwh,
             operatorRate: opRate,
             totalOperatorCost: totalOperatorCost,
-            operatorWorkCost: operatorWorkCost,
-            downtimeCost: downtimeCost,
             downtimeMinutes: totalDowntimeMinutes,
             coolingMinutes: totalCoolingMinutes,
             printerPrepMinutes: totalPrinterPrepMinutes,
-            rounding: roundingInfo,
             preparationCost: preparationCost,
             preparationTime: prepTime,
             calcData,
             globalAdditional: {
-                sumGlobalAdd,
-                taxAmount,
                 details: globalAdditionalDetails
             },
             parallelMode,
             startDate: sDate,
             markupPercent,
             discountPercent,
-            priceBeforeDiscount: totalBeforeDiscount,
             realTotal: manualFinalCost > 0 ? manualFinalCost : null,
             totalLabelsCost,
             modelsRevenue,
             urgencyProfileId: urgencyProfile ? urgencyProfile.id : '',
-            urgencyProfileTitle: urgencyProfile ? urgencyProfile.title : '',
-            profileMarkupPercent,
             userMarkupPercent,
-            timelineScheduleSummary,
             requiredFinishDate: normalizedDeadline || "",
-            actualFinishDate: timelineEndDate ? timelineEndDate.toISOString() : "",
-            deadlineMet,
-            autoSelectedUrgencyId: autoSelectedProfileId || null
-        };
+            nalogReceipts: []
+        });
+        if(existingIndex !== -1){
+            const ex = appData.calcHistory[existingIndex];
+            if(Array.isArray(ex.nalogReceipts)){
+                lastCalcFullData.nalogReceipts = ex.nalogReceipts.map(r=>({uuid:r.uuid, canceled: !!r.canceled}));
+            }else if(ex.nalogReceiptUuid){
+                lastCalcFullData.nalogReceipts = [{uuid: ex.nalogReceiptUuid, canceled: !!ex.nalogCanceled}];
+            }
+            if(Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length){
+                const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
+                lastCalcFullData.receiptUuid = last.uuid;
+            }
+            const cancelBtn=document.getElementById('cancelMyNalogBtn');
+            const showCancel = Array.isArray(lastCalcFullData.nalogReceipts) && lastCalcFullData.nalogReceipts.length && !lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1].canceled;
+            if(cancelBtn) cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+        }
 
         const dtStr = new Date().toLocaleString("ru-RU");
-        const newEntry = {
+        const newEntry = stripLegacyHistoryFields({
             id: orderId,
             timestamp: Date.now(),
             dateStr: dtStr,
@@ -5639,41 +6071,31 @@
             operatorRate: opRate,
             costKwh: cKwh,
             totalOperatorCost: totalOperatorCost,
-            operatorWorkCost: operatorWorkCost,
-            downtimeCost: downtimeCost,
             downtimeMinutes: totalDowntimeMinutes,
             coolingMinutes: totalCoolingMinutes,
             printerPrepMinutes: totalPrinterPrepMinutes,
-            rounding: roundingInfo,
             preparationCost: preparationCost,
             preparationTime: prepTime,
             details: detailsByPrinter,
             calcData,
             globalAdditional: {
-                sumGlobalAdd,
-                taxAmount,
                 details: globalAdditionalDetails
             },
             parallelMode,
             startDate: sDate,
             markupPercent,
             discountPercent,
-            priceBeforeDiscount: totalBeforeDiscount,
             realTotal: manualFinalCost > 0 ? manualFinalCost : null,
             urgencyProfileId: urgencyProfile ? urgencyProfile.id : '',
-            urgencyProfileTitle: urgencyProfile ? urgencyProfile.title : '',
-            profileMarkupPercent,
             userMarkupPercent,
-            timelineScheduleSummary,
             requiredFinishDate: normalizedDeadline || "",
-            actualFinishDate: timelineEndDate ? timelineEndDate.toISOString() : "",
-            deadlineMet,
-            autoSelectedUrgencyId: autoSelectedProfileId || null,
-            rejectHours: totalRejectHours,
-            rejectWeight: totalRejectWeight,
+            nalogReceipts: Array.isArray(lastCalcFullData.nalogReceipts)
+                ? lastCalcFullData.nalogReceipts.map(r=>({uuid:r.uuid, canceled:!!r.canceled}))
+                : [],
+            nalogReceiptUuid: lastCalcFullData.receiptUuid || null,
             totalLabelsCost,
             modelsRevenue
-        };
+        });
         if (existingIndex !== -1) {
             appData.calcHistory[existingIndex] = newEntry;
         } else {
@@ -5744,7 +6166,7 @@
         if(mats.length>1){
             const options = mats.map(m => ({
                 value: String(m.id),
-                label: `${m.name} (ID: ${m.id})`
+                label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
             }));
 
             const res=await showMultiPrompt('Материал для профиля '+safeProfile,[
@@ -6422,10 +6844,326 @@
         downloadBlob(blob, `Estimate_${Date.now()}.html`);
     }
 
+    function generateDeviceId(len=16){
+        const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let out='';
+        for(let i=0;i<len;i++) out+=chars[Math.floor(Math.random()*chars.length)];
+        return out;
+    }
+
     function buildPaymentQrString(){
         return appData.labelSettings.chatLink || '';
     }
 
+    async function refreshMyNalogToken(){
+        const refresh = localStorage.getItem('my_nalog_refresh');
+        const deviceId = localStorage.getItem('my_nalog_device_id');
+        if(!refresh || !deviceId) return false;
+        const body={
+            refreshToken: refresh,
+            deviceInfo:{
+                sourceDeviceId: deviceId,
+                sourceType:'WEB',
+                appVersion:'1.0.0',
+                metaDetails:{userAgent:navigator.userAgent}
+            }
+        };
+        try{
+            const resp = await fetch(MY_NALOG_API+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+            if(resp.ok){
+                const data = await resp.json();
+                if(data.token){
+                    localStorage.setItem('my_nalog_token', data.token);
+                    if(data.refreshToken) localStorage.setItem('my_nalog_refresh', data.refreshToken);
+                    return true;
+                }
+            }
+        }catch(e){
+            console.error('token refresh failed');
+        }
+        return false;
+    }
+
+    async function sendMyNalogRequest(method,url,body){
+        let token = localStorage.getItem('my_nalog_token');
+        if(!token) throw new Error('no token');
+        const opt={method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}};
+        if(body) opt.body=JSON.stringify(body);
+        let resp = await fetch(url,opt);
+        if(resp.status===401){
+            const ok = await refreshMyNalogToken();
+            if(ok){
+                token = localStorage.getItem('my_nalog_token');
+                opt.headers['Authorization']='Bearer '+token;
+                resp = await fetch(url,opt);
+            }
+        }
+        return resp;
+    }
+
+    async function cancelReceiptInternal(receipt, comment){
+        if(!receipt || !receipt.uuid) return false;
+        const payload = {
+            receiptUuid: receipt.uuid,
+            comment: comment || '',
+            partnerCode: null,
+            requestTime: new Date().toISOString()
+        };
+        try{
+            const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/cancel',payload);
+            if(resp.ok){
+                receipt.canceled = true;
+                const idx = appData.calcHistory.findIndex(e=>String(e.id)===String(lastCalcFullData.id));
+                if(idx!==-1 && Array.isArray(appData.calcHistory[idx].nalogReceipts)){
+                    const arr = appData.calcHistory[idx].nalogReceipts;
+                    const j = arr.findIndex(r=>r.uuid===receipt.uuid);
+                    if(j!==-1) arr[j].canceled = true;
+                    saveToLocalStorage();
+                    renderHistoryTable();
+                }
+                return true;
+            }
+        }catch(e){
+        }
+        return false;
+    }
+
+    function showCheckLinkModal(checkUrl) {
+        document.getElementById('checkLinkInput').value = checkUrl;
+        const modal = new bootstrap.Modal(document.getElementById('checkLinkModal'));
+        modal.show();
+    }
+
+    async function sendMyNalogReceipt(){
+        if(!lastCalcFullData){ alert('Нет данных расчёта.'); return; }
+        if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
+        if(lastCalcFullData.nalogReceipts.length){
+            const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
+            const inn = localStorage.getItem('my_nalog_inn') || '';
+            const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${last.uuid}/print` : '';
+            const force = confirm('Чек уже сформирован' + (url ? '\n'+url : '') + '\nПерегенерировать?');
+            if(!force) return;
+            await cancelReceiptInternal(last, 'ошибочное формирование');
+        }
+        const btn = document.getElementById('sendMyNalogBtn');
+        if(btn) btn.disabled = true;
+        const payload = {
+            operationTime: new Date().toISOString(),
+            requestTime: new Date().toISOString(),
+            services: [{ name: `Печать на 3д-принтере "${lastCalcFullData.calcName || ''}" #${lastCalcFullData.id || ''}`, amount: lastCalcFullData.total, quantity: 1 }],
+            totalAmount: lastCalcFullData.total,
+            paymentType: 'CASH',
+            ignoreMaxTotalIncomeRestriction: false,
+            client: { contactPhone: null, displayName: null, incomeType: 'FROM_INDIVIDUAL', inn: null }
+        };
+        try {
+            const resp = await sendMyNalogRequest('POST',MY_NALOG_API+'/api/v1/income',payload);
+            if(resp.ok){
+                const data = await resp.json().catch(()=>null);
+                if(data?.approvedReceiptUuid){
+                    console.log(data);
+                    const inn = localStorage.getItem('my_nalog_inn') || '';
+                    lastCalcFullData.receiptUuid = data.approvedReceiptUuid;
+                    lastCalcFullData.orderStatus = 'paid';
+                    document.getElementById('calcOrderStatus').value = 'paid';
+                    toggleFinalFields('paid');
+                    const idx = appData.calcHistory.findIndex(e=>String(e.id)===String(lastCalcFullData.id));
+                    if(idx!==-1){
+                        const recList = Array.isArray(appData.calcHistory[idx].nalogReceipts)
+                            ? appData.calcHistory[idx].nalogReceipts.map(r=>({uuid:r.uuid, canceled:!!r.canceled}))
+                            : [];
+                        recList.push({uuid:data.approvedReceiptUuid, canceled:false});
+                        appData.calcHistory[idx].nalogReceipts = recList;
+                        appData.calcHistory[idx].nalogReceiptUuid = data.approvedReceiptUuid;
+                        appData.calcHistory[idx].orderStatus = 'paid';
+                    }
+                    if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
+                    lastCalcFullData.nalogReceipts.push({uuid:data.approvedReceiptUuid,canceled:false});
+
+
+                    saveToLocalStorage();
+                    if(idx!==-1){
+                        renderHistoryTable();
+                    }
+                    const cancelBtn=document.getElementById('cancelMyNalogBtn');
+                    if(cancelBtn) cancelBtn.style.display='inline-block';
+                    if(btn) btn.disabled = false;
+                    alert('Чек отправлен.');
+                    const receiptUrl = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${data.approvedReceiptUuid}/print` : '';
+                    showCheckLinkModal(receiptUrl);
+
+                }else{
+                    alert('Запрос отправлен в Мой Налог');
+                }
+            }else{
+                const text = await resp.text().catch(()=>resp.status);
+                alert('Ошибка отправки: '+text);
+            }
+        }catch(e){
+            alert('Не удалось подключиться к сервису Мой Налог');
+        }finally{
+            if(btn) btn.disabled = false;
+        }
+    }
+
+    async function cancelMyNalogReceipt(){
+        if(!lastCalcFullData || !Array.isArray(lastCalcFullData.nalogReceipts) || !lastCalcFullData.nalogReceipts.length){
+            alert('Нет чека для отмены.');
+            return;
+        }
+        const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
+        const comment = prompt('Причина отмены чекa:','');
+        if (!comment || !comment.trim()) {
+            alert('Не указана причина отмены чека.\nЧек не будет отменён.');
+            return;
+        }
+        const btn=document.getElementById('cancelMyNalogBtn');
+        if(btn) btn.disabled=true;
+        const ok = await cancelReceiptInternal(last, comment || '');
+        if(ok){
+            lastCalcFullData.orderStatus='canceled';
+            const idx=appData.calcHistory.findIndex(e=>String(e.id)===String(lastCalcFullData.id));
+            if(idx!==-1){
+                appData.calcHistory[idx].orderStatus='canceled';
+                saveToLocalStorage();
+                renderHistoryTable();
+            }
+            const cancelBtn=document.getElementById('cancelMyNalogBtn');
+            const showCancel = lastCalcFullData.nalogReceipts.length && !lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1].canceled;
+            if(cancelBtn) cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+            alert('Чек отменён.');
+        }else{
+            alert('Ошибка отмены чека');
+        }
+        if(btn) btn.disabled=false;
+    }
+
+    function saveMyNalogSettings(){
+        const token = document.getElementById('myNalogToken').value.trim();
+        localStorage.setItem('my_nalog_token', token);
+        const phoneEl = document.getElementById('myNalogPhone');
+        if(phoneEl) localStorage.setItem('my_nalog_phone', phoneEl.value.trim());
+        alert('Сохранено');
+    }
+
+    async function checkMyNalogStatus() {
+        const token = localStorage.getItem('my_nalog_token');
+        const statusEl = document.getElementById('myNalogStatus');
+        if (!token) {
+            statusEl.textContent = 'Токен не задан';
+            return;
+        }
+        statusEl.textContent = 'Проверка...';
+        try {
+            const resp = await sendMyNalogRequest('GET', MY_NALOG_API + '/api/v1/user');
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.health === "false") {
+
+                    statusEl.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${data.message}`;
+                } else if(data.displayName) {
+                    statusEl.innerHTML = `<i class="bi bi-check-square me-2"></i>ИНН ${data.inn} ${data.displayName}`;
+                    localStorage.setItem('my_nalog_inn', data.inn || '');
+                } else {
+                    statusEl.textContent = 'Сервис доступен';
+                }
+            } else {
+                statusEl.textContent = 'Ошибка: Невозможно проверить статус';
+            }
+        } catch (e) {
+            statusEl.textContent = 'Ошибка: Нет соединения с сервером';
+        }
+    }
+
+    async function requestMyNalogSms(){
+        const phoneNum = document.getElementById('myNalogPhone').value.trim();
+        const statusEl = document.getElementById('myNalogStatus');
+        if(!phoneNum){
+            alert('Введите телефон');
+            return;
+        }
+        statusEl.textContent = 'Отправка SMS...';
+        try{
+            const resp = await fetch(MY_NALOG_API+'/api/v1/auth/challenge/sms/start', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({phone: phoneNum, requireTpToBeActive: true})
+            });
+            if(resp.ok){
+                const data = await resp.json();
+                myNalogChallengeToken = data.challengeToken;
+                statusEl.textContent = 'SMS отправлено';
+            }else{
+                const text = await resp.text().catch(()=>resp.status);
+                statusEl.textContent = 'Ошибка: ' + text;
+            }
+        }catch(e){
+            statusEl.textContent = 'Нет соединения';
+        }
+    }
+
+    async function confirmMyNalogSms(){
+        const phoneNum = document.getElementById('myNalogPhone').value.trim();
+        const code = document.getElementById('myNalogSms').value.trim();
+        const statusEl = document.getElementById('myNalogStatus');
+        if(!phoneNum || !code){
+            alert('Нужен телефон и код');
+            return;
+        }
+        statusEl.textContent = 'Подтверждение...';
+        try{
+            const challenge = myNalogChallengeToken || '';
+            const deviceId = localStorage.getItem('my_nalog_device_id') || generateDeviceId();
+            localStorage.setItem('my_nalog_device_id', deviceId);
+            const body = {
+                phone: phoneNum,
+                code,
+                challengeToken: challenge,
+                deviceInfo:{
+                    sourceDeviceId: deviceId,
+                    sourceType:'WEB',
+                    appVersion:'1.0.0',
+                    metaDetails:{userAgent:navigator.userAgent}
+                }
+            };
+            const resp = await fetch(MY_NALOG_API+'/api/v1/auth/challenge/sms/verify', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(body)
+            });
+            if(resp.ok){
+                const data = await resp.json().catch(()=>null);
+                if(data?.token){
+                    localStorage.setItem('my_nalog_token', data.token);
+                    localStorage.setItem('my_nalog_refresh', data.refreshToken || '');
+                    document.getElementById('myNalogToken').value = data.token;
+                    if(data.inn){
+                        localStorage.setItem('my_nalog_inn', data.inn);
+                    } else {
+                        await checkMyNalogStatus();
+                    }
+                    statusEl.textContent = 'Токен получен';
+                }else{
+                    statusEl.textContent = 'Код подтвержден';
+                }
+            }else{
+                const text = await resp.text().catch(()=>resp.status);
+                statusEl.textContent = 'Ошибка: ' + text;
+            }
+        }catch(e){
+            statusEl.textContent = 'Нет соединения';
+        }
+    }
+
+    function loadMyNalogSettings(){
+        const token = localStorage.getItem('my_nalog_token') || '';
+        const inp = document.getElementById('myNalogToken');
+        if(inp) inp.value = token;
+        const savedPhone = localStorage.getItem('my_nalog_phone') || '';
+        const phoneInp = document.getElementById('myNalogPhone');
+        if(phoneInp) phoneInp.value = savedPhone;
+        if(token) checkMyNalogStatus();
+    }
     function downloadBlob(blob, filename){
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -6456,7 +7194,7 @@
             const table=document.getElementById(`calcModelsTable_${pr.id}`);
             if(table) table.querySelector("tbody").innerHTML="";
         });
-        ['downloadSummaryCardBtn'].forEach(id => {
+        ['downloadSummaryCardBtn','sendMyNalogBtn','cancelMyNalogBtn'].forEach(id => {
             const btn = document.getElementById(id);
             if (btn) btn.style.display = 'none';
         });
@@ -6542,6 +7280,22 @@
         URL.revokeObjectURL(u);
     }
     function generateMaxDetailedCalcHtml(d) {
+        const totalCost = typeof d.total === 'number' ? d.total : parseFloat(d.total) || 0;
+        const discountPercent = typeof d.discountPercent === 'number' ? d.discountPercent : 0;
+        const hasDiscount = discountPercent > 0 && discountPercent < 100;
+        const computedPriceBeforeDiscount = hasDiscount ? totalCost / (1 - discountPercent / 100) : null;
+        const priceBeforeDiscount = computedPriceBeforeDiscount || d.priceBeforeDiscount || null;
+        const totalTaxAmount = typeof d.taxAmount === 'number' ? d.taxAmount : 0;
+        const subtotalWithoutTax = totalCost - totalTaxAmount;
+        const urgencyProfiles = (appData.labelSettings && Array.isArray(appData.labelSettings.urgencyProfiles))
+            ? appData.labelSettings.urgencyProfiles
+            : [];
+        const matchedProfile = urgencyProfiles.find(p => String(p.id) === String(d.urgencyProfileId));
+        const profileTitle = matchedProfile ? matchedProfile.title : (d.urgencyProfileTitle || '');
+        const profileMarkupPercent = matchedProfile
+            ? (parseFloat(matchedProfile.markupPercent) || 0)
+            : (typeof d.profileMarkupPercent === 'number' ? d.profileMarkupPercent : 0);
+        const manualMarkupPercent = typeof d.userMarkupPercent === 'number' ? d.userMarkupPercent : 0;
         let s = `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -6557,11 +7311,11 @@
 <body>
   <h1>Подробный расчёт<\/h1>
   <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${getOrderStatusLabel(d.orderStatus)}<\/p>
-  <p>Срочность: ${d.urgencyProfileTitle || '—'}${d.profileMarkupPercent ? ` (+${d.profileMarkupPercent}% )` : ''}${d.userMarkupPercent ? `, ручная ${d.userMarkupPercent}%` : ''}<\/p>
-  <p>Итог: <strong>${safeFixed(d.total)} ₽<\/strong>${d.priceBeforeDiscount ? ` (скидка ${d.discountPercent}% от ${safeFixed(d.priceBeforeDiscount)} ₽)` : ''}<\/p>
+  <p>Срочность: ${profileTitle || '—'}${profileMarkupPercent ? ` (+${profileMarkupPercent}% )` : ''}${manualMarkupPercent ? `, ручная ${manualMarkupPercent}%` : ''}<\/p>
+  <p>Итог: <strong>${safeFixed(totalCost)} ₽<\/strong>${priceBeforeDiscount ? ` (скидка ${discountPercent}% от ${safeFixed(priceBeforeDiscount)} ₽)` : ''}<\/p>
   <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${safeFixed(d.totalOperatorCost)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Этикетки: ${safeFixed(d.totalLabelsCost || 0)} ₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
   <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
-  <p>Подитог: ${safeFixed(d.total - d.globalAdditional.taxAmount)} ₽, Общий налог: ${safeFixed(d.globalAdditional.taxAmount)} ₽<\/p>
+  <p>Подитог: ${safeFixed(subtotalWithoutTax)} ₽, Общий налог: ${safeFixed(totalTaxAmount)} ₽<\/p>
   <hr/>
 `;
         d.detailsByPrinter.forEach(pr => {
@@ -7723,9 +8477,113 @@
 
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    const SUPABASE_URL = "https://kvvxfytrlgihewmsvwkj.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2dnhmeXRybGdpaGV3bXN2d2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NDExMzIsImV4cCI6MjA2MTUxNzEzMn0.bvXmrh3XZivLVyg4irGo82pLAhlrSapzmxcDKLEAjLo";
+
+    const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // ✅ исправлено
+
+    let syncId = localStorage.getItem("sync_id") || crypto.randomUUID();
+    let encryptionKey = localStorage.getItem("encryption_key") || crypto.randomUUID() + crypto.randomUUID();
+    localStorage.setItem("sync_id", syncId);
+    localStorage.setItem("encryption_key", encryptionKey);
+
+    async function encryptData(data, key) {
+        const text = JSON.stringify(data);
+        const enc = new TextEncoder().encode(text);
+        const cryptoKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(key.slice(0, 32)), "AES-GCM", false, ["encrypt"]);
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const cipher = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, enc);
+        return btoa(JSON.stringify({ iv: Array.from(iv), data: Array.from(new Uint8Array(cipher)) }));
+    }
+
+    async function decryptData(encrypted, key) {
+        const parsed = JSON.parse(atob(encrypted));
+        const iv = new Uint8Array(parsed.iv);
+        const data = new Uint8Array(parsed.data);
+        const cryptoKey = await crypto.subtle.importKey("raw", new TextEncoder().encode(key.slice(0, 32)), "AES-GCM", false, ["decrypt"]);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, data);
+        return JSON.parse(new TextDecoder().decode(decrypted));
+    }
+
+    async function saveSettingsToCloud() {
+        const encrypted = await encryptData(appData, encryptionKey);
+        const { error } = await _supabase
+            .from('user_settings')
+            .upsert({
+                sync_id: syncId,
+                encrypted_data: encrypted,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'sync_id' });
+
+        if (error) alert("Ошибка сохранения: " + error.message);
+        else alert("✅ Данные сохранены в облако.");
+    }
+
+    async function loadSettingsFromCloud() {
+        const { data, error } = await _supabase
+            .from('user_settings')
+            .select('*')
+            .eq('sync_id', syncId)
+            .single();
+
+        if (error || !data) {
+            alert("Ошибка загрузки: " + error?.message);
+            return;
+        }
+
+        // Проверка времени
+        const createdAt = new Date(data.created_at);
+        const now = new Date();
+        if ((now - createdAt) > 5 * 60 * 1000) { // 5 минут
+            alert("Данные устарели и были удалены");
+            await _supabase.from('user_settings').delete().eq('sync_id', syncId);
+            return;
+        }
+
+        try {
+            const decrypted = await decryptData(data.encrypted_data, encryptionKey);
+            appData = decrypted;
+            saveToLocalStorage();
+            initAll();
+            alert("✅ Настройки загружены.");
+        } catch (e) {
+            alert("Ошибка расшифровки.");
+        }
+    }
+
+    function generateSyncLinkAndQR() {
+        const url = new URL(window.location.href);
+        url.searchParams.set("sync_id", syncId);
+        url.searchParams.set("key", encryptionKey);
+        const link = url.toString();
+        document.getElementById("syncLinkDisplay").value = link;
+        const qrcodeDiv = document.getElementById("qrcode");
+        qrcodeDiv.innerHTML = "";
+        new QRCode(qrcodeDiv, {
+            text: link,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff"
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
         const params = new URLSearchParams(window.location.search);
+        const incomingId = params.get("sync_id");
+        const incomingKey = params.get("key");
+
+        if (incomingId && incomingKey) {
+            localStorage.setItem("sync_id", incomingId);
+            localStorage.setItem("encryption_key", incomingKey);
+            syncId = incomingId;
+            encryptionKey = incomingKey;
+            await loadSettingsFromCloud();
+        }
         document.getElementById('delOrcaProfileBtn').onclick = ()=>deleteOrcaProfile();
         document.getElementById('orcaProfileSelect').addEventListener('change',e=>{
             const pr=appData.printers.find(p=>String(p.id)===String(currentOrcaPrinterId));
@@ -7737,6 +8595,18 @@
         if (jsonBtn) jsonBtn.addEventListener('click', downloadJsonFile);
         const summaryBtn = document.getElementById('downloadSummaryCardBtn');
         if (summaryBtn) summaryBtn.addEventListener('click', downloadSummaryCardHtml);
+        const myNalogBtn = document.getElementById('sendMyNalogBtn');
+        if (myNalogBtn) myNalogBtn.addEventListener('click', sendMyNalogReceipt);
+        const myNalogBillBtn = document.getElementById('sendMyNalogBillBtn');
+        if (myNalogBillBtn) myNalogBillBtn.addEventListener('click', sendMyNalogBill);
+        const myNalogCancelBtn = document.getElementById('cancelMyNalogBtn');
+        if (myNalogCancelBtn) myNalogCancelBtn.addEventListener('click', cancelMyNalogReceipt);
+        const phoneInput = document.getElementById('myNalogPhone');
+        if (phoneInput) {
+            phoneInput.addEventListener('change', e => {
+                localStorage.setItem('my_nalog_phone', e.target.value.trim());
+            });
+        }
         const workdayModal = document.getElementById('workdayTemplateModal');
         if (workdayModal) {
             workdayModal.addEventListener('show.bs.modal', () => {
@@ -7880,6 +8750,10 @@
                 });
             }
         });
+        const requestSmsBtn = document.getElementById('requestSmsBtn');
+        if (requestSmsBtn) requestSmsBtn.addEventListener('click', requestMyNalogSms);
+        const confirmSmsBtn = document.getElementById('confirmSmsBtn');
+        if (confirmSmsBtn) confirmSmsBtn.addEventListener('click', confirmMyNalogSms);
         const importFileInput = document.getElementById('importJsonFile');
         if (importFileInput) importFileInput.addEventListener('change', importFromFile);
         const applyLinkBtn=document.getElementById("applyMaterialProfileLinkBtn");
@@ -7888,6 +8762,8 @@
         if(manageProfilesBtn) manageProfilesBtn.onclick = openMaterialProfilesManager;
         const managePrProfilesBtn=document.getElementById("managePrinterProfilesBtn");
         if(managePrProfilesBtn) managePrProfilesBtn.onclick = openPrinterProfilesManager;
+        loadMyNalogSettings();
+
         parseIncomingLinkParams(params);
         if(params.toString()){
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -7896,6 +8772,630 @@
         attachExternalImportBridge();
         initPromptMemoryUi();
     });
+
+
+    const SPOOLMAN_CONFIG_KEY = "spoolman_config";
+
+    function getSpoolmanConfig() {
+        const configStr = localStorage.getItem(SPOOLMAN_CONFIG_KEY);
+        if (!configStr) return { enabled: false, url: '', autoSync: false, lastSync: null };
+        try {
+            return JSON.parse(configStr);
+        } catch (e) {
+            console.error("Ошибка парсинга настроек Spoolman из localStorage:", e);
+            return { enabled: false, url: '', autoSync: false, lastSync: null };
+        }
+    }
+
+    function saveSpoolmanConfig(config) {
+        localStorage.setItem(SPOOLMAN_CONFIG_KEY, JSON.stringify(config));
+        // Немедленно обновляем UI после сохранения
+        populateSpoolmanUIFromConfig();
+    }
+
+    // Функция для обновления элементов UI из конфигурации
+    function populateSpoolmanUIFromConfig() {
+        const cfg = getSpoolmanConfig();
+        const cbEnabled = document.getElementById("spoolmanEnabledCheckbox");
+        const inpUrl = document.getElementById("spoolmanUrlInput");
+        const cbAuto = document.getElementById("spoolmanAutoSyncCheckbox");
+        const lastSync = document.getElementById("spoolmanLastSync");
+
+        if (cbEnabled) cbEnabled.checked = !!cfg.enabled;
+        if (inpUrl) inpUrl.value = cfg.url || "";
+        if (cbAuto) cbAuto.checked = !!cfg.autoSync;
+        if (lastSync) {
+            lastSync.textContent = cfg.lastSync
+                ? new Date(cfg.lastSync).toLocaleString()
+                : "Никогда";
+        }
+    }
+
+    async function spoolmanApiRequest(endpoint, method = 'GET', body = null) {
+        const config = getSpoolmanConfig();
+        if (!config.enabled || !config.url) {
+            throw new Error('Spoolman is not configured');
+        }
+
+        const baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
+        const url = `${baseUrl}/api/v1/${endpoint}`;
+
+        const options = {
+            method,
+            headers: { 'Content-Type': 'application/json' }
+        };
+
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+
+        try {
+            console.log(`Sending ${method} request to ${url}`, body || '');
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`API error response:`, errorText);
+                throw new Error(`API error (${response.status}): ${errorText}`);
+            }
+
+            if (response.status === 204) return null;
+
+            const responseData = await response.json();
+            console.log(`Response from ${endpoint}:`, responseData);
+            return responseData;
+        } catch (error) {
+            console.error('Spoolman API error:', error);
+            throw error;
+        }
+    }
+
+    async function fetchSpoolmanFilaments() {
+        return await spoolmanApiRequest('filament');
+    }
+
+    async function fetchSpoolmanSpools() {
+        return await spoolmanApiRequest('spool');
+    }
+
+    function prepareExtraForSpoolman(extra) {
+        const prepared = {};
+        for (const [key, value] of Object.entries(extra)) {
+            prepared[key] = JSON.stringify(value);
+        }
+        return prepared;
+    }
+
+    function mapSpoolmanToMaterial(spool, filament) {
+        let extraFields = {};
+        if (spool.extra) {
+            for (const [key, value] of Object.entries(spool.extra)) {
+                try {
+                    if (typeof value === 'string') {
+
+                        if (value.startsWith('"') && value.endsWith('"')) {
+                            extraFields[key] = JSON.parse(value);
+                        } else {
+
+                            extraFields[key] = value;
+                        }
+                    } else {
+                        extraFields[key] = value;
+                    }
+                } catch (e) {
+                    console.log(`Error parsing extra field ${key}:`, e);
+                    extraFields[key] = value;
+                }
+            }
+        }
+
+        return {
+            id: getNextId('materials'),
+            materialType: filament.material || '',
+            name:  filament.vendor?.name+'- '+filament.name || spool.comment || `${filament.material || 'Unknown'} (${spool.id})`,
+            costPerKg: spool.price || 0,
+            balance: spool.remaining_weight ? spool.remaining_weight / 1000 : 0,
+            declaredWeight: spool.initial_weight ? spool.initial_weight / 1000 :
+                (filament.weight ? filament.weight / 1000 : 1),
+            manufacturer: filament.vendor?.name ,
+            productionDate: spool.lot_nr || '',
+            printers: [],
+            profileIds: [],
+            color: filament.color_hex || '#ffffff',
+            spoolmanSpoolId: spool.id,
+            printerPrepMinutes: parseFloat(extraFields.printerPrepMinutes ?? extraFields.prepMinutes ?? 0) || 0
+        };
+    }
+
+    async function importAllMaterialsFromSpoolman(statusCallback) {
+        const config = getSpoolmanConfig();
+        if (!config.enabled || !config.url) {
+            return { success: false, message: 'Spoolman is not configured' };
+        }
+
+        try {
+            statusCallback('Connecting to Spoolman...');
+            await spoolmanApiRequest('info');
+
+            statusCallback('Fetching data from Spoolman...');
+            const filaments = await fetchSpoolmanFilaments();
+            const spools = await fetchSpoolmanSpools();
+            const filamentMap = {};
+            filaments.forEach(filament => {
+                filamentMap[filament.id] = filament;
+            });
+
+            const importedMaterials = [];
+            const updatedMaterials = [];
+            const errors = [];
+
+            const activeSpools = spools.filter(spool => !spool.archived);
+
+            statusCallback(`Processing ${activeSpools.length} spools...`);
+
+            const existingBySpoolmanId = {};
+            appData.materials.forEach(material => {
+                if (material.spoolmanSpoolId) {
+                    existingBySpoolmanId[material.spoolmanSpoolId] = material;
+                }
+            });
+
+            for (const spool of activeSpools) {
+                try {
+                    if (!spool.filament) {
+                        errors.push(`Spool ${spool.id} has no valid filament reference`);
+                        continue;
+                    }
+
+                    const filament = filamentMap[spool.filament.id];
+                    if (!filament) {
+                        errors.push(`Spool ${spool.id} references unknown filament ID ${spool.filament.id}`);
+                        continue;
+                    }
+
+                    const existingMaterial = existingBySpoolmanId[spool.id];
+
+                    if (existingMaterial) {
+                        const updatedData = mapSpoolmanToMaterial(spool, filament);
+
+                        updatedData.id = existingMaterial.id;
+                        updatedData.printers = existingMaterial.printers || [];
+                        updatedData.profileIds = existingMaterial.profileIds || [];
+
+                        Object.assign(existingMaterial, updatedData);
+                        updatedMaterials.push(existingMaterial);
+                    } else {
+                        const material = mapSpoolmanToMaterial(spool, filament);
+                        appData.materials.push(material);
+                        importedMaterials.push(material);
+                        existingBySpoolmanId[spool.id] = material;
+                    }
+
+                } catch (error) {
+                    console.error(`Error importing spool ${spool.id}:`, error);
+                    errors.push(`Spool ${spool.id}: ${error.message}`);
+                }
+            }
+
+            saveToLocalStorage();
+            renderGlobalMaterialsTable();
+
+            config.lastSync = new Date().toISOString();
+            saveSpoolmanConfig(config);
+
+            const totalProcessed = importedMaterials.length + updatedMaterials.length;
+            return {
+                success: true,
+                message: `Синхронизировано ${totalProcessed} катушек из Spoolman (${importedMaterials.length} новых, ${updatedMaterials.length} обновлено)`,
+                materials: importedMaterials,
+                updated: updatedMaterials,
+                errors: errors.length ? errors : null
+            };
+        } catch (error) {
+            console.error('Import error:', error);
+            return { success: false, message: `Ошибка импорта: ${error.message}` };
+        }
+    }
+
+    async function updateSpoolUsageInSpoolman(materialId, usedWeight) {
+        const material = appData.materials.find(m => String(m.id) === String(materialId));
+        if (!material || !material.spoolmanSpoolId) {
+            console.log(`Material ${materialId} not linked to Spoolman, skipping usage update`);
+            return;
+        }
+
+        try {
+            console.log(`Updating Spoolman spool ${material.spoolmanSpoolId} with used weight: ${usedWeight}kg`);
+            await spoolmanApiRequest(`spool/${material.spoolmanSpoolId}/use`, 'PUT', {
+                use_weight: usedWeight * 1000
+            });
+
+            material.balance -= usedWeight;
+            if (material.balance < 0) material.balance = 0;
+
+            saveToLocalStorage();
+            console.log(`Successfully updated usage for spool ${material.spoolmanSpoolId}`);
+        } catch (error) {
+            console.error('Failed to update spool usage in Spoolman:', error);
+        }
+    }
+
+    async function testSpoolmanConnection(url) {
+        try {
+            const baseUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+            const response = await fetch(`${baseUrl}/api/v1/info`);
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                version: data.version || 'Unknown',
+                message: `Connected to Spoolman ${data.version || 'Unknown'}`
+            };
+        } catch (error) {
+            return { success: false, message: `Connection failed: ${error.message}` };
+        }
+    }
+
+    function hookMaterialUsage() {
+        const originalCalculateAll = window.onCalculateAll;
+        window.onCalculateAll = function() {
+            const result = originalCalculateAll.apply(this, arguments);
+
+            const config = getSpoolmanConfig();
+            if (config.enabled && config.autoSync && lastCalcFullData) {
+                const materialUsage = {};
+
+                lastCalcFullData.detailsByPrinter.forEach(printer => {
+                    printer.linesDetail.forEach(model => {
+                        if (model.materialData && model.materialData.id) {
+                            const materialId = model.materialData.id;
+                            const usedWeight = (model.realWeight || 0) / 1000;
+
+                            if (!materialUsage[materialId]) materialUsage[materialId] = 0;
+                            materialUsage[materialId] += usedWeight;
+                        }
+                    });
+                });
+
+                Object.keys(materialUsage).forEach(materialId => {
+                    updateSpoolUsageInSpoolman(materialId, materialUsage[materialId]);
+                });
+            }
+
+            return result;
+        };
+    }
+
+    function createSpoolmanSettingsUI() {
+        const config = getSpoolmanConfig();
+
+        return `
+    <div class="mt-4">
+    <h3>Интеграция со Spoolman</h3>
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i>
+      При активации происходит импорт данных из Spoolman в калькулятор (в одну сторону).
+    </div>
+
+    <div class="alert alert-warning">
+      <h5><i class="bi bi-exclamation-triangle-fill"></i> Важно: Обход CORS для локального Spoolman</h5>
+      <p>Для работы с локально установленным Spoolman вам может потребоваться обойти ограничения CORS. Выполните следующие шаги:</p>
+      <ol>
+        <li>Установите расширение <a href="https://chromewebstore.google.com/detail/cors-unblock/lfhmikememgdcahcdlaciloancbhjino" target="_blank">CORS Unblock</a> для Chrome</li>
+        <li>В настройках расширения включите <em>Access-Control-Request-Headers</em></li>
+        <li>Включите опцию <em>Overwrite 4xx status codes with 200</em></li>
+        <li>Нажмите «Start»</li>
+      </ol>
+      <p><strong>Примечание:</strong> Необходимо использовать именно это расширение, так как оно добавляет нужные заголовки для работы с API Spoolman.</p>
+    </div>
+
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="spoolmanEnabledCheckbox">
+      <label class="form-check-label" for="spoolmanEnabledCheckbox">Включить интеграцию с Spoolman</label>
+    </div>
+    <div class="mb-3">
+      <label for="spoolmanUrlInput" class="form-label">URL сервера Spoolman:</label>
+      <div class="input-group">
+        <input type="text" id="spoolmanUrlInput" class="form-control" placeholder="http://localhost:7912">
+        <button class="btn btn-outline-secondary" type="button" id="testSpoolmanConnectionBtn">Проверить</button>
+      </div>
+      <div class="form-text">Примеры: http://localhost:7912 или https://127.0.0.1:7912</div>
+    </div>
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="spoolmanAutoSyncCheckbox">
+      <label class="form-check-label" for="spoolmanAutoSyncCheckbox">Автоматически обновлять использование материалов</label>
+    </div>
+    <div class="mb-3">
+      <p>Последняя синхронизация: <span id="spoolmanLastSync">Никогда</span></p>
+    </div>
+    <div id="spoolmanSyncStatus" class="alert alert-success" style="display: none; opacity: 1;"></div>
+    <div class="mb-3">
+      <button class="btn btn-primary" id="saveSpoolmanSettingsBtn">Сохранить настройки</button>
+      <button class="btn btn-success" id="importFromSpoolmanBtn">Синхронизация с Spoolman</button>
+      <button class="btn btn-warning" id="syncToSpoolmanBtn" style="display: none;">Экспорт (устарел)</button>
+      <button class="btn btn-danger" id="clearSpoolmanDuplicatesBtn">Очистить дубликаты</button>
+      <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#instructionModal">
+        Инструкция по установке
+      </button>
+    </div>
+  </div>
+  <div class="modal fade" id="instructionModal" tabindex="-1" aria-labelledby="instructionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="instructionModalLabel">Инструкция по настройке HTTPS для Spoolman (локальная сеть)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+        </div>
+        <div class="modal-body">
+          <ol>
+
+           <li><strong>Установить Spoolman на внешнее устройство с Ubuntu в локальной сети</strong> <a href="https://github.com/Donkie/Spoolman/wiki/Installation">https://github.com/Donkie/Spoolman/wiki/Installation</a></li>
+
+            <li>
+              <strong>Генерация самоподписанного сертификата</strong><br>
+              <pre><code>sudo mkdir -p /etc/ssl/spoolman
+sudo openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -keyout /etc/ssl/spoolman/spoolman.key \
+  -out /etc/ssl/spoolman/spoolman.crt \
+  -subj "/CN=127.0.0.1" \
+  -addext "subjectAltName=IP:127.0.0.1"
+
+sudo chmod 600 /etc/ssl/spoolman/spoolman.key
+sudo chmod 644 /etc/ssl/spoolman/spoolman.crt</code></pre><br/>
+spoolman.crt нужно скачать на локальный компьютер и добавить в доверенные центрв сертификации.
+            </li>
+            <li>
+              <strong>Установка и базовая настройка Nginx</strong><br>
+              <pre><code>sudo apt update
+sudo apt install -y nginx
+sudo rm /etc/nginx/sites-enabled/default
+sudo ln -s /etc/nginx/sites-available/spoolman /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx</code></pre>
+            </li>
+            <li>
+              <strong>Конфигурация Nginx (HTTPS + CORS + PNA + proxy_pass)</strong><br>
+              Создайте или отредактируйте файл <code>/etc/nginx/sites-available/spoolman</code>:
+              <pre><code>
+server {
+    listen 443 ssl;
+    server_name 127.0.0.1;
+
+    ssl_certificate     /etc/ssl/spoolman/spoolman.crt;
+    ssl_certificate_key /etc/ssl/spoolman/spoolman.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_tickets off;
+
+    location / {
+        # Общие CORS + метод PATCH
+        add_header Access-Control-Allow-Origin         "https://nazbav.github.io" always;
+        add_header Access-Control-Allow-Credentials    "true" always;
+        add_header Access-Control-Allow-Private-Network "true" always;
+        add_header Access-Control-Allow-Methods        "GET, POST, PUT, PATCH, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers        "Origin, X-Requested-With, Content-Type, Accept" always;
+
+        # Preflight OPTIONS
+        if ($request_method = OPTIONS) {
+            return 204;
+        }
+
+        proxy_pass         http://127.0.0.1:7912;
+        proxy_http_version 1.1;
+        proxy_set_header   Host            $host;
+        proxy_set_header   X-Real-IP       $remote_addr;
+        proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+</code></pre> <br/>Перезагружаем
+            </li>
+            <li>
+              <strong>Настройка файрвола (UFW)</strong><br>
+              <pre><code>sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload</code></pre>
+            </li>
+            <li>
+              <strong>Перезапуск и проверка</strong><br>
+              <pre><code>sudo systemctl restart Spoolman
+sudo systemctl status Spoolman
+
+# Проверить HTTPS:
+curl -vk https://127.0.0.1/
+
+# Проверить preflight CORS/PNA:
+curl -vk -X OPTIONS https://127.0.0.1/api/v1/info \
+  -H "Origin: https://nazbav.github.io" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: Content-Type" \
+  -H "Access-Control-Request-Private-Network: true"</code></pre>
+              При успешном ответе будет:
+              <ul>
+                <li><code>HTTP/1.1 204 No Content</code></li>
+                <li><code>Access-Control-Allow-Private-Network: true</code></li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+    }
+
+    function setupSpoolmanUI() {
+        document.getElementById('saveSpoolmanSettingsBtn').addEventListener('click', function() {
+            const config = {
+                enabled: document.getElementById('spoolmanEnabledCheckbox').checked,
+                url: document.getElementById('spoolmanUrlInput').value.trim(),
+                autoSync: document.getElementById('spoolmanAutoSyncCheckbox').checked,
+                lastSync: getSpoolmanConfig().lastSync
+            };
+
+            saveSpoolmanConfig(config);
+            showSpoolmanStatus('success', 'Настройки сохранены');
+        });
+
+        document.getElementById('testSpoolmanConnectionBtn').addEventListener('click', async function() {
+            const url = document.getElementById('spoolmanUrlInput').value.trim();
+            if (!url) {
+                showSpoolmanStatus('danger', 'Необходимо указать URL');
+                return;
+            }
+
+            showSpoolmanStatus('info', 'Проверка подключения...');
+            const result = await testSpoolmanConnection(url);
+            if (result.success) {
+                showSpoolmanStatus('success', result.message);
+            } else {
+                showSpoolmanStatus('danger', `${result.message}. Возможно нужно установить и активировать CORS Unblock.`);
+            }
+        });
+
+        document.getElementById('importFromSpoolmanBtn').addEventListener('click', async function() {
+            showSpoolmanStatus('info', 'Синхронизация с Spoolman...');
+            this.disabled = true;
+
+            const result = await importAllMaterialsFromSpoolman(msg => showSpoolmanStatus('info', msg));
+
+            this.disabled = false;
+            if (result.success) {
+                showSpoolmanStatus('success', result.message);
+                if (result.errors && result.errors.length > 0) {
+                    console.warn('Import completed with errors:', result.errors);
+                }
+            } else {
+                showSpoolmanStatus('danger', result.message);
+            }
+        });
+
+        document.getElementById('syncToSpoolmanBtn').addEventListener('click', async function() {
+            const result = await syncAllMaterialsToSpoolman();
+            showSpoolmanStatus('warning', result.message);
+        });
+
+        if (document.getElementById('clearSpoolmanDuplicatesBtn')) {
+            document.getElementById('clearSpoolmanDuplicatesBtn').addEventListener('click', function() {
+                clearSpoolmanDuplicates();
+            });
+        }
+    }
+
+    function clearSpoolmanDuplicates() {
+        showSpoolmanStatus('info', 'Поиск и удаление дубликатов...');
+
+        try {
+            const materialsBySpoolmanId = {};
+            const duplicates = [];
+            appData.materials.forEach(material => {
+                if (material.spoolmanSpoolId) {
+                    const spoolId = material.spoolmanSpoolId;
+
+                    if (!materialsBySpoolmanId[spoolId]) {
+                        materialsBySpoolmanId[spoolId] = [];
+                    }
+
+                    materialsBySpoolmanId[spoolId].push(material);
+                }
+            });
+
+            for (const [spoolId, materials] of Object.entries(materialsBySpoolmanId)) {
+                if (materials.length > 1) {
+                    console.log(`Found ${materials.length} materials referencing Spoolman spool ${spoolId}`);
+                    for (let i = 1; i < materials.length; i++) {
+                        duplicates.push(materials[i]);
+                    }
+                }
+            }
+
+            if (duplicates.length > 0) {
+                const duplicateIds = new Set(duplicates.map(m => m.id));
+
+                appData.materials = appData.materials.filter(m => !duplicateIds.has(m.id));
+
+                saveToLocalStorage();
+                renderGlobalMaterialsTable();
+
+                showSpoolmanStatus('success', `Удалено ${duplicates.length} дубликатов. Обновите страницу для применения изменений.`);
+            } else {
+                showSpoolmanStatus('info', 'Дубликатов не найдено.');
+            }
+        } catch (error) {
+            console.error('Error cleaning up duplicates:', error);
+            showSpoolmanStatus('danger', `Ошибка очистки дубликатов: ${error.message}`);
+        }
+    }
+
+    function showSpoolmanStatus(type, message) {
+        const statusEl = document.getElementById('spoolmanSyncStatus');
+        if (!statusEl) return;
+
+        statusEl.className = `alert alert-${type}`;
+        statusEl.style.display = 'block';
+        statusEl.textContent = message;
+
+        if (type === 'success' || type === 'info') {
+            setTimeout(() => {
+                statusEl.style.opacity = '0';
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                    statusEl.style.opacity = '1';
+                }, 500);
+            }, 5000);
+        }
+    }
+
+    function initSpoolmanIntegration() {
+        const container = document.getElementById('spoolmanSettingsContainer');
+        if (!container) return;
+
+        container.innerHTML = createSpoolmanSettingsUI();
+
+        saveToLocalStorage();
+        hookMaterialUsage();
+
+        // Заполняем форму существующими значениями из localStorage
+        setTimeout(() => {
+            populateSpoolmanUIFromConfig();
+        }, 200);
+    }
+
+    function scheduleSpoolmanSetup(){
+        if(migrationState.needsMigration){
+            setTimeout(scheduleSpoolmanSetup, 1000);
+            return;
+        }
+        initSpoolmanIntegration();
+        setTimeout(() => {
+            setupSpoolmanUI();
+        }, 500);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            scheduleSpoolmanSetup();
+        }, 1000);
+
+
+        console.log(appData);
+    });
+
+    const copyCheckBtn = document.getElementById('copyCheckLinkBtn');
+    if(copyCheckBtn){
+        copyCheckBtn.onclick = function() {
+            const linkInput = document.getElementById('checkLinkInput');
+            if(linkInput){
+                navigator.clipboard.writeText(linkInput.value);
+            }
+        };
+    }
 
 </script>
 

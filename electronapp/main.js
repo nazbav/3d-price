@@ -13,6 +13,7 @@ const { URL, pathToFileURL, fileURLToPath } = require('node:url');
 
 const { buildOfflineSite, DEFAULT_SOURCE_URL, atomicSwapDir } = require('./offlineBuilder');
 const { scanOrcaProfiles, buildPreview, applyAssignments } = require('./orcaSync');
+const backupUiScript = require('./backup-ui.js');
 
 const APP_ID = 'com.n4v.nprintcalc';
 
@@ -73,6 +74,10 @@ let autoSyncEnabled = false;
 // Settings
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const STORAGE_KEY = 'ThreeDPrintCalc_Extended_v5';
+const STORAGE_HISTORY_KEY = `${STORAGE_KEY}_history`;
+const BACKUP_FILE_PREFIX = 'gcodecalc_backup_';
+const DEFAULT_BACKUP_DIR = path.join(app.getPath('userData'), 'backups');
+const BACKUP_STATUS_CHANNEL = 'backups:status';
 
 // Proxy settings
 // settings.json: { proxy: { enabled, timeoutMs, rawList, proxies: [...] } }
@@ -154,6 +159,230 @@ function saveSettings(obj) {
     fs.writeFileSync(SETTINGS_FILE, JSON.stringify(obj, null, 2), 'utf-8');
   } catch (e) {
     log('saveSettings.failed', { error: e?.message });
+  }
+}
+
+const BACKUP_DEFAULTS = {
+  enabled: true,
+  targetDir: DEFAULT_BACKUP_DIR,
+  retentionDays: 30,
+  maxFiles: 80,
+  lastSuccessAt: null,
+  lastFile: null,
+  lastReason: null,
+  lastDailyRun: null
+};
+
+function clampInt(value, min, max, fallback) {
+  const num = parseInt(value, 10);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.max(min, Math.min(max, num));
+}
+
+function normalizeBackupSettings(rawSettings) {
+  const src = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+  const normalized = {
+    enabled: src.enabled !== false,
+    targetDir: (typeof src.targetDir === 'string' && src.targetDir.trim()) ? src.targetDir.trim() : DEFAULT_BACKUP_DIR,
+    retentionDays: clampInt(src.retentionDays, 1, 365, BACKUP_DEFAULTS.retentionDays),
+    maxFiles: clampInt(src.maxFiles, 5, 1000, BACKUP_DEFAULTS.maxFiles),
+    lastSuccessAt: src.lastSuccessAt || null,
+    lastFile: src.lastFile || null,
+    lastReason: src.lastReason || null,
+    lastDailyRun: src.lastDailyRun || null
+  };
+  return normalized;
+}
+
+function getBackupSettings() {
+  const settings = loadSettings();
+  const normalized = normalizeBackupSettings(settings.backups);
+  const current = settings.backups && typeof settings.backups === 'object' ? settings.backups : {};
+  if (JSON.stringify(current) !== JSON.stringify(normalized)) {
+    settings.backups = normalized;
+    saveSettings(settings);
+  }
+  return normalized;
+}
+
+function updateBackupSettings(patch = {}) {
+  const current = getBackupSettings();
+  const merged = Object.assign({}, current, patch || {});
+  const normalized = normalizeBackupSettings(merged);
+  if (JSON.stringify(current) !== JSON.stringify(normalized)) {
+    const settings = loadSettings();
+    settings.backups = normalized;
+    saveSettings(settings);
+  }
+  return normalized;
+}
+
+function sendBackupStatus(payload = {}) {
+  try {
+    const normalized = Object.assign({}, payload);
+    if (!normalized.settings) normalized.settings = getBackupSettings();
+    if (!normalized.version && typeof app?.getVersion === 'function') {
+      normalized.version = app.getVersion();
+    }
+    if (contentView && contentView.webContents && !contentView.webContents.isDestroyed()) {
+      contentView.webContents.send(BACKUP_STATUS_CHANNEL, normalized);
+    }
+  } catch (e) {
+    log('backup.status.failed', { error: e?.message });
+  }
+}
+
+async function ensureBackupDir(dirPath) {
+  const dir = (typeof dirPath === 'string' && dirPath.trim()) ? dirPath.trim() : DEFAULT_BACKUP_DIR;
+  await fsp.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+async function listBackupFiles(targetDir) {
+  const dir = await ensureBackupDir(targetDir);
+  try {
+    const entries = await fsp.readdir(dir, { withFileTypes: true });
+    const files = [];
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (!entry.name.endsWith('.json')) continue;
+      const full = path.join(dir, entry.name);
+      try {
+        const stat = await fsp.stat(full);
+        files.push({ name: entry.name, path: full, size: stat.size, modified: stat.mtime.toISOString() });
+      } catch {}
+    }
+    files.sort((a, b) => b.modified.localeCompare(a.modified));
+    return { ok: true, dir, files };
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e), dir };
+  }
+}
+
+async function enforceBackupRetention(dir, settings) {
+  const removed = [];
+  try {
+    const entries = await fsp.readdir(dir, { withFileTypes: true });
+    const stats = [];
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.startsWith(BACKUP_FILE_PREFIX) || !entry.name.endsWith('.json')) continue;
+      const full = path.join(dir, entry.name);
+      try {
+        const st = await fsp.stat(full);
+        stats.push({ path: full, mtime: st.mtimeMs });
+      } catch {}
+    }
+    stats.sort((a, b) => a.mtime - b.mtime);
+    const expireBefore = settings.retentionDays > 0 ? Date.now() - (settings.retentionDays * 86400000) : null;
+    const bucket = [];
+    for (const item of stats) {
+      if (expireBefore && item.mtime < expireBefore) {
+        try { await fsp.unlink(item.path); removed.push(item.path); } catch {}
+      } else {
+        bucket.push(item);
+      }
+    }
+    while (bucket.length > settings.maxFiles) {
+      const oldest = bucket.shift();
+      if (!oldest) break;
+      try { await fsp.unlink(oldest.path); removed.push(oldest.path); } catch {}
+    }
+  } catch (e) {
+    log('backup.retention.failed', { error: e?.message });
+  }
+  return { removed };
+}
+
+let backupQueue = Promise.resolve();
+async function runBackupTask(reason = 'manual', options = {}) {
+  const settings = getBackupSettings();
+  if (!options.force && settings.enabled === false) {
+    sendBackupStatus({ type: 'warning', reason, warning: 'Автобэкап отключён пользователем', settings });
+    return { ok: false, skipped: 'disabled', settings };
+  }
+  if (options.skipIfNotNeeded) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (settings.lastDailyRun === today) {
+      return { ok: false, skipped: 'already-run', settings };
+    }
+  }
+  if (!contentView || !contentView.webContents || contentView.webContents.isDestroyed()) {
+    throw new Error('Интерфейс ещё не готов для резервной копии');
+  }
+  sendBackupStatus({ type: 'progress', reason });
+  const snapshot = await exportCalcSnapshot();
+  const dir = await ensureBackupDir(settings.targetDir);
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `${BACKUP_FILE_PREFIX}${stamp}.json`;
+  const filePath = path.join(dir, fileName);
+  await fsp.writeFile(filePath, snapshot.raw, 'utf-8');
+  const retention = await enforceBackupRetention(dir, settings);
+  const timestamp = new Date().toISOString();
+  const patch = {
+    targetDir: dir,
+    lastSuccessAt: timestamp,
+    lastFile: filePath,
+    lastReason: reason
+  };
+  if (options.markDaily) {
+    patch.lastDailyRun = timestamp.slice(0, 10);
+  }
+  const updatedSettings = updateBackupSettings(patch);
+  const payload = {
+    type: 'success',
+    reason,
+    filePath,
+    fileName,
+    timestamp,
+    removed: retention.removed || [],
+    settings: updatedSettings
+  };
+  sendBackupStatus(payload);
+  return Object.assign({ ok: true }, payload);
+}
+
+function enqueueBackup(reason, options = {}) {
+  const run = backupQueue.then(() => runBackupTask(reason, options));
+  backupQueue = run.catch(() => {});
+  return run;
+}
+
+async function maybeRunDailyBackup() {
+  try {
+    const settings = getBackupSettings();
+    if (settings.enabled === false) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (settings.lastDailyRun === today) return;
+    await enqueueBackup('daily', { markDaily: true });
+  } catch (e) {
+    log('backup.daily.error', { error: e?.message });
+  }
+}
+
+let dailyBackupScheduled = false;
+function scheduleDailyBackup() {
+  if (dailyBackupScheduled) return;
+  dailyBackupScheduled = true;
+  setTimeout(async () => {
+    try {
+      await ensureContentReady();
+      await waitForAppDataReady();
+      await maybeRunDailyBackup();
+    } catch (e) {
+      log('backup.schedule.failed', { error: e?.message });
+      dailyBackupScheduled = false;
+    }
+  }, 3000);
+}
+
+async function injectBackupUi() {
+  if (!contentView || !contentView.webContents) return;
+  try {
+    await ensureContentReady();
+    await waitForAppDataReady();
+    await contentView.webContents.executeJavaScript(backupUiScript, true);
+  } catch (e) {
+    log('backupUi.inject.failed', { error: e?.message });
   }
 }
 
@@ -1182,6 +1411,7 @@ function buildStatusPayload(message) {
     offlineAvailable,
     preferredMode,
     autoSyncEnabled,
+    appVersion: (typeof app?.getVersion === 'function') ? app.getVersion() : null,
     appPath: app.getPath('exe'),
     paths: getPathsPayload(),
     offlineHash: settings.currentOfflineHash || null,
@@ -1320,10 +1550,25 @@ async function exportCalcSnapshot() {
     const result = await contentView.webContents.executeJavaScript(`
       (() => {
         const storageKey = ${JSON.stringify(STORAGE_KEY)};
+        const historyKey = ${JSON.stringify(STORAGE_HISTORY_KEY)};
+        const readHistory = () => {
+          try {
+            const rawHistory = localStorage.getItem(historyKey);
+            if (!rawHistory) return [];
+            const parsedHistory = JSON.parse(rawHistory);
+            if (Array.isArray(parsedHistory)) return parsedHistory;
+            if (parsedHistory && Array.isArray(parsedHistory.calcHistory)) return parsedHistory.calcHistory;
+          } catch {}
+          return [];
+        };
         try {
           const stored = localStorage.getItem(storageKey);
           if (stored && stored.length > 2) {
-            return { raw: stored, source: 'storage' };
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed.calcHistory) || parsed.calcHistory.length === 0) {
+              parsed.calcHistory = readHistory();
+            }
+            return { raw: JSON.stringify(parsed), source: 'storage' };
           }
         } catch {}
         try {
@@ -1371,10 +1616,11 @@ async function importCalcData(updatedJson, options = {}) {
 
         window.appData = next;
 
-        // Persist once, without calling saveToLocalStorage() (it can be heavy).
-        try {
-          localStorage.setItem(storageKey, JSON.stringify(next));
-        } catch {}
+        if (typeof saveToLocalStorage === 'function') {
+          try { saveToLocalStorage(); } catch {}
+        } else {
+          try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
+        }
 
         // Defer re-init to idle time to reduce UI stalls after native dialogs.
         const runInit = () => {
@@ -1761,6 +2007,9 @@ function createWindow(startSilent) {
       sandbox: true
     }
   });
+  contentView.webContents.on('did-finish-load', () => {
+    injectBackupUi().catch((e) => log('backupUi.inject.error', { error: e?.message }));
+  });
 
   win.setBrowserView(toolbarView);
   win.addBrowserView(contentView);
@@ -1782,15 +2031,18 @@ function createWindow(startSilent) {
 
     try {
       await startContentByPreference();
+      await injectBackupUi();
       maybeCheckForUpdates().catch((err) => log('update.check.promise', { error: err?.message }));
     } catch (e) {
       log('startContent.failed', { error: e?.message });
       await refreshOfflineAvailability();
       if (offlineAvailable) await loadOffline();
       else await loadStub();
+      await injectBackupUi();
     }
 
     broadcastStatus('');
+    scheduleDailyBackup();
   };
 
   startWindowFlow().catch((e) => {
@@ -1886,6 +2138,71 @@ ipcMain.handle('app:copyOrcaCommand', async () => {
   } catch (e) {
     log('app.copyOrcaCmd.error', { error: e?.message });
     throw e;
+  }
+});
+
+ipcMain.handle('backups:getSettings', async () => ({
+  settings: getBackupSettings(),
+  version: (typeof app?.getVersion === 'function') ? app.getVersion() : null
+}));
+
+ipcMain.handle('backups:updateSettings', async (_event, payload = {}) => {
+  try {
+    const settings = updateBackupSettings(payload || {});
+    sendBackupStatus({ type: 'settings', settings });
+    return {
+      ok: true,
+      settings,
+      version: (typeof app?.getVersion === 'function') ? app.getVersion() : null
+    };
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+});
+
+ipcMain.handle('backups:pickDir', async (event, initialPath) => {
+  const owner = BrowserWindow.fromWebContents(event.sender) || win || undefined;
+  if (!owner) return null;
+  const options = { properties: ['openDirectory'] };
+  if (typeof initialPath === 'string' && initialPath.trim()) options.defaultPath = initialPath.trim();
+  const res = await dialog.showOpenDialog(owner, options);
+  if (res.canceled || !res.filePaths.length) return null;
+  return res.filePaths[0];
+});
+
+ipcMain.handle('backups:runNow', async (_event, payload = {}) => {
+  try {
+    const result = await enqueueBackup(payload.reason || 'manual', { force: true });
+    return result;
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+});
+
+ipcMain.handle('backups:openFolder', async () => {
+  try {
+    const settings = getBackupSettings();
+    const dir = await ensureBackupDir(settings.targetDir);
+    await shell.openPath(dir);
+    return { ok: true, dir };
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+});
+
+ipcMain.handle('backups:list', async () => {
+  try {
+    const settings = getBackupSettings();
+    return await listBackupFiles(settings.targetDir);
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+});
+
+ipcMain.on('backups:notify', (_event, payload = {}) => {
+  if (!payload || typeof payload !== 'object') return;
+  if (payload.type === 'migrationComplete') {
+    enqueueBackup('post-migration', {});
   }
 });
 
