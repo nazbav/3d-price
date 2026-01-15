@@ -1250,9 +1250,6 @@
             <div aria-labelledby="printers-tab" class="tab-pane fade" id="printersPane" role="tabpanel">
                 <div class="mt-4">
                     <h3>Список принтеров</h3>
-                    <p class="small-text">
-                        Укажите параметры принтера и при необходимости добавьте доп. расходы и материалы, уникальные для него.
-                    </p>
                     <div class="mb-2">
                         <button class="btn btn-primary btn-sm" onclick="onAddPrinter()">Добавить принтер</button>
                         <button class="btn btn-danger btn-sm" onclick="massDelete('printers')">Массовое удаление
@@ -1287,9 +1284,7 @@
             <div aria-labelledby="globalMaterials-tab" class="tab-pane fade" id="globalMaterialsPane" role="tabpanel">
                 <div class="mt-4">
                     <h3>Общие материалы</h3>
-                    <p class="small-text">Эти материалы доступны всем принтерам «по умолчанию». Укажите стоимость за кг,
-                        остаток, заявленный вес, производителя и дату производства.</p>
-                    <div class="mb-2">
+                   <div class="mb-2">
                         <button class="btn btn-primary btn-sm" onclick="onAddGlobalMaterial()">Добавить материал
                         </button>
                         <button class="btn btn-danger btn-sm" onclick="massDelete('globalMaterials')">Массовое
@@ -1645,8 +1640,7 @@
             <!-- Статистика -->
             <div aria-labelledby="summary-tab" class="tab-pane fade" id="summaryPane" role="tabpanel">
                 <div class="mt-4">
-                    <h3>Общий обзор («Статистика»)</h3>
-                    <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
+                    <h3>Статистика</h3>
                     <div class="d-flex align-items-center mb-3">
                         <select class="form-select form-select-sm w-auto me-2" id="summaryPeriod">
                             <option value="all">Весь период</option>
@@ -1666,9 +1660,6 @@
             <div aria-labelledby="history-tab" class="tab-pane fade" id="historyPane" role="tabpanel">
                 <div class="mt-4">
                     <h3>История расчетов</h3>
-                    <p class="small-text">
-                        Прошлые расчёты. «Редакт.» — загрузить данные обратно в калькулятор.
-                    </p>
                     <div class="table-responsive">
                         <input class="form-control form-control-sm mb-2"
                                oninput="filterTable('historyTable', this.value)" placeholder="Поиск..." type="text"/>
