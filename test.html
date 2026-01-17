@@ -161,6 +161,33 @@
             font-weight: 600;
         }
 
+        .calc-empty-placeholder {
+            padding: 1rem;
+            border: 1px dashed var(--bs-border-color);
+            border-radius: 0.75rem;
+            text-align: center;
+            color: var(--bs-secondary-color);
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        #calcPrintersContainer {
+            position: relative;
+            outline: 2px dashed transparent;
+            border-radius: 1rem;
+            transition: background-color 0.2s ease, outline-color 0.2s ease;
+        }
+
+        #calcPrintersContainer.calc-printers-drop-active {
+            outline-color: var(--bs-primary);
+            background-color: rgba(13, 110, 253, 0.08);
+        }
+
+        [data-bs-theme="dark"] .calc-empty-placeholder {
+            border-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--bs-gray-400);
+        }
+
         .schema-migration-overlay {
             position: fixed;
             inset: 0;
@@ -1548,6 +1575,9 @@
                             <div class="calc-section-title">
                                 <span class="icon">6</span>
                                 Расширенный отчёт
+                            </div>
+                            <div class="calc-empty-placeholder text-muted small" id="calcResultEmpty">
+                                Пока нет данных — запустите расчёт.
                             </div>
                             <div class="calc-result-panel" id="calcResult" style="display:none;"></div>
                         </div>
@@ -4662,31 +4692,118 @@
         });
     }
 
+    async function resolveDropPrinterId(target){
+        const lookupAncestorPrinterId = (el) => {
+            let current = el;
+            while (current) {
+                if (current.dataset && current.dataset.printerId) {
+                    return current.dataset.printerId;
+                }
+                if (current.id && current.id.startsWith('calcModelsTable_')) {
+                    return current.id.split('_')[1];
+                }
+                current = current.parentElement;
+            }
+            return null;
+        };
+        let printerId = lookupAncestorPrinterId(target);
+        if (printerId) return printerId;
+
+        const container = document.getElementById('calcPrintersContainer');
+        if (!container) return null;
+        const containerOwnsTarget = target === container || (typeof container.contains === 'function' && container.contains(target));
+        if (!containerOwnsTarget) return null;
+
+        const printerBlocks = container.querySelectorAll('[data-printer-id]');
+        if (printerBlocks.length === 0) return null;
+        if (printerBlocks.length === 1) {
+            return printerBlocks[0].dataset.printerId || null;
+        }
+        const printers = Array.isArray(appData.printers) ? appData.printers : [];
+        const options = printers.map(p => ({
+            value: String(p.id),
+            label: `${p.name} (ID: ${p.id})`
+        }));
+        if (!options.length) return null;
+        const result = await showMultiPrompt('Выберите принтер для моделей', [
+            {id:'printerId', label:'Принтер', type:'select', options, value: options[0].value}
+        ]);
+        if (result && result.printerId) {
+            return result.printerId;
+        }
+        return null;
+    }
+
     function setupGcodeDrop() {
+        const printersContainer = document.getElementById('calcPrintersContainer');
+        let dropHighlightDepth = 0;
+        let fileDragActive = false;
+
+        const isFileDrag = (event) => {
+            const dt = event && event.dataTransfer;
+            if (!dt) return false;
+            return Array.from(dt.types || []).includes('Files');
+        };
+
+        const isInsidePrinters = (target) => {
+            return printersContainer && (target === printersContainer || printersContainer.contains(target));
+        };
+
+        const clearHighlight = () => {
+            dropHighlightDepth = 0;
+            fileDragActive = false;
+            if (printersContainer) {
+                printersContainer.classList.remove('calc-printers-drop-active');
+            }
+        };
+
+        window.addEventListener('dragenter', e => {
+            if (!printersContainer) return;
+            if (isFileDrag(e)) {
+                fileDragActive = true;
+            }
+            if (!fileDragActive) return;
+            if (isInsidePrinters(e.target)) {
+                dropHighlightDepth++;
+                printersContainer.classList.add('calc-printers-drop-active');
+            }
+        });
+
+        window.addEventListener('dragleave', e => {
+            if (!printersContainer) return;
+            if (!fileDragActive) return;
+            if (isInsidePrinters(e.target)) {
+                dropHighlightDepth = Math.max(0, dropHighlightDepth - 1);
+                if (dropHighlightDepth === 0) {
+                    printersContainer.classList.remove('calc-printers-drop-active');
+                }
+            }
+        });
+
         window.addEventListener('dragover', e => {
+            if (isFileDrag(e)) {
+                fileDragActive = true;
+            } else if (!fileDragActive) {
+                return;
+            }
             e.preventDefault();
         });
 
         window.addEventListener('drop', async e => {
-            e.preventDefault();
-
-            let printerId = null;
-            let target = e.target;
-
-            while (target && !printerId) {
-                if (target.id && target.id.startsWith('calcModelsTable_')) {
-                    printerId = target.id.split('_')[1];
-                    break;
-                }
-                target = target.parentElement;
+            const hasFiles = isFileDrag(e);
+            if (hasFiles) {
+                e.preventDefault();
             }
+            clearHighlight();
+            if (!hasFiles) return;
 
+            const printerId = await resolveDropPrinterId(e.target);
             if (!printerId) {
-                alert('Please drop the G-code file over a printer\'s table.');
+                alert('Не удалось определить цель. Перетащите файл в блок принтера или выберите его при подсказке.');
                 return;
             }
 
-            const files = Array.from(e.dataTransfer.files).filter(f =>
+            const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []).filter(f =>
                 f.name.toLowerCase().endsWith('.gcode')
             );
 
@@ -4695,7 +4812,8 @@
                 const parsed = await parseGcodeText(txt);
                 let mid = await resolveMaterialIdByProfile(parsed.matProfile);
 
-                const modelName = parsed.modelName || f.name.replace(/\.gcode$/i, '');
+                const baseName = (f.name || '').replace(/\.gcode$/i, '').trim();
+                const modelName = baseName || f.name || parsed.code || parsed.modelName || 'Модель';
 
                 if (!mid) {
                     const materialOptions = appData.materials.map(m => ({
@@ -4732,6 +4850,8 @@
                 });
             }
         });
+
+        window.addEventListener('dragend', clearHighlight);
     }
 
 
@@ -4878,7 +4998,8 @@
         const ok = await ensureTargetOrderForImport();
         if(!ok) return;
 
-        const modelName = parsed.modelName || fn.replace(/\.gcode$/i,'') || parsed.code;
+        const fileBaseName = (fn || '').replace(/\.gcode$/i,'').trim();
+        const modelName = fileBaseName || fn || parsed.code || parsed.modelName || 'Модель';
 
         const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
         addModelRow(pr.id, {
@@ -5377,7 +5498,15 @@
         const tb = document.querySelector('#customServicesTable tbody');
         if(!tb) return;
         tb.innerHTML='';
-        (appData.calcSettings.customServices||[]).forEach(s=>{
+        if(!appData.calcSettings) appData.calcSettings = {};
+        const services = Array.isArray(appData.calcSettings.customServices) ? appData.calcSettings.customServices : [];
+        if(services.length === 0){
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="6" class="text-center text-muted small">Добавьте услуги при необходимости<\/td>`;
+            tb.appendChild(tr);
+            return;
+        }
+        services.forEach(s=>{
             const tr=document.createElement('tr');
             tr.innerHTML=`
       <td><input type="checkbox" ${s.use?'checked':''} onchange="updateService('${s.id}','use',this.checked)"></td>
@@ -6091,11 +6220,23 @@
     /* Функции калькуляции */
     function renderCalcPrinters(){
         const c = document.getElementById("calcPrintersContainer");
+        if(!c) return;
         c.innerHTML = "";
-        appData.printers.forEach(pr => {
+        const printers = Array.isArray(appData.printers) ? appData.printers : [];
+        if(printers.length === 0){
+            const placeholder = document.createElement('div');
+            placeholder.className = 'calc-empty-placeholder text-muted small';
+            placeholder.id = 'calcPrintersEmpty';
+            placeholder.textContent = 'Добавьте модель или перетащите файл .gcode в данную область';
+            c.appendChild(placeholder);
+            return;
+        }
+        printers.forEach(pr => {
             const block = document.createElement("div");
 
             block.className = "border p-3 mb-3";
+            block.classList.add('calc-printer-block');
+            block.dataset.printerId = String(pr.id);
             block.innerHTML = `
       <h5>Принтер: ${pr.name} (ID: ${pr.id})<\/h5>
       <div class="small-text mb-2">
@@ -6116,10 +6257,22 @@
         <\/thead>
         <tbody><\/tbody>
       <\/table>
+      <div class="calc-empty-placeholder text-muted small mb-3" id="calcModelsPlaceholder_${pr.id}">
+        Добавьте модель или перетащите файл .gcode в данную область
+      <\/div>
       <button class="btn btn-sm btn-primary" onclick="addModelRow(${pr.id}, {})">Добавить модель<\/button>
     `;
             c.appendChild(block);
+            updatePrinterModelsEmptyState(pr.id);
         });
+    }
+
+    function updatePrinterModelsEmptyState(printerId){
+        const placeholder = document.getElementById(`calcModelsPlaceholder_${printerId}`);
+        if(!placeholder) return;
+        const table = document.getElementById(`calcModelsTable_${printerId}`);
+        const hasRows = table ? !!table.querySelector('tbody tr') : false;
+        placeholder.style.display = hasRows ? 'none' : 'block';
     }
 
     // --- Model ID hygiene -------------------------------------------------
@@ -6334,9 +6487,10 @@
         <label class="form-check-label small" for="${labelId}">Печатать<\/label>
       </div>
     <\/td>
-    <td><button class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">Удл.<\/button><\/td>
+    <td><button class="btn btn-sm btn-danger" onclick="removeModelRow(this)">Удл.<\/button><\/td>
   `;
         tbody.appendChild(tr);
+        updatePrinterModelsEmptyState(printerId);
         if (initialThumb) {
             ensureThumbnailOpaque(initialThumb).then(processed => {
                 if (!processed || processed === initialThumb) return;
@@ -6346,6 +6500,17 @@
                     imgEl.src = `data:image/png;base64,${processed}`;
                 }
             });
+        }
+    }
+
+    function removeModelRow(button){
+        if(!button) return;
+        const row = button.closest('tr');
+        const table = row ? row.closest('table') : null;
+        if(row) row.remove();
+        if(table && table.id && table.id.startsWith('calcModelsTable_')){
+            const printerId = table.id.substring('calcModelsTable_'.length);
+            updatePrinterModelsEmptyState(printerId);
         }
     }
     function getAllMaterialsForPrinter(printerId, includeAll=false){
@@ -6926,7 +7091,15 @@
         });
         appData.calcSettings.deadlineDate = normalizedDeadline;
         let orderId = getCalcOrderId();
-        let existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
+        let existingIndex = -1;
+        const safeCalcName = (calcName || '').trim();
+        const historyHasId = entry => entry && entry.id !== undefined && entry.id !== null;
+        if (orderId) {
+            existingIndex = appData.calcHistory.findIndex(entry => String(entry.id) === String(orderId));
+        }
+        if (existingIndex === -1 && safeCalcName) {
+            existingIndex = appData.calcHistory.findIndex(entry => !historyHasId(entry) && entry.calcName === safeCalcName);
+        }
         if (!orderId) {
             orderId = getNextOrderId();
         } else {
@@ -7732,8 +7905,15 @@
             htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">Накладные расходы<\/div>${overheadCards}<div class="calc-overhead-total">Всего: ${safeFixed(sumGlobalAdd)} ₽<\/div><\/div>`;
         }
 
-        document.getElementById("calcResult").style.display = "block";
-        document.getElementById("calcResult").innerHTML = htmlRes;
+        const calcResultEmptyEl = document.getElementById("calcResultEmpty");
+        if (calcResultEmptyEl) {
+            calcResultEmptyEl.style.display = 'none';
+        }
+        const calcResultContainer = document.getElementById("calcResult");
+        if (calcResultContainer) {
+            calcResultContainer.style.display = "block";
+            calcResultContainer.innerHTML = htmlRes;
+        }
         const qrTarget=document.getElementById("orderSummaryQr");
         if(qrTarget){
             new QRCode(qrTarget,{text:appData.labelSettings.chatLink,width:120,height:120,correctLevel:QRCode.CorrectLevel.H});
@@ -9075,6 +9255,7 @@
         appData.printers.forEach(pr=>{
             const table=document.getElementById(`calcModelsTable_${pr.id}`);
             if(table) table.querySelector("tbody").innerHTML="";
+            updatePrinterModelsEmptyState(pr.id);
         });
         ['downloadSummaryCardBtn','sendMyNalogBtn','cancelMyNalogBtn'].forEach(id => {
             const btn = document.getElementById(id);
@@ -9084,6 +9265,10 @@
         if (calcResultEl) {
             calcResultEl.style.display = 'none';
             calcResultEl.innerHTML = '';
+        }
+        const calcResultEmptyEl = document.getElementById("calcResultEmpty");
+        if (calcResultEmptyEl) {
+            calcResultEmptyEl.style.display = 'block';
         }
     }
 
@@ -9286,6 +9471,7 @@
                 const tbody = table.querySelector("tbody");
                 tbody.innerHTML = "";
                 const prIdNum = isNaN(printerId) ? printerId : parseInt(printerId, 10);
+                updatePrinterModelsEmptyState(prIdNum);
                 it.calcData[printerId].forEach(model => {
                     addModelRow(prIdNum, model);
                 });
