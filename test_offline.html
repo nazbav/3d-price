@@ -161,6 +161,70 @@
             font-weight: 600;
         }
 
+        .calc-empty-placeholder {
+            padding: 1rem;
+            border: 1px dashed var(--bs-border-color);
+            border-radius: 0.75rem;
+            text-align: center;
+            color: var(--bs-secondary-color);
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        #calcPrintersContainer {
+            position: relative;
+            outline: 2px dashed transparent;
+            border-radius: 1rem;
+            transition: background-color 0.2s ease, outline-color 0.2s ease;
+        }
+
+        #calcPrintersContainer.calc-printers-drop-active {
+            outline-color: var(--bs-primary);
+            background-color: rgba(13, 110, 253, 0.08);
+        }
+
+        .mat-mass-mode-group {
+            gap: 0.35rem;
+        }
+
+        .mat-mass-mode-group .btn {
+            flex: 1 1 0;
+        }
+
+        .material-modal-body .form-label {
+            margin-bottom: 0.2rem;
+            font-weight: 600;
+        }
+
+        .material-modal-body .form-text {
+            margin-top: 0.2rem;
+            font-size: 0.75rem;
+            line-height: 1.2;
+        }
+
+        .material-modal-body .mat-mass-block {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            background-color: var(--bs-tertiary-bg);
+        }
+
+        @media (min-width: 576px) {
+            .material-modal-body .mat-type-col {
+                flex: 0 0 30%;
+                max-width: 30%;
+            }
+            .material-modal-body .mat-name-col {
+                flex: 0 0 70%;
+                max-width: 70%;
+            }
+        }
+
+        [data-bs-theme="dark"] .calc-empty-placeholder {
+            border-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--bs-gray-400);
+        }
+
         .schema-migration-overlay {
             position: fixed;
             inset: 0;
@@ -1147,9 +1211,108 @@
             border-radius: 0.85rem;
             padding: 1rem;
         }
-    </style>
+</style>
 </head>
 <body>
+<script id="materialTypeCatalog" type="application/json">
+{
+  "customLabel": "Другое (вручную)",
+  "groups": [
+    {
+      "label": "FDM / FFF",
+      "items": [
+        "PLA",
+        "PLA+",
+        "PETG",
+        "ABS",
+        "ASA",
+        "TPU",
+        "TPE",
+        "HIPS",
+        "PP",
+        "PETT",
+        "PCTG",
+        "CPE",
+        "CPE+"
+      ]
+    },
+    {
+      "label": "FDM / Инженерные",
+      "items": [
+        "PA (Nylon)",
+        "PA6",
+        "PA11",
+        "PA12",
+        "PC",
+        "PC-ABS",
+        "POM (Delrin)",
+        "PMMA (Acrylic)",
+        "PEI (Ultem)",
+        "PPSU",
+        "PSU",
+        "PPS",
+        "PEEK",
+        "PEKK",
+        "PVDF",
+        "PBT"
+      ]
+    },
+    {
+      "label": "FDM / Поддержки и спец.",
+      "items": [
+        "PVA",
+        "BVOH",
+        "HIPS (Support)",
+        "EVA"
+      ]
+    },
+    {
+      "label": "FDM / Композиты и наполнители",
+      "items": [
+        "PLA-CF",
+        "PETG-CF",
+        "ABS-CF",
+        "ASA-CF",
+        "PA-CF",
+        "PC-CF",
+        "PEEK-CF",
+        "PP-CF",
+        "PLA-GF",
+        "PETG-GF",
+        "PA-GF",
+        "PC-GF",
+        "PP-GF",
+        "PA-Kevlar",
+        "PLA-Wood",
+        "PLA-Metal",
+        "Ceramic-filled",
+        "Stone-filled",
+        "Glow-in-the-dark",
+        "Conductive",
+        "Magnetic"
+      ]
+    },
+    {
+      "label": "SLA / DLP / LCD (Resin)",
+      "items": [
+        "Resin Standard",
+        "Resin ABS-like",
+        "Resin Tough",
+        "Resin Durable",
+        "Resin Flexible",
+        "Resin Elastic",
+        "Resin Clear",
+        "Resin High Temp",
+        "Resin Castable",
+        "Resin Dental",
+        "Resin Biocompatible",
+        "Resin Water-washable",
+        "Resin Ceramic"
+      ]
+    }
+  ]
+}
+</script>
 <div class="schema-migration-overlay" id="schemaMigrationOverlay">
     <div class="schema-migration-card">
         <h2>Обновление формата данных</h2>
@@ -1219,7 +1382,7 @@
                             Накладные расходы
                         </button>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item d-none">
                         <button aria-controls="settingsPane" aria-selected="false" class="nav-link"
                                 data-bs-target="#settingsPane" data-bs-toggle="tab" id="settings-tab" role="tab"
                                 type="button">
@@ -1250,9 +1413,6 @@
             <div aria-labelledby="printers-tab" class="tab-pane fade" id="printersPane" role="tabpanel">
                 <div class="mt-4">
                     <h3>Список принтеров</h3>
-                    <p class="small-text">
-                        Укажите параметры принтера и при необходимости добавьте доп. расходы и материалы, уникальные для него.
-                    </p>
                     <div class="mb-2">
                         <button class="btn btn-primary btn-sm" onclick="onAddPrinter()">Добавить принтер</button>
                         <button class="btn btn-danger btn-sm" onclick="massDelete('printers')">Массовое удаление
@@ -1287,9 +1447,7 @@
             <div aria-labelledby="globalMaterials-tab" class="tab-pane fade" id="globalMaterialsPane" role="tabpanel">
                 <div class="mt-4">
                     <h3>Общие материалы</h3>
-                    <p class="small-text">Эти материалы доступны всем принтерам «по умолчанию». Укажите стоимость за кг,
-                        остаток, заявленный вес, производителя и дату производства.</p>
-                    <div class="mb-2">
+                   <div class="mb-2">
                         <button class="btn btn-primary btn-sm" onclick="onAddGlobalMaterial()">Добавить материал
                         </button>
                         <button class="btn btn-danger btn-sm" onclick="massDelete('globalMaterials')">Массовое
@@ -1312,7 +1470,7 @@
                                 <th onclick="sortTable('materialsTable',1)">Тип</th>
                                 <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
                                 <th onclick="sortTable('materialsTable',3)">Остаток (гр)</th>
-                                <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
+                                <th onclick="sortTable('materialsTable',4)">Начальный вес (кг)</th>
                                 <th onclick="sortTable('materialsTable',5)">Время остыв. (мин)</th>
                                 <th onclick="sortTable('materialsTable',6)">Подготовка (мин)</th>
                                 <th onclick="sortTable('materialsTable',7)">Производитель</th>
@@ -1554,6 +1712,9 @@
                                 <span class="icon">6</span>
                                 Расширенный отчёт
                             </div>
+                            <div class="calc-empty-placeholder text-muted small" id="calcResultEmpty">
+                                Пока нет данных — запустите расчёт.
+                            </div>
                             <div class="calc-result-panel" id="calcResult" style="display:none;"></div>
                         </div>
                     </div>
@@ -1644,8 +1805,7 @@
             <!-- Статистика -->
             <div aria-labelledby="summary-tab" class="tab-pane fade" id="summaryPane" role="tabpanel">
                 <div class="mt-4">
-                    <h3>Общий обзор («Статистика»)</h3>
-                    <p class="small-text">Суммарные показатели по принтерам, материалам (без. уч остатка).</p>
+                    <h3>Статистика</h3>
                     <div class="d-flex align-items-center mb-3">
                         <select class="form-select form-select-sm w-auto me-2" id="summaryPeriod">
                             <option value="all">Весь период</option>
@@ -1665,9 +1825,6 @@
             <div aria-labelledby="history-tab" class="tab-pane fade" id="historyPane" role="tabpanel">
                 <div class="mt-4">
                     <h3>История расчетов</h3>
-                    <p class="small-text">
-                        Прошлые расчёты. «Редакт.» — загрузить данные обратно в калькулятор.
-                    </p>
                     <div class="table-responsive">
                         <input class="form-control form-control-sm mb-2"
                                oninput="filterTable('historyTable', this.value)" placeholder="Поиск..." type="text"/>
@@ -2147,52 +2304,135 @@
 </div>
 <!-- Модальное окно редактирования материала -->
 <div class="modal fade" id="materialModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Материал</h5>
                 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-2">
-                    <label class="form-label">Тип материала (PLA, PETG и т.д.)</label>
-                    <input class="form-control" id="matMaterialTypeInput" type="text"/>
+            <div class="modal-body material-modal-body">
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 mat-type-col">
+                        <label class="form-label">Тип</label>
+                        <select class="form-select" id="matMaterialTypeInput" onchange="onMaterialTypeSelectChange()"></select>
+                    </div>
+                    <div class="col-12 mat-name-col">
+                        <label class="form-label">Название</label>
+                        <input class="form-control" id="matNameInput" type="text"/>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Название</label>
-                    <input class="form-control" id="matNameInput" type="text"/>
+                <div class="row g-2 align-items-end mb-2 d-none" id="matMaterialTypeCustomWrap">
+                    <div class="col-12">
+                        <label class="form-label">Свой тип материала</label>
+                        <input class="form-control" id="matMaterialTypeCustomInput" type="text"/>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Стоимость за кг</label>
-                    <input class="form-control" id="matCostInput" type="number"/>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Стоимость за кг</label>
+                        <input class="form-control" id="matCostInput" min="0" step="0.01" type="number"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Цвет</label>
+                        <input class="form-control form-control-color w-100" id="matColorInput" type="color" value="#ffffff"/>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Остаток (кг)</label>
-                    <input class="form-control" id="matBalanceInput" type="number"/>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Начальный вес (кг)</label>
+                        <input class="form-control" id="matDeclaredInput" oninput="updateMaterialBalancePreview()" step="0.01"
+                               type="number"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Остаток (кг)</label>
+                        <div class="input-group">
+                            <input class="form-control" id="matBalanceInput" min="0" step="0.001" type="number"/>
+                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#matMassCollapse" aria-expanded="false"
+                                    aria-controls="matMassCollapse" title="Режим ввода остатка">
+                                <i class="bi bi-calculator"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Заявленный вес (кг)</label>
-                    <input class="form-control" id="matDeclaredInput" type="number"/>
+                <div class="mat-mass-block mb-2 collapse" id="matMassCollapse">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <label class="form-label mb-0">Масса катушки</label>
+                        <small class="text-muted">Режим ввода массы</small>
+                    </div>
+                    <input id="matMassModeInput" type="hidden" value="used"/>
+                    <div class="btn-group btn-group-sm d-flex flex-wrap mat-mass-mode-group mt-1" id="matMassModeGroup" role="group" aria-label="Режим ввода массы">
+                        <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="used"
+                                onclick="setMaterialMassMode('used')" type="button">Использованный
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="remaining"
+                                onclick="setMaterialMassMode('remaining')" type="button">Оставшийся
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="measured"
+                                onclick="setMaterialMassMode('measured')" type="button">Измеренный
+                        </button>
+                    </div>
+                    <div class="form-text">Измеренный вес доступен при указанном пустом весе.</div>
+                    <div class="row g-2 align-items-end mt-2">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label">Пустой вес</label>
+                            <div class="input-group">
+                                <input class="form-control" id="matEmptySpoolWeightInput" min="0" step="0.1"
+                                       oninput="updateMaterialMassAvailability();updateMaterialBalancePreview()" type="number"/>
+                                <span class="input-group-text">г</span>
+                            </div>
+                            <div class="form-text">Оставьте пустым, чтобы использовать данные производителя.</div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <div class="mat-mass-input" data-mode="used">
+                                <label class="form-label">Использованный вес</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="matUsedWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                           step="0.1" type="number"/>
+                                    <span class="input-group-text">г</span>
+                                </div>
+                                <div class="form-text">Для новой катушки: 0 г.</div>
+                            </div>
+                            <div class="mat-mass-input d-none" data-mode="remaining">
+                                <label class="form-label">Оставшийся вес</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="matRemainingWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                           step="0.1" type="number"/>
+                                    <span class="input-group-text">г</span>
+                                </div>
+                                <div class="form-text">Для новой катушки совпадает с начальным весом.</div>
+                            </div>
+                            <div class="mat-mass-input d-none" data-mode="measured">
+                                <label class="form-label">Измеренный вес</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="matMeasuredWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                           step="0.1" type="number"/>
+                                    <span class="input-group-text">г</span>
+                                </div>
+                                <div class="form-text">Вес катушки с материалом.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Время остывания (мин)</label>
-                    <input class="form-control" id="matCoolingTimeInput" type="number"/>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Подготовка (мин)</label>
+                        <input class="form-control" id="matPrepTimeInput" min="0" type="number"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Остывание (мин)</label>
+                        <input class="form-control" id="matCoolingTimeInput" min="0" type="number"/>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Подготовка перед печатью (мин)</label>
-                    <input class="form-control" id="matPrepTimeInput" type="number"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Цвет</label>
-                    <input class="form-control form-control-color" id="matColorInput" type="color" value="#ffffff"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Производитель</label>
-                    <input class="form-control" id="matManufInput" type="text"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Дата производства</label>
-                    <input class="form-control" id="matProdDateInput" type="text"/>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Производитель</label>
+                        <input class="form-control" id="matManufInput" type="text"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Дата производства</label>
+                        <input class="form-control" id="matProdDateInput" placeholder="ГГГГ-ММ-ДД" type="text"/>
+                    </div>
                 </div>
                 <div class="mb-2">
                     <label class="form-label">Принтеры</label>
@@ -3577,6 +3817,12 @@
 
     function ensureAppDataDefaults(obj) {
         if (!obj || typeof obj !== 'object') obj = {};
+        const allowedMassModes = ['used','remaining','measured'];
+        const normalizeOptionalNumber = (val) => {
+            if (val === null || val === undefined || val === '') return null;
+            const parsed = parseFloat(val);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
         if (!Array.isArray(obj.printers)) obj.printers = [];
         if (!Array.isArray(obj.materials)) obj.materials = [];
         if (!Array.isArray(obj.materialProfiles)) obj.materialProfiles = [];
@@ -3585,6 +3831,13 @@
         if (!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
         obj.materials.forEach(m => {
             if (!m.printers) m.printers = [];
+            if (!allowedMassModes.includes(m.massInputMode)) {
+                m.massInputMode = 'used';
+            }
+            m.emptySpoolWeight = normalizeOptionalNumber(m.emptySpoolWeight);
+            m.usedWeightGrams = normalizeOptionalNumber(m.usedWeightGrams);
+            m.remainingWeightGrams = normalizeOptionalNumber(m.remainingWeightGrams);
+            m.measuredWeightGrams = normalizeOptionalNumber(m.measuredWeightGrams);
         });
         obj.additionalGlobal.forEach(a => {
             if (!a.printers) a.printers = [];
@@ -4621,31 +4874,118 @@
         });
     }
 
+    async function resolveDropPrinterId(target){
+        const lookupAncestorPrinterId = (el) => {
+            let current = el;
+            while (current) {
+                if (current.dataset && current.dataset.printerId) {
+                    return current.dataset.printerId;
+                }
+                if (current.id && current.id.startsWith('calcModelsTable_')) {
+                    return current.id.split('_')[1];
+                }
+                current = current.parentElement;
+            }
+            return null;
+        };
+        let printerId = lookupAncestorPrinterId(target);
+        if (printerId) return printerId;
+
+        const container = document.getElementById('calcPrintersContainer');
+        if (!container) return null;
+        const containerOwnsTarget = target === container || (typeof container.contains === 'function' && container.contains(target));
+        if (!containerOwnsTarget) return null;
+
+        const printerBlocks = container.querySelectorAll('[data-printer-id]');
+        if (printerBlocks.length === 0) return null;
+        if (printerBlocks.length === 1) {
+            return printerBlocks[0].dataset.printerId || null;
+        }
+        const printers = Array.isArray(appData.printers) ? appData.printers : [];
+        const options = printers.map(p => ({
+            value: String(p.id),
+            label: `${p.name} (ID: ${p.id})`
+        }));
+        if (!options.length) return null;
+        const result = await showMultiPrompt('Выберите принтер для моделей', [
+            {id:'printerId', label:'Принтер', type:'select', options, value: options[0].value}
+        ]);
+        if (result && result.printerId) {
+            return result.printerId;
+        }
+        return null;
+    }
+
     function setupGcodeDrop() {
+        const printersContainer = document.getElementById('calcPrintersContainer');
+        let dropHighlightDepth = 0;
+        let fileDragActive = false;
+
+        const isFileDrag = (event) => {
+            const dt = event && event.dataTransfer;
+            if (!dt) return false;
+            return Array.from(dt.types || []).includes('Files');
+        };
+
+        const isInsidePrinters = (target) => {
+            return printersContainer && (target === printersContainer || printersContainer.contains(target));
+        };
+
+        const clearHighlight = () => {
+            dropHighlightDepth = 0;
+            fileDragActive = false;
+            if (printersContainer) {
+                printersContainer.classList.remove('calc-printers-drop-active');
+            }
+        };
+
+        window.addEventListener('dragenter', e => {
+            if (!printersContainer) return;
+            if (isFileDrag(e)) {
+                fileDragActive = true;
+            }
+            if (!fileDragActive) return;
+            if (isInsidePrinters(e.target)) {
+                dropHighlightDepth++;
+                printersContainer.classList.add('calc-printers-drop-active');
+            }
+        });
+
+        window.addEventListener('dragleave', e => {
+            if (!printersContainer) return;
+            if (!fileDragActive) return;
+            if (isInsidePrinters(e.target)) {
+                dropHighlightDepth = Math.max(0, dropHighlightDepth - 1);
+                if (dropHighlightDepth === 0) {
+                    printersContainer.classList.remove('calc-printers-drop-active');
+                }
+            }
+        });
+
         window.addEventListener('dragover', e => {
+            if (isFileDrag(e)) {
+                fileDragActive = true;
+            } else if (!fileDragActive) {
+                return;
+            }
             e.preventDefault();
         });
 
         window.addEventListener('drop', async e => {
-            e.preventDefault();
-
-            let printerId = null;
-            let target = e.target;
-
-            while (target && !printerId) {
-                if (target.id && target.id.startsWith('calcModelsTable_')) {
-                    printerId = target.id.split('_')[1];
-                    break;
-                }
-                target = target.parentElement;
+            const hasFiles = isFileDrag(e);
+            if (hasFiles) {
+                e.preventDefault();
             }
+            clearHighlight();
+            if (!hasFiles) return;
 
+            const printerId = await resolveDropPrinterId(e.target);
             if (!printerId) {
-                alert('Please drop the G-code file over a printer\'s table.');
+                alert('Не удалось определить цель. Перетащите файл в блок принтера или выберите его при подсказке.');
                 return;
             }
 
-            const files = Array.from(e.dataTransfer.files).filter(f =>
+            const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []).filter(f =>
                 f.name.toLowerCase().endsWith('.gcode')
             );
 
@@ -4654,7 +4994,8 @@
                 const parsed = await parseGcodeText(txt);
                 let mid = await resolveMaterialIdByProfile(parsed.matProfile);
 
-                const modelName = parsed.modelName || f.name.replace(/\.gcode$/i, '');
+                const baseName = (f.name || '').replace(/\.gcode$/i, '').trim();
+                const modelName = baseName || f.name || parsed.code || parsed.modelName || 'Модель';
 
                 if (!mid) {
                     const materialOptions = appData.materials.map(m => ({
@@ -4691,6 +5032,8 @@
                 });
             }
         });
+
+        window.addEventListener('dragend', clearHighlight);
     }
 
 
@@ -4837,7 +5180,8 @@
         const ok = await ensureTargetOrderForImport();
         if(!ok) return;
 
-        const modelName = parsed.modelName || fn.replace(/\.gcode$/i,'') || parsed.code;
+        const fileBaseName = (fn || '').replace(/\.gcode$/i,'').trim();
+        const modelName = fileBaseName || fn || parsed.code || parsed.modelName || 'Модель';
 
         const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
         addModelRow(pr.id, {
@@ -4875,6 +5219,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         instrumentFunctions();
         initAll();
+        renderMaterialTypeOptions();
         const logoInput = document.getElementById('brandLogoInput');
         if (logoInput) logoInput.addEventListener('change', onBrandLogoChange);
     });
@@ -4977,7 +5322,7 @@
                     {id: 'materialType', label: 'Тип материала'},
                     {id:'cost',label:'Стоимость за кг',type:'number'},
                     {id:'balance',label:'Остаток (кг)',type:'number'},
-                    {id:'declared',label:'Заявленный вес (кг)',type:'number'},
+                    {id:'declared',label:'Начальный вес (кг)',type:'number'},
                     {id:'prepMinutes',label:'Подготовка (мин)',type:'number'},
                     {id:'manuf',label:'Производитель'},
                     {id:'prodDate',label:'Дата производства'},
@@ -5162,6 +5507,214 @@
         const unresolved = collectUnresolvedPrinters();
         if(unresolved.length) showPrinterMapModal(unresolved);
     }
+    const MATERIAL_MASS_MODES = ['used','remaining','measured'];
+
+    function setMaterialMassMode(mode){
+        if (!MATERIAL_MASS_MODES.includes(mode)) {
+            mode = 'used';
+        }
+        const hiddenInput = document.getElementById('matMassModeInput');
+        if (hiddenInput) {
+            hiddenInput.value = mode;
+        }
+        const buttons = document.querySelectorAll('#matMassModeGroup [data-mat-mass-mode]');
+        buttons.forEach(btn => {
+            const isActive = btn.dataset.matMassMode === mode;
+            btn.classList.toggle('active', isActive);
+        });
+        const sections = document.querySelectorAll('.mat-mass-input');
+        sections.forEach(section => {
+            const shouldShow = section.dataset.mode === mode;
+            section.classList.toggle('d-none', !shouldShow);
+        });
+        updateMaterialBalancePreview();
+    }
+
+    function updateMaterialMassAvailability(){
+        const emptyInput = document.getElementById('matEmptySpoolWeightInput');
+        const measuredButton = document.querySelector('#matMassModeGroup [data-mat-mass-mode="measured"]');
+        if (!emptyInput || !measuredButton) return;
+        const rawValue = emptyInput.value;
+        const parsed = parseFloat(rawValue);
+        const allowMeasured = rawValue !== '' && Number.isFinite(parsed) && parsed > 0;
+        measuredButton.disabled = !allowMeasured;
+        if (!allowMeasured) {
+            const currentMode = document.getElementById('matMassModeInput')?.value;
+            if (currentMode === 'measured') {
+                setMaterialMassMode('used');
+            }
+        }
+        updateMaterialBalancePreview();
+    }
+
+    function setMaterialNumberInputValue(id, value){
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (value === null || value === undefined || value === '') {
+            el.value = '';
+            return;
+        }
+        el.value = value;
+    }
+
+    function getMaterialNumberInputValue(id){
+        const el = document.getElementById(id);
+        if (!el) return null;
+        const raw = el.value;
+        if (raw === '' || raw === null || raw === undefined) return null;
+        const parsed = parseFloat(raw);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function loadMaterialTypeCatalog(){
+        const el = document.getElementById('materialTypeCatalog');
+        if (!el) return {groups: [], customLabel: 'Другое (вручную)'};
+        try {
+            const parsed = JSON.parse(el.textContent || '');
+            return parsed && typeof parsed === 'object' ? parsed : {groups: [], customLabel: 'Другое (вручную)'};
+        } catch (e) {
+            console.warn('Failed to parse material type catalog', e);
+            return {groups: [], customLabel: 'Другое (вручную)'};
+        }
+    }
+
+    function renderMaterialTypeOptions(){
+        const select = document.getElementById('matMaterialTypeInput');
+        if (!select) return;
+        const catalog = loadMaterialTypeCatalog();
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '-- Выберите тип --';
+        select.appendChild(placeholder);
+        const groups = Array.isArray(catalog.groups) ? catalog.groups : [];
+        groups.forEach(group => {
+            const items = Array.isArray(group?.items) ? group.items : [];
+            const label = group?.label ? String(group.label) : '';
+            const optGroup = document.createElement('optgroup');
+            if (label) optGroup.label = label;
+            items.forEach(item => {
+                let value = '';
+                let text = '';
+                if (typeof item === 'string') {
+                    value = item;
+                    text = item;
+                } else if (item && typeof item === 'object') {
+                    value = item.value || item.label || '';
+                    text = item.label || item.value || '';
+                }
+                if (!value && !text) return;
+                const opt = document.createElement('option');
+                opt.value = value || text;
+                opt.textContent = text || value;
+                optGroup.appendChild(opt);
+            });
+            if (optGroup.children.length) {
+                if (label) {
+                    select.appendChild(optGroup);
+                } else {
+                    Array.from(optGroup.children).forEach(child => select.appendChild(child));
+                }
+            }
+        });
+        const customLabel = catalog.customLabel || 'Другое (вручную)';
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = customLabel;
+        select.appendChild(customOpt);
+    }
+
+    function onMaterialTypeSelectChange(){
+        const select = document.getElementById('matMaterialTypeInput');
+        const customWrap = document.getElementById('matMaterialTypeCustomWrap');
+        const customInput = document.getElementById('matMaterialTypeCustomInput');
+        if (!select || !customWrap) return;
+        const isCustom = select.value === '__custom__';
+        customWrap.classList.toggle('d-none', !isCustom);
+        if (isCustom && customInput) {
+            customInput.focus();
+        }
+        if (!isCustom && customInput) {
+            customInput.value = '';
+        }
+    }
+
+    function setMaterialTypeValue(value){
+        const select = document.getElementById('matMaterialTypeInput');
+        const customWrap = document.getElementById('matMaterialTypeCustomWrap');
+        const customInput = document.getElementById('matMaterialTypeCustomInput');
+        if (!select) return;
+        if (!select.options.length) {
+            renderMaterialTypeOptions();
+        }
+        const normalized = (value || '').trim();
+        if (normalized === '') {
+            select.value = '';
+            if (customWrap) customWrap.classList.add('d-none');
+            if (customInput) customInput.value = '';
+            return;
+        }
+        const hasOption = Array.from(select.options).some(opt => opt.value === normalized);
+        if (hasOption) {
+            select.value = normalized;
+            if (customWrap) customWrap.classList.add('d-none');
+            if (customInput) customInput.value = '';
+            return;
+        }
+        select.value = '__custom__';
+        if (customWrap) customWrap.classList.remove('d-none');
+        if (customInput) customInput.value = normalized;
+    }
+
+    function getMaterialTypeValue(){
+        const select = document.getElementById('matMaterialTypeInput');
+        if (!select) return '';
+        if (select.value === '__custom__') {
+            return document.getElementById('matMaterialTypeCustomInput')?.value?.trim() || '';
+        }
+        return select.value || '';
+    }
+
+    function hideMaterialMassCollapse(){
+        const collapseEl = document.getElementById('matMassCollapse');
+        if (!collapseEl) return;
+        const instance = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, {toggle: false});
+        instance.hide();
+    }
+
+    function updateMaterialBalancePreview(){
+        const balanceInput = document.getElementById('matBalanceInput');
+        if (!balanceInput) return;
+        const modeInput = document.getElementById('matMassModeInput');
+        const mode = modeInput ? modeInput.value : 'used';
+        const declaredKg = getMaterialNumberInputValue('matDeclaredInput');
+        const declaredGrams = declaredKg !== null ? declaredKg * 1000 : null;
+        let remainingGrams = null;
+        if (mode === 'used') {
+            const used = getMaterialNumberInputValue('matUsedWeightInput');
+            if (declaredGrams !== null && used !== null) {
+                remainingGrams = Math.max(declaredGrams - used, 0);
+            }
+        } else if (mode === 'remaining') {
+            const remaining = getMaterialNumberInputValue('matRemainingWeightInput');
+            if (remaining !== null) {
+                remainingGrams = Math.max(remaining, 0);
+            }
+        } else if (mode === 'measured') {
+            const measured = getMaterialNumberInputValue('matMeasuredWeightInput');
+            const empty = getMaterialNumberInputValue('matEmptySpoolWeightInput');
+            if (measured !== null && empty !== null) {
+                remainingGrams = Math.max(measured - empty, 0);
+            }
+        }
+        if (remainingGrams !== null) {
+            const kgVal = remainingGrams / 1000;
+            const normalized = Math.max(kgVal, 0);
+            const rounded = Math.round(normalized * 1000) / 1000;
+            balanceInput.value = rounded.toString();
+        }
+    }
+
     /* Функции для глобальных материалов */
     function renderGlobalMaterialsTable(){
         const tb = document.querySelector("#materialsTable tbody");
@@ -5208,15 +5761,23 @@
     function onAddGlobalMaterial(){
         currentMaterialEditId = null;
         document.getElementById('matNameInput').value = '';
-        document.getElementById('matMaterialTypeInput').value = '';
+        setMaterialTypeValue('');
         document.getElementById('matCostInput').value = '0';
         document.getElementById('matBalanceInput').value = '0';
         document.getElementById('matDeclaredInput').value = '0';
+        document.getElementById('matCoolingTimeInput').value = '0';
+        setMaterialNumberInputValue('matEmptySpoolWeightInput', '');
+        setMaterialNumberInputValue('matUsedWeightInput', '');
+        setMaterialNumberInputValue('matRemainingWeightInput', '');
+        setMaterialNumberInputValue('matMeasuredWeightInput', '');
         document.getElementById('matColorInput').value = '#ffffff';
         document.getElementById('matPrepTimeInput').value = '0';
         document.getElementById('matManufInput').value = '';
         document.getElementById('matProdDateInput').value = '';
         populatePrintersSelect(document.getElementById('matPrintersSelect'), []);
+        setMaterialMassMode('used');
+        updateMaterialMassAvailability();
+        hideMaterialMassCollapse();
         new bootstrap.Modal(document.getElementById('materialModal')).show();
     }
     function onEditGlobalMaterial(id){
@@ -5224,24 +5785,39 @@
         if(!m) return;
         currentMaterialEditId = id;
         document.getElementById('matNameInput').value = m.name;
-        document.getElementById('matMaterialTypeInput').value = m.materialType;
+        setMaterialTypeValue(m.materialType);
         document.getElementById('matCostInput').value = m.costPerKg;
         document.getElementById('matBalanceInput').value = m.balance;
         document.getElementById('matDeclaredInput').value = m.declaredWeight;
+        setMaterialNumberInputValue('matEmptySpoolWeightInput', m.emptySpoolWeight);
+        setMaterialNumberInputValue('matUsedWeightInput', m.usedWeightGrams);
+        setMaterialNumberInputValue('matRemainingWeightInput', m.remainingWeightGrams);
+        setMaterialNumberInputValue('matMeasuredWeightInput', m.measuredWeightGrams);
         document.getElementById('matCoolingTimeInput').value = m.coolingTime || 0;
         document.getElementById('matPrepTimeInput').value = m.printerPrepMinutes || 0;
         document.getElementById('matColorInput').value = m.color || '#ffffff';
         document.getElementById('matManufInput').value = m.manufacturer || '';
         document.getElementById('matProdDateInput').value = m.productionDate || '';
         populatePrintersSelect(document.getElementById('matPrintersSelect'), m.printers||[]);
+        setMaterialMassMode(m.massInputMode || 'used');
+        updateMaterialMassAvailability();
+        hideMaterialMassCollapse();
         new bootstrap.Modal(document.getElementById('materialModal')).show();
     }
     function saveMaterialFromModal(){
         const isNew = currentMaterialEditId === null;
         let m = isNew ? {id: getNextId('materials'), profileIds: [], printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
         if(!m) return;
+        const readOptionalNumber = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            const raw = el.value;
+            if (raw === '' || raw === null || raw === undefined) return null;
+            const parsed = parseFloat(raw);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
         m.name = document.getElementById('matNameInput').value;
-        m.materialType = document.getElementById('matMaterialTypeInput').value || '';
+        m.materialType = getMaterialTypeValue();
         m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
         m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
         m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
@@ -5251,6 +5827,14 @@
         m.manufacturer = document.getElementById('matManufInput').value;
         m.productionDate = document.getElementById('matProdDateInput').value;
         m.printers = Array.from(document.getElementById('matPrintersSelect').selectedOptions).map(o=>o.value);
+        m.emptySpoolWeight = readOptionalNumber('matEmptySpoolWeightInput');
+        m.massInputMode = document.getElementById('matMassModeInput')?.value || 'used';
+        if (!MATERIAL_MASS_MODES.includes(m.massInputMode)) {
+            m.massInputMode = 'used';
+        }
+        m.usedWeightGrams = readOptionalNumber('matUsedWeightInput');
+        m.remainingWeightGrams = readOptionalNumber('matRemainingWeightInput');
+        m.measuredWeightGrams = readOptionalNumber('matMeasuredWeightInput');
         if(isNew) appData.materials.push(m);
         saveToLocalStorage();
         renderGlobalMaterialsTable();
@@ -5336,7 +5920,15 @@
         const tb = document.querySelector('#customServicesTable tbody');
         if(!tb) return;
         tb.innerHTML='';
-        (appData.calcSettings.customServices||[]).forEach(s=>{
+        if(!appData.calcSettings) appData.calcSettings = {};
+        const services = Array.isArray(appData.calcSettings.customServices) ? appData.calcSettings.customServices : [];
+        if(services.length === 0){
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="6" class="text-center text-muted small">Добавьте услуги при необходимости<\/td>`;
+            tb.appendChild(tr);
+            return;
+        }
+        services.forEach(s=>{
             const tr=document.createElement('tr');
             tr.innerHTML=`
       <td><input type="checkbox" ${s.use?'checked':''} onchange="updateService('${s.id}','use',this.checked)"></td>
@@ -6050,11 +6642,23 @@
     /* Функции калькуляции */
     function renderCalcPrinters(){
         const c = document.getElementById("calcPrintersContainer");
+        if(!c) return;
         c.innerHTML = "";
-        appData.printers.forEach(pr => {
+        const printers = Array.isArray(appData.printers) ? appData.printers : [];
+        if(printers.length === 0){
+            const placeholder = document.createElement('div');
+            placeholder.className = 'calc-empty-placeholder text-muted small';
+            placeholder.id = 'calcPrintersEmpty';
+            placeholder.textContent = 'Добавьте модель или перетащите файл .gcode в данную область';
+            c.appendChild(placeholder);
+            return;
+        }
+        printers.forEach(pr => {
             const block = document.createElement("div");
 
             block.className = "border p-3 mb-3";
+            block.classList.add('calc-printer-block');
+            block.dataset.printerId = String(pr.id);
             block.innerHTML = `
       <h5>Принтер: ${pr.name} (ID: ${pr.id})<\/h5>
       <div class="small-text mb-2">
@@ -6075,10 +6679,22 @@
         <\/thead>
         <tbody><\/tbody>
       <\/table>
+      <div class="calc-empty-placeholder text-muted small mb-3" id="calcModelsPlaceholder_${pr.id}">
+        Добавьте модель или перетащите файл .gcode в данную область
+      <\/div>
       <button class="btn btn-sm btn-primary" onclick="addModelRow(${pr.id}, {})">Добавить модель<\/button>
     `;
             c.appendChild(block);
+            updatePrinterModelsEmptyState(pr.id);
         });
+    }
+
+    function updatePrinterModelsEmptyState(printerId){
+        const placeholder = document.getElementById(`calcModelsPlaceholder_${printerId}`);
+        if(!placeholder) return;
+        const table = document.getElementById(`calcModelsTable_${printerId}`);
+        const hasRows = table ? !!table.querySelector('tbody tr') : false;
+        placeholder.style.display = hasRows ? 'none' : 'block';
     }
 
     // --- Model ID hygiene -------------------------------------------------
@@ -6293,9 +6909,10 @@
         <label class="form-check-label small" for="${labelId}">Печатать<\/label>
       </div>
     <\/td>
-    <td><button class="btn btn-sm btn-danger" onclick="this.closest('tr').remove()">Удл.<\/button><\/td>
+    <td><button class="btn btn-sm btn-danger" onclick="removeModelRow(this)">Удл.<\/button><\/td>
   `;
         tbody.appendChild(tr);
+        updatePrinterModelsEmptyState(printerId);
         if (initialThumb) {
             ensureThumbnailOpaque(initialThumb).then(processed => {
                 if (!processed || processed === initialThumb) return;
@@ -6305,6 +6922,17 @@
                     imgEl.src = `data:image/png;base64,${processed}`;
                 }
             });
+        }
+    }
+
+    function removeModelRow(button){
+        if(!button) return;
+        const row = button.closest('tr');
+        const table = row ? row.closest('table') : null;
+        if(row) row.remove();
+        if(table && table.id && table.id.startsWith('calcModelsTable_')){
+            const printerId = table.id.substring('calcModelsTable_'.length);
+            updatePrinterModelsEmptyState(printerId);
         }
     }
     function getAllMaterialsForPrinter(printerId, includeAll=false){
@@ -6885,7 +7513,15 @@
         });
         appData.calcSettings.deadlineDate = normalizedDeadline;
         let orderId = getCalcOrderId();
-        let existingIndex = appData.calcHistory.findIndex(entry => entry.calcName === calcName);
+        let existingIndex = -1;
+        const safeCalcName = (calcName || '').trim();
+        const historyHasId = entry => entry && entry.id !== undefined && entry.id !== null;
+        if (orderId) {
+            existingIndex = appData.calcHistory.findIndex(entry => String(entry.id) === String(orderId));
+        }
+        if (existingIndex === -1 && safeCalcName) {
+            existingIndex = appData.calcHistory.findIndex(entry => !historyHasId(entry) && entry.calcName === safeCalcName);
+        }
         if (!orderId) {
             orderId = getNextOrderId();
         } else {
@@ -7691,8 +8327,15 @@
             htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">Накладные расходы<\/div>${overheadCards}<div class="calc-overhead-total">Всего: ${safeFixed(sumGlobalAdd)} ₽<\/div><\/div>`;
         }
 
-        document.getElementById("calcResult").style.display = "block";
-        document.getElementById("calcResult").innerHTML = htmlRes;
+        const calcResultEmptyEl = document.getElementById("calcResultEmpty");
+        if (calcResultEmptyEl) {
+            calcResultEmptyEl.style.display = 'none';
+        }
+        const calcResultContainer = document.getElementById("calcResult");
+        if (calcResultContainer) {
+            calcResultContainer.style.display = "block";
+            calcResultContainer.innerHTML = htmlRes;
+        }
         const qrTarget=document.getElementById("orderSummaryQr");
         if(qrTarget){
             new QRCode(qrTarget,{text:appData.labelSettings.chatLink,width:120,height:120,correctLevel:QRCode.CorrectLevel.H});
@@ -9029,6 +9672,7 @@
         appData.printers.forEach(pr=>{
             const table=document.getElementById(`calcModelsTable_${pr.id}`);
             if(table) table.querySelector("tbody").innerHTML="";
+            updatePrinterModelsEmptyState(pr.id);
         });
         ['downloadSummaryCardBtn','sendMyNalogBtn','cancelMyNalogBtn'].forEach(id => {
             const btn = document.getElementById(id);
@@ -9038,6 +9682,10 @@
         if (calcResultEl) {
             calcResultEl.style.display = 'none';
             calcResultEl.innerHTML = '';
+        }
+        const calcResultEmptyEl = document.getElementById("calcResultEmpty");
+        if (calcResultEmptyEl) {
+            calcResultEmptyEl.style.display = 'block';
         }
     }
 
@@ -9240,6 +9888,7 @@
                 const tbody = table.querySelector("tbody");
                 tbody.innerHTML = "";
                 const prIdNum = isNaN(printerId) ? printerId : parseInt(printerId, 10);
+                updatePrinterModelsEmptyState(prIdNum);
                 it.calcData[printerId].forEach(model => {
                     addModelRow(prIdNum, model);
                 });
@@ -10698,6 +11347,11 @@
     }
 
     function mapSpoolmanToMaterial(spool, filament) {
+        const parseOptionalWeight = (val) => {
+            if (val === null || val === undefined || val === '') return null;
+            const num = parseFloat(val);
+            return Number.isFinite(num) ? num : null;
+        };
         let extraFields = {};
         if (spool.extra) {
             for (const [key, value] of Object.entries(spool.extra)) {
@@ -10735,7 +11389,12 @@
             color: filament.color_hex || '#ffffff',
             spoolmanId: filament.id,
             spoolmanSpoolId: spool.id,
-            printerPrepMinutes: parseFloat(extraFields.printerPrepMinutes ?? extraFields.prepMinutes ?? 0) || 0
+            printerPrepMinutes: parseFloat(extraFields.printerPrepMinutes ?? extraFields.prepMinutes ?? 0) || 0,
+            emptySpoolWeight: parseOptionalWeight(spool.empty_spool_weight),
+            massInputMode: 'remaining',
+            usedWeightGrams: parseOptionalWeight(spool.used_weight),
+            remainingWeightGrams: parseOptionalWeight(spool.remaining_weight),
+            measuredWeightGrams: parseOptionalWeight(spool.weight)
         };
     }
 

@@ -190,6 +190,35 @@
             flex: 1 1 0;
         }
 
+        .material-modal-body .form-label {
+            margin-bottom: 0.2rem;
+            font-weight: 600;
+        }
+
+        .material-modal-body .form-text {
+            margin-top: 0.2rem;
+            font-size: 0.75rem;
+            line-height: 1.2;
+        }
+
+        .material-modal-body .mat-mass-block {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            background-color: var(--bs-tertiary-bg);
+        }
+
+        @media (min-width: 576px) {
+            .material-modal-body .mat-type-col {
+                flex: 0 0 30%;
+                max-width: 30%;
+            }
+            .material-modal-body .mat-name-col {
+                flex: 0 0 70%;
+                max-width: 70%;
+            }
+        }
+
         [data-bs-theme="dark"] .calc-empty-placeholder {
             border-color: rgba(255, 255, 255, 0.2);
             background-color: rgba(255, 255, 255, 0.03);
@@ -1182,9 +1211,108 @@
             border-radius: 0.85rem;
             padding: 1rem;
         }
-    </style>
+</style>
 </head>
 <body>
+<script id="materialTypeCatalog" type="application/json">
+{
+  "customLabel": "Другое (вручную)",
+  "groups": [
+    {
+      "label": "FDM / FFF",
+      "items": [
+        "PLA",
+        "PLA+",
+        "PETG",
+        "ABS",
+        "ASA",
+        "TPU",
+        "TPE",
+        "HIPS",
+        "PP",
+        "PETT",
+        "PCTG",
+        "CPE",
+        "CPE+"
+      ]
+    },
+    {
+      "label": "FDM / Инженерные",
+      "items": [
+        "PA (Nylon)",
+        "PA6",
+        "PA11",
+        "PA12",
+        "PC",
+        "PC-ABS",
+        "POM (Delrin)",
+        "PMMA (Acrylic)",
+        "PEI (Ultem)",
+        "PPSU",
+        "PSU",
+        "PPS",
+        "PEEK",
+        "PEKK",
+        "PVDF",
+        "PBT"
+      ]
+    },
+    {
+      "label": "FDM / Поддержки и спец.",
+      "items": [
+        "PVA",
+        "BVOH",
+        "HIPS (Support)",
+        "EVA"
+      ]
+    },
+    {
+      "label": "FDM / Композиты и наполнители",
+      "items": [
+        "PLA-CF",
+        "PETG-CF",
+        "ABS-CF",
+        "ASA-CF",
+        "PA-CF",
+        "PC-CF",
+        "PEEK-CF",
+        "PP-CF",
+        "PLA-GF",
+        "PETG-GF",
+        "PA-GF",
+        "PC-GF",
+        "PP-GF",
+        "PA-Kevlar",
+        "PLA-Wood",
+        "PLA-Metal",
+        "Ceramic-filled",
+        "Stone-filled",
+        "Glow-in-the-dark",
+        "Conductive",
+        "Magnetic"
+      ]
+    },
+    {
+      "label": "SLA / DLP / LCD (Resin)",
+      "items": [
+        "Resin Standard",
+        "Resin ABS-like",
+        "Resin Tough",
+        "Resin Durable",
+        "Resin Flexible",
+        "Resin Elastic",
+        "Resin Clear",
+        "Resin High Temp",
+        "Resin Castable",
+        "Resin Dental",
+        "Resin Biocompatible",
+        "Resin Water-washable",
+        "Resin Ceramic"
+      ]
+    }
+  ]
+}
+</script>
 <div class="schema-migration-overlay" id="schemaMigrationOverlay">
     <div class="schema-migration-card">
         <h2>Обновление формата данных</h2>
@@ -1254,7 +1382,7 @@
                             Накладные расходы
                         </button>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item d-none">
                         <button aria-controls="settingsPane" aria-selected="false" class="nav-link"
                                 data-bs-target="#settingsPane" data-bs-toggle="tab" id="settings-tab" role="tab"
                                 type="button">
@@ -2226,121 +2354,135 @@
 </div>
 <!-- Модальное окно редактирования материала -->
 <div class="modal fade" id="materialModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Материал</h5>
                 <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-2">
-                    <label class="form-label">Тип материала (PLA, PETG и т.д.)</label>
-                    <input class="form-control" id="matMaterialTypeInput" type="text"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Название</label>
-                    <input class="form-control" id="matNameInput" type="text"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Стоимость за кг</label>
-                    <input class="form-control" id="matCostInput" type="number"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Остаток (кг)</label>
-                    <input class="form-control" id="matBalanceInput" type="number"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Начальный вес (кг)</label>
-                    <input class="form-control" id="matDeclaredInput" oninput="updateMaterialBalancePreview()" step="0.01"
-                           type="number"/>
-                    <div class="form-text">Исходный вес филамента на катушке (нетто). Если поле пустое, будет
-                        использоваться значение из описания филамента.
+            <div class="modal-body material-modal-body">
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 mat-type-col">
+                        <label class="form-label">Тип</label>
+                        <select class="form-select" id="matMaterialTypeInput" onchange="onMaterialTypeSelectChange()"></select>
+                    </div>
+                    <div class="col-12 mat-name-col">
+                        <label class="form-label">Название</label>
+                        <input class="form-control" id="matNameInput" type="text"/>
                     </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Пустой вес</label>
-                    <div class="input-group">
-                        <input class="form-control" id="matEmptySpoolWeightInput" min="0" step="0.1"
-                               oninput="updateMaterialMassAvailability();updateMaterialBalancePreview()" type="number"/>
-                        <span class="input-group-text">г</span>
-                    </div>
-                    <div class="form-text">Вес пустой катушки. Оставьте поле пустым, чтобы использовать данные
-                        производителя или описания филамента.
+                <div class="row g-2 align-items-end mb-2 d-none" id="matMaterialTypeCustomWrap">
+                    <div class="col-12">
+                        <label class="form-label">Свой тип материала</label>
+                        <input class="form-control" id="matMaterialTypeCustomInput" type="text"/>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label d-flex justify-content-between align-items-center">
-                        <span>Масса</span>
-                        <small class="text-muted">Выберите значение для ввода</small>
-                    </label>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Стоимость за кг</label>
+                        <input class="form-control" id="matCostInput" min="0" step="0.01" type="number"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Цвет</label>
+                        <input class="form-control form-control-color w-100" id="matColorInput" type="color" value="#ffffff"/>
+                    </div>
+                </div>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Начальный вес (кг)</label>
+                        <input class="form-control" id="matDeclaredInput" oninput="updateMaterialBalancePreview()" step="0.01"
+                               type="number"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Остаток (кг)</label>
+                        <div class="input-group">
+                            <input class="form-control" id="matBalanceInput" min="0" step="0.001" type="number"/>
+                            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#matMassCollapse" aria-expanded="false"
+                                    aria-controls="matMassCollapse" title="Режим ввода остатка">
+                                <i class="bi bi-calculator"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mat-mass-block mb-2 collapse" id="matMassCollapse">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <label class="form-label mb-0">Масса катушки</label>
+                        <small class="text-muted">Режим ввода массы</small>
+                    </div>
                     <input id="matMassModeInput" type="hidden" value="used"/>
-                    <div class="btn-group btn-group-sm d-flex flex-wrap mat-mass-mode-group" id="matMassModeGroup" role="group" aria-label="Режим ввода массы">
+                    <div class="btn-group btn-group-sm d-flex flex-wrap mat-mass-mode-group mt-1" id="matMassModeGroup" role="group" aria-label="Режим ввода массы">
                         <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="used"
-                                onclick="setMaterialMassMode('used')" type="button">Использованный вес
+                                onclick="setMaterialMassMode('used')" type="button">Использованный
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="remaining"
-                                onclick="setMaterialMassMode('remaining')" type="button">Оставшийся вес
+                                onclick="setMaterialMassMode('remaining')" type="button">Оставшийся
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="measured"
-                                onclick="setMaterialMassMode('measured')" type="button">Измеренный вес
+                                onclick="setMaterialMassMode('measured')" type="button">Измеренный
                         </button>
                     </div>
-                    <div class="form-text">Измеренный вес доступен только при заполненном пустом весе катушки.</div>
-                    <div class="mt-3">
-                        <div class="mat-mass-input" data-mode="used">
-                            <label class="form-label">Использованный вес</label>
+                    <div class="form-text">Измеренный вес доступен при указанном пустом весе.</div>
+                    <div class="row g-2 align-items-end mt-2">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label">Пустой вес</label>
                             <div class="input-group">
-                                <input class="form-control" id="matUsedWeightInput" min="0" oninput="updateMaterialBalancePreview()"
-                                       step="0.1" type="number"/>
+                                <input class="form-control" id="matEmptySpoolWeightInput" min="0" step="0.1"
+                                       oninput="updateMaterialMassAvailability();updateMaterialBalancePreview()" type="number"/>
                                 <span class="input-group-text">г</span>
                             </div>
-                            <div class="form-text">Сколько материала уже израсходовано. Для новой катушки значение
-                                должно быть 0 г.
-                            </div>
+                            <div class="form-text">Оставьте пустым, чтобы использовать данные производителя.</div>
                         </div>
-                        <div class="mat-mass-input d-none" data-mode="remaining">
-                            <label class="form-label">Оставшийся вес</label>
-                            <div class="input-group">
-                                <input class="form-control" id="matRemainingWeightInput" min="0" oninput="updateMaterialBalancePreview()"
-                                       step="0.1" type="number"/>
-                                <span class="input-group-text">г</span>
+                        <div class="col-12 col-sm-6">
+                            <div class="mat-mass-input" data-mode="used">
+                                <label class="form-label">Использованный вес</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="matUsedWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                           step="0.1" type="number"/>
+                                    <span class="input-group-text">г</span>
+                                </div>
+                                <div class="form-text">Для новой катушки: 0 г.</div>
                             </div>
-                            <div class="form-text">Сколько материала осталось на катушке. Для новой катушки это значение
-                                совпадает с начальным весом.
+                            <div class="mat-mass-input d-none" data-mode="remaining">
+                                <label class="form-label">Оставшийся вес</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="matRemainingWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                           step="0.1" type="number"/>
+                                    <span class="input-group-text">г</span>
+                                </div>
+                                <div class="form-text">Для новой катушки совпадает с начальным весом.</div>
                             </div>
-                        </div>
-                        <div class="mat-mass-input d-none" data-mode="measured">
-                            <label class="form-label">Измеренный вес</label>
-                            <div class="input-group">
-                                <input class="form-control" id="matMeasuredWeightInput" min="0" oninput="updateMaterialBalancePreview()"
-                                       step="0.1" type="number"/>
-                                <span class="input-group-text">г</span>
-                            </div>
-                            <div class="form-text">Вес катушки вместе с материалом. Используется для расчёта остатка при
-                                известном пустом весе.
+                            <div class="mat-mass-input d-none" data-mode="measured">
+                                <label class="form-label">Измеренный вес</label>
+                                <div class="input-group">
+                                    <input class="form-control" id="matMeasuredWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                           step="0.1" type="number"/>
+                                    <span class="input-group-text">г</span>
+                                </div>
+                                <div class="form-text">Вес катушки с материалом.</div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Время остывания (мин)</label>
-                    <input class="form-control" id="matCoolingTimeInput" type="number"/>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Подготовка (мин)</label>
+                        <input class="form-control" id="matPrepTimeInput" min="0" type="number"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Остывание (мин)</label>
+                        <input class="form-control" id="matCoolingTimeInput" min="0" type="number"/>
+                    </div>
                 </div>
-                <div class="mb-2">
-                    <label class="form-label">Подготовка перед печатью (мин)</label>
-                    <input class="form-control" id="matPrepTimeInput" type="number"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Цвет</label>
-                    <input class="form-control form-control-color" id="matColorInput" type="color" value="#ffffff"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Производитель</label>
-                    <input class="form-control" id="matManufInput" type="text"/>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Дата производства</label>
-                    <input class="form-control" id="matProdDateInput" type="text"/>
+                <div class="row g-2 align-items-end mb-2">
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Производитель</label>
+                        <input class="form-control" id="matManufInput" type="text"/>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label">Дата производства</label>
+                        <input class="form-control" id="matProdDateInput" placeholder="ГГГГ-ММ-ДД" type="text"/>
+                    </div>
                 </div>
                 <div class="mb-2">
                     <label class="form-label">Принтеры</label>
@@ -5127,6 +5269,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         instrumentFunctions();
         initAll();
+        renderMaterialTypeOptions();
         const logoInput = document.getElementById('brandLogoInput');
         if (logoInput) logoInput.addEventListener('change', onBrandLogoChange);
     });
@@ -5473,6 +5616,122 @@
         return Number.isFinite(parsed) ? parsed : null;
     }
 
+    function loadMaterialTypeCatalog(){
+        const el = document.getElementById('materialTypeCatalog');
+        if (!el) return {groups: [], customLabel: 'Другое (вручную)'};
+        try {
+            const parsed = JSON.parse(el.textContent || '');
+            return parsed && typeof parsed === 'object' ? parsed : {groups: [], customLabel: 'Другое (вручную)'};
+        } catch (e) {
+            console.warn('Failed to parse material type catalog', e);
+            return {groups: [], customLabel: 'Другое (вручную)'};
+        }
+    }
+
+    function renderMaterialTypeOptions(){
+        const select = document.getElementById('matMaterialTypeInput');
+        if (!select) return;
+        const catalog = loadMaterialTypeCatalog();
+        select.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '-- Выберите тип --';
+        select.appendChild(placeholder);
+        const groups = Array.isArray(catalog.groups) ? catalog.groups : [];
+        groups.forEach(group => {
+            const items = Array.isArray(group?.items) ? group.items : [];
+            const label = group?.label ? String(group.label) : '';
+            const optGroup = document.createElement('optgroup');
+            if (label) optGroup.label = label;
+            items.forEach(item => {
+                let value = '';
+                let text = '';
+                if (typeof item === 'string') {
+                    value = item;
+                    text = item;
+                } else if (item && typeof item === 'object') {
+                    value = item.value || item.label || '';
+                    text = item.label || item.value || '';
+                }
+                if (!value && !text) return;
+                const opt = document.createElement('option');
+                opt.value = value || text;
+                opt.textContent = text || value;
+                optGroup.appendChild(opt);
+            });
+            if (optGroup.children.length) {
+                if (label) {
+                    select.appendChild(optGroup);
+                } else {
+                    Array.from(optGroup.children).forEach(child => select.appendChild(child));
+                }
+            }
+        });
+        const customLabel = catalog.customLabel || 'Другое (вручную)';
+        const customOpt = document.createElement('option');
+        customOpt.value = '__custom__';
+        customOpt.textContent = customLabel;
+        select.appendChild(customOpt);
+    }
+
+    function onMaterialTypeSelectChange(){
+        const select = document.getElementById('matMaterialTypeInput');
+        const customWrap = document.getElementById('matMaterialTypeCustomWrap');
+        const customInput = document.getElementById('matMaterialTypeCustomInput');
+        if (!select || !customWrap) return;
+        const isCustom = select.value === '__custom__';
+        customWrap.classList.toggle('d-none', !isCustom);
+        if (isCustom && customInput) {
+            customInput.focus();
+        }
+        if (!isCustom && customInput) {
+            customInput.value = '';
+        }
+    }
+
+    function setMaterialTypeValue(value){
+        const select = document.getElementById('matMaterialTypeInput');
+        const customWrap = document.getElementById('matMaterialTypeCustomWrap');
+        const customInput = document.getElementById('matMaterialTypeCustomInput');
+        if (!select) return;
+        if (!select.options.length) {
+            renderMaterialTypeOptions();
+        }
+        const normalized = (value || '').trim();
+        if (normalized === '') {
+            select.value = '';
+            if (customWrap) customWrap.classList.add('d-none');
+            if (customInput) customInput.value = '';
+            return;
+        }
+        const hasOption = Array.from(select.options).some(opt => opt.value === normalized);
+        if (hasOption) {
+            select.value = normalized;
+            if (customWrap) customWrap.classList.add('d-none');
+            if (customInput) customInput.value = '';
+            return;
+        }
+        select.value = '__custom__';
+        if (customWrap) customWrap.classList.remove('d-none');
+        if (customInput) customInput.value = normalized;
+    }
+
+    function getMaterialTypeValue(){
+        const select = document.getElementById('matMaterialTypeInput');
+        if (!select) return '';
+        if (select.value === '__custom__') {
+            return document.getElementById('matMaterialTypeCustomInput')?.value?.trim() || '';
+        }
+        return select.value || '';
+    }
+
+    function hideMaterialMassCollapse(){
+        const collapseEl = document.getElementById('matMassCollapse');
+        if (!collapseEl) return;
+        const instance = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, {toggle: false});
+        instance.hide();
+    }
+
     function updateMaterialBalancePreview(){
         const balanceInput = document.getElementById('matBalanceInput');
         if (!balanceInput) return;
@@ -5552,7 +5811,7 @@
     function onAddGlobalMaterial(){
         currentMaterialEditId = null;
         document.getElementById('matNameInput').value = '';
-        document.getElementById('matMaterialTypeInput').value = '';
+        setMaterialTypeValue('');
         document.getElementById('matCostInput').value = '0';
         document.getElementById('matBalanceInput').value = '0';
         document.getElementById('matDeclaredInput').value = '0';
@@ -5568,6 +5827,7 @@
         populatePrintersSelect(document.getElementById('matPrintersSelect'), []);
         setMaterialMassMode('used');
         updateMaterialMassAvailability();
+        hideMaterialMassCollapse();
         new bootstrap.Modal(document.getElementById('materialModal')).show();
     }
     function onEditGlobalMaterial(id){
@@ -5575,7 +5835,7 @@
         if(!m) return;
         currentMaterialEditId = id;
         document.getElementById('matNameInput').value = m.name;
-        document.getElementById('matMaterialTypeInput').value = m.materialType;
+        setMaterialTypeValue(m.materialType);
         document.getElementById('matCostInput').value = m.costPerKg;
         document.getElementById('matBalanceInput').value = m.balance;
         document.getElementById('matDeclaredInput').value = m.declaredWeight;
@@ -5591,6 +5851,7 @@
         populatePrintersSelect(document.getElementById('matPrintersSelect'), m.printers||[]);
         setMaterialMassMode(m.massInputMode || 'used');
         updateMaterialMassAvailability();
+        hideMaterialMassCollapse();
         new bootstrap.Modal(document.getElementById('materialModal')).show();
     }
     function saveMaterialFromModal(){
@@ -5606,7 +5867,7 @@
             return Number.isFinite(parsed) ? parsed : null;
         };
         m.name = document.getElementById('matNameInput').value;
-        m.materialType = document.getElementById('matMaterialTypeInput').value || '';
+        m.materialType = getMaterialTypeValue();
         m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
         m.balance = parseFloat(document.getElementById('matBalanceInput').value) || 0;
         m.declaredWeight = parseFloat(document.getElementById('matDeclaredInput').value) || 0;
