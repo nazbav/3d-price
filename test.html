@@ -182,6 +182,14 @@
             background-color: rgba(13, 110, 253, 0.08);
         }
 
+        .mat-mass-mode-group {
+            gap: 0.35rem;
+        }
+
+        .mat-mass-mode-group .btn {
+            flex: 1 1 0;
+        }
+
         [data-bs-theme="dark"] .calc-empty-placeholder {
             border-color: rgba(255, 255, 255, 0.2);
             background-color: rgba(255, 255, 255, 0.03);
@@ -1334,7 +1342,7 @@
                                 <th onclick="sortTable('materialsTable',1)">Тип</th>
                                 <th onclick="sortTable('materialsTable',2)">Стоим./кг</th>
                                 <th onclick="sortTable('materialsTable',3)">Остаток (гр)</th>
-                                <th onclick="sortTable('materialsTable',4)">Заявленный вес (кг)</th>
+                                <th onclick="sortTable('materialsTable',4)">Начальный вес (кг)</th>
                                 <th onclick="sortTable('materialsTable',5)">Время остыв. (мин)</th>
                                 <th onclick="sortTable('materialsTable',6)">Подготовка (мин)</th>
                                 <th onclick="sortTable('materialsTable',7)">Производитель</th>
@@ -2242,8 +2250,77 @@
                     <input class="form-control" id="matBalanceInput" type="number"/>
                 </div>
                 <div class="mb-2">
-                    <label class="form-label">Заявленный вес (кг)</label>
-                    <input class="form-control" id="matDeclaredInput" type="number"/>
+                    <label class="form-label">Начальный вес (кг)</label>
+                    <input class="form-control" id="matDeclaredInput" oninput="updateMaterialBalancePreview()" step="0.01"
+                           type="number"/>
+                    <div class="form-text">Исходный вес филамента на катушке (нетто). Если поле пустое, будет
+                        использоваться значение из описания филамента.
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Пустой вес</label>
+                    <div class="input-group">
+                        <input class="form-control" id="matEmptySpoolWeightInput" min="0" step="0.1"
+                               oninput="updateMaterialMassAvailability();updateMaterialBalancePreview()" type="number"/>
+                        <span class="input-group-text">г</span>
+                    </div>
+                    <div class="form-text">Вес пустой катушки. Оставьте поле пустым, чтобы использовать данные
+                        производителя или описания филамента.
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label d-flex justify-content-between align-items-center">
+                        <span>Масса</span>
+                        <small class="text-muted">Выберите значение для ввода</small>
+                    </label>
+                    <input id="matMassModeInput" type="hidden" value="used"/>
+                    <div class="btn-group btn-group-sm d-flex flex-wrap mat-mass-mode-group" id="matMassModeGroup" role="group" aria-label="Режим ввода массы">
+                        <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="used"
+                                onclick="setMaterialMassMode('used')" type="button">Использованный вес
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="remaining"
+                                onclick="setMaterialMassMode('remaining')" type="button">Оставшийся вес
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" data-mat-mass-mode="measured"
+                                onclick="setMaterialMassMode('measured')" type="button">Измеренный вес
+                        </button>
+                    </div>
+                    <div class="form-text">Измеренный вес доступен только при заполненном пустом весе катушки.</div>
+                    <div class="mt-3">
+                        <div class="mat-mass-input" data-mode="used">
+                            <label class="form-label">Использованный вес</label>
+                            <div class="input-group">
+                                <input class="form-control" id="matUsedWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                       step="0.1" type="number"/>
+                                <span class="input-group-text">г</span>
+                            </div>
+                            <div class="form-text">Сколько материала уже израсходовано. Для новой катушки значение
+                                должно быть 0 г.
+                            </div>
+                        </div>
+                        <div class="mat-mass-input d-none" data-mode="remaining">
+                            <label class="form-label">Оставшийся вес</label>
+                            <div class="input-group">
+                                <input class="form-control" id="matRemainingWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                       step="0.1" type="number"/>
+                                <span class="input-group-text">г</span>
+                            </div>
+                            <div class="form-text">Сколько материала осталось на катушке. Для новой катушки это значение
+                                совпадает с начальным весом.
+                            </div>
+                        </div>
+                        <div class="mat-mass-input d-none" data-mode="measured">
+                            <label class="form-label">Измеренный вес</label>
+                            <div class="input-group">
+                                <input class="form-control" id="matMeasuredWeightInput" min="0" oninput="updateMaterialBalancePreview()"
+                                       step="0.1" type="number"/>
+                                <span class="input-group-text">г</span>
+                            </div>
+                            <div class="form-text">Вес катушки вместе с материалом. Используется для расчёта остатка при
+                                известном пустом весе.
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="mb-2">
                     <label class="form-label">Время остывания (мин)</label>
@@ -3648,6 +3725,12 @@
 
     function ensureAppDataDefaults(obj) {
         if (!obj || typeof obj !== 'object') obj = {};
+        const allowedMassModes = ['used','remaining','measured'];
+        const normalizeOptionalNumber = (val) => {
+            if (val === null || val === undefined || val === '') return null;
+            const parsed = parseFloat(val);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
         if (!Array.isArray(obj.printers)) obj.printers = [];
         if (!Array.isArray(obj.materials)) obj.materials = [];
         if (!Array.isArray(obj.materialProfiles)) obj.materialProfiles = [];
@@ -3656,6 +3739,13 @@
         if (!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
         obj.materials.forEach(m => {
             if (!m.printers) m.printers = [];
+            if (!allowedMassModes.includes(m.massInputMode)) {
+                m.massInputMode = 'used';
+            }
+            m.emptySpoolWeight = normalizeOptionalNumber(m.emptySpoolWeight);
+            m.usedWeightGrams = normalizeOptionalNumber(m.usedWeightGrams);
+            m.remainingWeightGrams = normalizeOptionalNumber(m.remainingWeightGrams);
+            m.measuredWeightGrams = normalizeOptionalNumber(m.measuredWeightGrams);
         });
         obj.additionalGlobal.forEach(a => {
             if (!a.printers) a.printers = [];
@@ -5139,7 +5229,7 @@
                     {id: 'materialType', label: 'Тип материала'},
                     {id:'cost',label:'Стоимость за кг',type:'number'},
                     {id:'balance',label:'Остаток (кг)',type:'number'},
-                    {id:'declared',label:'Заявленный вес (кг)',type:'number'},
+                    {id:'declared',label:'Начальный вес (кг)',type:'number'},
                     {id:'prepMinutes',label:'Подготовка (мин)',type:'number'},
                     {id:'manuf',label:'Производитель'},
                     {id:'prodDate',label:'Дата производства'},
@@ -5324,6 +5414,98 @@
         const unresolved = collectUnresolvedPrinters();
         if(unresolved.length) showPrinterMapModal(unresolved);
     }
+    const MATERIAL_MASS_MODES = ['used','remaining','measured'];
+
+    function setMaterialMassMode(mode){
+        if (!MATERIAL_MASS_MODES.includes(mode)) {
+            mode = 'used';
+        }
+        const hiddenInput = document.getElementById('matMassModeInput');
+        if (hiddenInput) {
+            hiddenInput.value = mode;
+        }
+        const buttons = document.querySelectorAll('#matMassModeGroup [data-mat-mass-mode]');
+        buttons.forEach(btn => {
+            const isActive = btn.dataset.matMassMode === mode;
+            btn.classList.toggle('active', isActive);
+        });
+        const sections = document.querySelectorAll('.mat-mass-input');
+        sections.forEach(section => {
+            const shouldShow = section.dataset.mode === mode;
+            section.classList.toggle('d-none', !shouldShow);
+        });
+        updateMaterialBalancePreview();
+    }
+
+    function updateMaterialMassAvailability(){
+        const emptyInput = document.getElementById('matEmptySpoolWeightInput');
+        const measuredButton = document.querySelector('#matMassModeGroup [data-mat-mass-mode="measured"]');
+        if (!emptyInput || !measuredButton) return;
+        const rawValue = emptyInput.value;
+        const parsed = parseFloat(rawValue);
+        const allowMeasured = rawValue !== '' && Number.isFinite(parsed) && parsed > 0;
+        measuredButton.disabled = !allowMeasured;
+        if (!allowMeasured) {
+            const currentMode = document.getElementById('matMassModeInput')?.value;
+            if (currentMode === 'measured') {
+                setMaterialMassMode('used');
+            }
+        }
+        updateMaterialBalancePreview();
+    }
+
+    function setMaterialNumberInputValue(id, value){
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (value === null || value === undefined || value === '') {
+            el.value = '';
+            return;
+        }
+        el.value = value;
+    }
+
+    function getMaterialNumberInputValue(id){
+        const el = document.getElementById(id);
+        if (!el) return null;
+        const raw = el.value;
+        if (raw === '' || raw === null || raw === undefined) return null;
+        const parsed = parseFloat(raw);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function updateMaterialBalancePreview(){
+        const balanceInput = document.getElementById('matBalanceInput');
+        if (!balanceInput) return;
+        const modeInput = document.getElementById('matMassModeInput');
+        const mode = modeInput ? modeInput.value : 'used';
+        const declaredKg = getMaterialNumberInputValue('matDeclaredInput');
+        const declaredGrams = declaredKg !== null ? declaredKg * 1000 : null;
+        let remainingGrams = null;
+        if (mode === 'used') {
+            const used = getMaterialNumberInputValue('matUsedWeightInput');
+            if (declaredGrams !== null && used !== null) {
+                remainingGrams = Math.max(declaredGrams - used, 0);
+            }
+        } else if (mode === 'remaining') {
+            const remaining = getMaterialNumberInputValue('matRemainingWeightInput');
+            if (remaining !== null) {
+                remainingGrams = Math.max(remaining, 0);
+            }
+        } else if (mode === 'measured') {
+            const measured = getMaterialNumberInputValue('matMeasuredWeightInput');
+            const empty = getMaterialNumberInputValue('matEmptySpoolWeightInput');
+            if (measured !== null && empty !== null) {
+                remainingGrams = Math.max(measured - empty, 0);
+            }
+        }
+        if (remainingGrams !== null) {
+            const kgVal = remainingGrams / 1000;
+            const normalized = Math.max(kgVal, 0);
+            const rounded = Math.round(normalized * 1000) / 1000;
+            balanceInput.value = rounded.toString();
+        }
+    }
+
     /* Функции для глобальных материалов */
     function renderGlobalMaterialsTable(){
         const tb = document.querySelector("#materialsTable tbody");
@@ -5374,11 +5556,18 @@
         document.getElementById('matCostInput').value = '0';
         document.getElementById('matBalanceInput').value = '0';
         document.getElementById('matDeclaredInput').value = '0';
+        document.getElementById('matCoolingTimeInput').value = '0';
+        setMaterialNumberInputValue('matEmptySpoolWeightInput', '');
+        setMaterialNumberInputValue('matUsedWeightInput', '');
+        setMaterialNumberInputValue('matRemainingWeightInput', '');
+        setMaterialNumberInputValue('matMeasuredWeightInput', '');
         document.getElementById('matColorInput').value = '#ffffff';
         document.getElementById('matPrepTimeInput').value = '0';
         document.getElementById('matManufInput').value = '';
         document.getElementById('matProdDateInput').value = '';
         populatePrintersSelect(document.getElementById('matPrintersSelect'), []);
+        setMaterialMassMode('used');
+        updateMaterialMassAvailability();
         new bootstrap.Modal(document.getElementById('materialModal')).show();
     }
     function onEditGlobalMaterial(id){
@@ -5390,18 +5579,32 @@
         document.getElementById('matCostInput').value = m.costPerKg;
         document.getElementById('matBalanceInput').value = m.balance;
         document.getElementById('matDeclaredInput').value = m.declaredWeight;
+        setMaterialNumberInputValue('matEmptySpoolWeightInput', m.emptySpoolWeight);
+        setMaterialNumberInputValue('matUsedWeightInput', m.usedWeightGrams);
+        setMaterialNumberInputValue('matRemainingWeightInput', m.remainingWeightGrams);
+        setMaterialNumberInputValue('matMeasuredWeightInput', m.measuredWeightGrams);
         document.getElementById('matCoolingTimeInput').value = m.coolingTime || 0;
         document.getElementById('matPrepTimeInput').value = m.printerPrepMinutes || 0;
         document.getElementById('matColorInput').value = m.color || '#ffffff';
         document.getElementById('matManufInput').value = m.manufacturer || '';
         document.getElementById('matProdDateInput').value = m.productionDate || '';
         populatePrintersSelect(document.getElementById('matPrintersSelect'), m.printers||[]);
+        setMaterialMassMode(m.massInputMode || 'used');
+        updateMaterialMassAvailability();
         new bootstrap.Modal(document.getElementById('materialModal')).show();
     }
     function saveMaterialFromModal(){
         const isNew = currentMaterialEditId === null;
         let m = isNew ? {id: getNextId('materials'), profileIds: [], printers: []} : appData.materials.find(x=>x.id==currentMaterialEditId);
         if(!m) return;
+        const readOptionalNumber = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return null;
+            const raw = el.value;
+            if (raw === '' || raw === null || raw === undefined) return null;
+            const parsed = parseFloat(raw);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
         m.name = document.getElementById('matNameInput').value;
         m.materialType = document.getElementById('matMaterialTypeInput').value || '';
         m.costPerKg = parseFloat(document.getElementById('matCostInput').value) || 0;
@@ -5413,6 +5616,14 @@
         m.manufacturer = document.getElementById('matManufInput').value;
         m.productionDate = document.getElementById('matProdDateInput').value;
         m.printers = Array.from(document.getElementById('matPrintersSelect').selectedOptions).map(o=>o.value);
+        m.emptySpoolWeight = readOptionalNumber('matEmptySpoolWeightInput');
+        m.massInputMode = document.getElementById('matMassModeInput')?.value || 'used';
+        if (!MATERIAL_MASS_MODES.includes(m.massInputMode)) {
+            m.massInputMode = 'used';
+        }
+        m.usedWeightGrams = readOptionalNumber('matUsedWeightInput');
+        m.remainingWeightGrams = readOptionalNumber('matRemainingWeightInput');
+        m.measuredWeightGrams = readOptionalNumber('matMeasuredWeightInput');
         if(isNew) appData.materials.push(m);
         saveToLocalStorage();
         renderGlobalMaterialsTable();
@@ -10930,6 +11141,11 @@
     }
 
     function mapSpoolmanToMaterial(spool, filament) {
+        const parseOptionalWeight = (val) => {
+            if (val === null || val === undefined || val === '') return null;
+            const num = parseFloat(val);
+            return Number.isFinite(num) ? num : null;
+        };
         let extraFields = {};
         if (spool.extra) {
             for (const [key, value] of Object.entries(spool.extra)) {
@@ -10967,7 +11183,12 @@
             color: filament.color_hex || '#ffffff',
             spoolmanId: filament.id,
             spoolmanSpoolId: spool.id,
-            printerPrepMinutes: parseFloat(extraFields.printerPrepMinutes ?? extraFields.prepMinutes ?? 0) || 0
+            printerPrepMinutes: parseFloat(extraFields.printerPrepMinutes ?? extraFields.prepMinutes ?? 0) || 0,
+            emptySpoolWeight: parseOptionalWeight(spool.empty_spool_weight),
+            massInputMode: 'remaining',
+            usedWeightGrams: parseOptionalWeight(spool.used_weight),
+            remainingWeightGrams: parseOptionalWeight(spool.remaining_weight),
+            measuredWeightGrams: parseOptionalWeight(spool.weight)
         };
     }
 
