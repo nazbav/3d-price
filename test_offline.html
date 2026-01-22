@@ -1739,6 +1739,7 @@
                             <button class="btn btn-warning" id="downloadSummaryCardBtn" style="display:none">Скачать
                                 смету
                             </button>
+                            <button class="btn btn-outline-secondary" id="openReceiptsBtn">Чеки</button>
                         </div>
                         <div class="calc-sidebar-card">
                             <div class="calc-section-title mb-3">
@@ -1837,6 +1838,7 @@
                                 <th onclick="sortTable('historyTable',3)">Клиент</th>
                                 <th onclick="sortTable('historyTable',4)">Статус</th>
                                 <th onclick="sortTable('historyTable',5)">Итог (₽)</th>
+                                <th>Чек</th>
                                 <th>Подробнее</th>
                             </tr>
                             </thead>
@@ -1895,6 +1897,12 @@
                         </button>
                         <button class="nav-link" data-bs-target="#cloudSet" data-bs-toggle="pill" id="cloud-set-tab"
                                 role="tab" type="button">Импорт/Экспорт
+                        </button>
+                        <button class="nav-link" data-bs-target="#spoolmanSet" data-bs-toggle="pill"
+                                id="spoolman-set-tab" role="tab" type="button">Spoolman
+                        </button>
+                        <button class="nav-link" data-bs-target="#nalogSet" data-bs-toggle="pill" id="nalog-set-tab"
+                                role="tab" type="button">Мой Налог
                         </button>
                         <button class="nav-link" data-bs-target="#aboutSet" data-bs-toggle="pill" id="about-set-tab"
                                 role="tab" type="button">О калькуляторе
@@ -2094,6 +2102,34 @@
                                         LocalStorage вручную.</p>
                                 </div>
                             </div>
+                        </div>
+                        <div class="tab-pane fade" id="spoolmanSet" role="tabpanel">
+                            <div class="mt-4" id="spoolmanSettingsContainer"></div>
+                        </div>
+                        <div class="tab-pane fade" id="nalogSet" role="tabpanel">
+                            <h3>Мой Налог</h3>
+                            <div class="mb-3">
+                                <label class="form-label" for="myNalogToken">Токен доступа:</label>
+                                <input class="form-control" id="myNalogToken" type="text">
+                                </input></div>
+                            <div class="mb-3">
+                                <label class="form-label" for="myNalogPhone">Телефон:</label>
+                                <input class="form-control" id="myNalogPhone" type="text">
+                                </input></div>
+                            <div class="mb-3">
+                                <button class="btn btn-secondary" id="requestSmsBtn">Запросить SMS</button>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="myNalogSms">Код из SMS:</label>
+                                <input class="form-control" id="myNalogSms" type="text">
+                                <button class="btn btn-primary mt-2" id="confirmSmsBtn">Получить токен</button>
+                                </input></div>
+                            <div class="mb-3">
+                                <button class="btn btn-primary" onclick="saveMyNalogSettings()">Сохранить</button>
+                                <button class="btn btn-info ms-2" onclick="checkMyNalogStatus()">Проверить статус
+                                </button>
+                            </div>
+                            <div class="small-text" id="myNalogStatus"></div>
                         </div>
                         <div class="tab-pane fade" id="aboutSet" role="tabpanel">
                             <div class="mt-4">
@@ -8790,6 +8826,11 @@
       <\/td>
       <td>${safeFixed(h.total)}<\/td>
       <td>
+        ${Array.isArray(h.nalogReceipts) && h.nalogReceipts.length ?
+                h.nalogReceipts.map((r,i)=>`<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${localStorage.getItem('my_nalog_inn') || ''}/${r.uuid}/print\" target=\"_blank\" ${(r.canceled || i < h.nalogReceipts.length-1) ? 'class="text-danger"' : ''}>Чек ${h.nalogReceipts.length>1 ? ' '+(i+1) : ''}<\/a>`).join('<br/>') :
+                (h.nalogReceiptUuid ? `<a href=\"https://lknpd.nalog.ru/api/v1/receipt/${localStorage.getItem('my_nalog_inn') || ''}/${h.nalogReceiptUuid}/print\" target=\"_blank\">Чек #${h.nalogReceiptUuid}<\/a>` : '')}
+      <\/td>
+      <td>
         <button class="btn btn-sm btn-warning" onclick="onEditCalcHistory(${h.timestamp})">Редакт.<\/button>
         <button class="btn btn-sm btn-danger" onclick="onDeleteCalcHistoryEntry(${h.timestamp})">Удалить<\/button>
       <\/td>
@@ -9371,7 +9412,7 @@
             : [];
 
         if(btn){
-            btn.style.display = receipts.length ? 'inline-block' : 'none';
+            btn.style.display = 'inline-block';
             if(!btn.__bound){
                 btn.__bound = true;
                 btn.addEventListener('click', () => showReceiptsModal());

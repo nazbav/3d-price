@@ -1739,7 +1739,7 @@
                             <button class="btn btn-warning" id="downloadSummaryCardBtn" style="display:none">Скачать
                                 смету
                             </button>
-                            <button class="btn btn-outline-secondary" id="openReceiptsBtn" style="display:none">Чеки</button>
+                            <button class="btn btn-outline-secondary" id="openReceiptsBtn">Чеки</button>
                         </div>
                         <div class="calc-sidebar-card">
                             <div class="calc-section-title mb-3">
@@ -9426,7 +9426,7 @@
             : [];
 
         if(btn){
-            btn.style.display = receipts.length ? 'inline-block' : 'none';
+            btn.style.display = 'inline-block';
             if(!btn.__bound){
                 btn.__bound = true;
                 btn.addEventListener('click', () => showReceiptsModal());
