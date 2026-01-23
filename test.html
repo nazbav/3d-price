@@ -1429,11 +1429,12 @@
                             <tr>
                                 <th><input id="selectAll_printers" onchange="selectAll(this, 'printers')"
                                            type="checkbox"/></th>
-                                <th onclick="sortTable('printersTable',1)">Название</th>
-                                <th onclick="sortTable('printersTable',2)">Стоимость (₽)</th>
-                                <th onclick="sortTable('printersTable',3)">Часы окуп.</th>
-                                <th onclick="sortTable('printersTable',4)">Мощн. (Вт)</th>
-                                <th onclick="sortTable('printersTable',5)">Обсл. (₽/ч)</th>
+                                <th onclick="sortTable('printersTable',1)">ID</th>
+                                <th onclick="sortTable('printersTable',2)">Название</th>
+                                <th onclick="sortTable('printersTable',3)">Стоимость (₽)</th>
+                                <th onclick="sortTable('printersTable',4)">Часы окуп.</th>
+                                <th onclick="sortTable('printersTable',5)">Мощн. (Вт)</th>
+                                <th onclick="sortTable('printersTable',6)">Обсл. (₽/ч)</th>
                                 <th>Действия</th>
                             </tr>
                             </thead>
@@ -1508,10 +1509,11 @@
                             <tr>
                                 <th><input id="selectAll_globalAdditional"
                                            onchange="selectAll(this, 'globalAdditional')" type="checkbox"/></th>
-                                <th onclick="sortTable('additionalGlobalTable',1)">Описание</th>
-                                <th onclick="sortTable('additionalGlobalTable',2)">Стоим. (₽)</th>
-                                <th onclick="sortTable('additionalGlobalTable',3)">Часы окуп.</th>
-                                <th onclick="sortTable('additionalGlobalTable',4)">Вкл. в расчёт?</th>
+                                <th onclick="sortTable('additionalGlobalTable',1)">ID</th>
+                                <th onclick="sortTable('additionalGlobalTable',2)">Описание</th>
+                                <th onclick="sortTable('additionalGlobalTable',3)">Стоим. (₽)</th>
+                                <th onclick="sortTable('additionalGlobalTable',4)">Часы окуп.</th>
+                                <th onclick="sortTable('additionalGlobalTable',5)">Вкл. в расчёт?</th>
                                 <th>Принтеры</th>
                                 <th>Действия</th>
                             </tr>
@@ -5488,6 +5490,7 @@
             const tr = document.createElement("tr");
             tr.innerHTML = `
       <td><input type="checkbox" id="chk_printers_${printer.id}" class="printers_chk"><\/td>
+      <td>${printer.id}<\/td>
       <td>${printer.name}<\/td>
       <td>${printer.cost}<\/td>
       <td>${printer.hoursToRecoup}<\/td>
@@ -5908,6 +5911,7 @@
             const tr = document.createElement("tr");
             tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalAdditional_${a.id}" class="globalAdditional_chk"><\/td>
+      <td>${a.id}<\/td>
       <td>${a.description}<\/td>
       <td>${a.cost}<\/td>
       <td>${a.hoursToRecoup || 1000}<\/td>

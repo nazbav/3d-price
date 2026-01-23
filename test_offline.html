@@ -1429,11 +1429,12 @@
                             <tr>
                                 <th><input id="selectAll_printers" onchange="selectAll(this, 'printers')"
                                            type="checkbox"/></th>
-                                <th onclick="sortTable('printersTable',1)">Название</th>
-                                <th onclick="sortTable('printersTable',2)">Стоимость (₽)</th>
-                                <th onclick="sortTable('printersTable',3)">Часы окуп.</th>
-                                <th onclick="sortTable('printersTable',4)">Мощн. (Вт)</th>
-                                <th onclick="sortTable('printersTable',5)">Обсл. (₽/ч)</th>
+                                <th onclick="sortTable('printersTable',1)">ID</th>
+                                <th onclick="sortTable('printersTable',2)">Название</th>
+                                <th onclick="sortTable('printersTable',3)">Стоимость (₽)</th>
+                                <th onclick="sortTable('printersTable',4)">Часы окуп.</th>
+                                <th onclick="sortTable('printersTable',5)">Мощн. (Вт)</th>
+                                <th onclick="sortTable('printersTable',6)">Обсл. (₽/ч)</th>
                                 <th>Действия</th>
                             </tr>
                             </thead>
@@ -1508,10 +1509,11 @@
                             <tr>
                                 <th><input id="selectAll_globalAdditional"
                                            onchange="selectAll(this, 'globalAdditional')" type="checkbox"/></th>
-                                <th onclick="sortTable('additionalGlobalTable',1)">Описание</th>
-                                <th onclick="sortTable('additionalGlobalTable',2)">Стоим. (₽)</th>
-                                <th onclick="sortTable('additionalGlobalTable',3)">Часы окуп.</th>
-                                <th onclick="sortTable('additionalGlobalTable',4)">Вкл. в расчёт?</th>
+                                <th onclick="sortTable('additionalGlobalTable',1)">ID</th>
+                                <th onclick="sortTable('additionalGlobalTable',2)">Описание</th>
+                                <th onclick="sortTable('additionalGlobalTable',3)">Стоим. (₽)</th>
+                                <th onclick="sortTable('additionalGlobalTable',4)">Часы окуп.</th>
+                                <th onclick="sortTable('additionalGlobalTable',5)">Вкл. в расчёт?</th>
                                 <th>Принтеры</th>
                                 <th>Действия</th>
                             </tr>
@@ -1528,7 +1530,7 @@
                         <div class="calc-card calc-card-hero">
                             <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
                                 <div>
-                                    <h3 class="mt-1">Расчёт стоимости заказа</h3>
+                                    <h3 class="mt-1">Расчёт стоимости заказа <span class="text-muted small">(ID: <span id="calcOrderIdHero">—</span>)</span></h3>
                                     <input id="calcOrderId" type="hidden">
                                     </input></div>
                                 <div class="text-lg-end mt-1">
@@ -1872,9 +1874,10 @@
                         <table class="table table-bordered table-hover" id="clientsTable">
                             <thead>
                             <tr>
-                                <th onclick="sortTable('clientsTable',0)">Имя</th>
-                                <th onclick="sortTable('clientsTable',1)">Телефон</th>
-                                <th onclick="sortTable('clientsTable',2)">Ссылки</th>
+                                <th onclick="sortTable('clientsTable',0)">ID</th>
+                                <th onclick="sortTable('clientsTable',1)">Имя</th>
+                                <th onclick="sortTable('clientsTable',2)">Телефон</th>
+                                <th onclick="sortTable('clientsTable',3)">Ссылки</th>
                                 <th>Действия</th>
                             </tr>
                             </thead>
@@ -5473,6 +5476,7 @@
             const tr = document.createElement("tr");
             tr.innerHTML = `
       <td><input type="checkbox" id="chk_printers_${printer.id}" class="printers_chk"><\/td>
+      <td>${printer.id}<\/td>
       <td>${printer.name}<\/td>
       <td>${printer.cost}<\/td>
       <td>${printer.hoursToRecoup}<\/td>
@@ -5893,6 +5897,7 @@
             const tr = document.createElement("tr");
             tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalAdditional_${a.id}" class="globalAdditional_chk"><\/td>
+      <td>${a.id}<\/td>
       <td>${a.description}<\/td>
       <td>${a.cost}<\/td>
       <td>${a.hoursToRecoup || 1000}<\/td>
@@ -6014,6 +6019,7 @@
         appData.clients.forEach(c=>{
             const tr=document.createElement("tr");
             tr.innerHTML=`
+      <td>${c.id}</td>
       <td>${c.name}</td>
       <td>${c.phone||""}</td>
       <td>${c.links||""}</td>
@@ -7003,6 +7009,10 @@
         const summaryOrder = document.getElementById("calcSummaryOrderId");
         if (summaryOrder) {
             summaryOrder.textContent = displayValue;
+        }
+        const heroOrder = document.getElementById("calcOrderIdHero");
+        if (heroOrder) {
+            heroOrder.textContent = displayValue;
         }
     }
 
@@ -9107,9 +9117,40 @@
         }, 100);
     }
 
+    function getExportBridge() {
+        if (window && window.exportBridge && typeof window.exportBridge.saveHtml === 'function') {
+            return window.exportBridge;
+        }
+        return null;
+    }
+
+    function buildExportOrderMeta() {
+        const calcNameEl = document.getElementById("calcName");
+        const clientInput = document.getElementById("calcClientName");
+        const orderId = getCalcOrderId() || (lastCalcFullData && lastCalcFullData.id) || '';
+        const orderName = (calcNameEl ? calcNameEl.value : '') || (lastCalcFullData && lastCalcFullData.calcName) || '';
+        const clientId = currentCalcClientId || (lastCalcFullData && lastCalcFullData.clientId) || '';
+        const clientName = (clientInput ? clientInput.value : '') || (lastCalcFullData && lastCalcFullData.clientName) || '';
+        return { orderId, orderName, clientId, clientName };
+    }
+
+    async function saveHtmlExportOrDownload(htmlContent, downloadName, payload) {
+        const bridge = getExportBridge();
+        if (bridge) {
+            try {
+                const res = await bridge.saveHtml(Object.assign({ html: htmlContent }, payload || {}));
+                if (res && res.ok) return;
+            } catch (e) {
+                console.warn('export.saveHtml failed', e);
+            }
+        }
+        const blob = new Blob([htmlContent], { type: "text/html" });
+        downloadBlob(blob, downloadName);
+    }
+
     function downloadThermoLabelHtml(modelName, printerName, materialName, hours, weight, thumbnail) {
         const qrSize = 100;
-        generateQRCodeCanvas(appData.labelSettings.chatLink, qrSize, function(qrCanvas) {
+        generateQRCodeCanvas(appData.labelSettings.chatLink, qrSize, async function(qrCanvas) {
             const fallbackThumb = thumbnail || getBrandLogoBase64();
             const qrDataUrl = qrCanvas ? qrCanvas.toDataURL("image/png") : "";
             const htmlContent = `
@@ -9172,20 +9213,17 @@
   <\/body>
 <\/html>
     `.trim();
-            const blob = new Blob([htmlContent], { type: "text/html" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `ThermoLabel_${modelName}_${Date.now()}.html`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            const meta = buildExportOrderMeta();
+            await saveHtmlExportOrDownload(
+                htmlContent,
+                `ThermoLabel_${modelName}_${Date.now()}.html`,
+                Object.assign({ kind: 'model-label', modelName }, meta)
+            );
         });
     }
 
     /* Новая функция для генерации этикетки материала в формате 30x20 мм */
-    function downloadMaterialLabelHtml(materialId) {
+    async function downloadMaterialLabelHtml(materialId) {
         // Ищем материал сначала в глобальных, затем в материалах принтеров
         let mat = appData.materials.find(m => String(m.id) === String(materialId));
         if(!mat) {
@@ -9233,16 +9271,11 @@
 <\/body>
 <\/html>
   `.trim();
-
-        const blob = new Blob([htmlContent], { type: "text/html" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `MaterialLabel_${mat.name}_${Date.now()}.html`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        await saveHtmlExportOrDownload(
+            htmlContent,
+            `MaterialLabel_${mat.name}_${Date.now()}.html`,
+            { kind: 'material-label', materialId: mat.id, materialName: mat.name }
+        );
     }
 
     function buildSummaryCardHtml(data){
@@ -9306,10 +9339,14 @@
 </html>`;
     }
 
-    function downloadSummaryCardHtml(){
+    async function downloadSummaryCardHtml(){
         if(!lastSummaryCardHtml){alert('Нет данных.');return;}
-        const blob=new Blob([lastSummaryCardHtml],{type:'text/html'});
-        downloadBlob(blob, `Estimate_${Date.now()}.html`);
+        const meta = buildExportOrderMeta();
+        await saveHtmlExportOrDownload(
+            lastSummaryCardHtml,
+            `Estimate_${Date.now()}.html`,
+            Object.assign({ kind: 'estimate' }, meta)
+        );
     }
 
     function generateDeviceId(len=16){
