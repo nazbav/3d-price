@@ -11452,9 +11452,6 @@
                 </div>
             `);
             });
-            const breakdownHtml = breakdownTop.length
-                ? `<div class="calc-structure-chart">${breakdownSegments.join('')}</div><div class="calc-structure-breakdown">${breakdownItems.join('')}</div>`
-                : `<div class="calc-empty-placeholder text-muted small">Нет данных по структуре затрат.</div>`;
 
             const costDonutSegments = breakdownTop.map((item, index) => ({
                 label: item.label,
@@ -11707,11 +11704,6 @@
               <div class="small text-muted mt-2">Всего: ${statusOrders.length}</div>
             </div>
           </div>
-        </div>
-
-        <div class="calc-card summary-structure">
-          <div class="calc-section-title"><i class="bi bi-receipt-cutoff me-2"></i>Структура затрат</div>
-          ${breakdownHtml}
         </div>
 
           <div class="row g-3">
