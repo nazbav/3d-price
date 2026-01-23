@@ -4,18 +4,18 @@
   "description": "Калькулятор печати",
   "keywords": [],
   "main": "./main.js",
-  "version": "1.0.4",
+  "version": "1.0.7",
   "author": "n4v",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make",
+    "make": "node scripts/bump-version.js && electron-forge make",
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\"",
-    "dist": "electron-builder",
-    "dist:win": "electron-builder --win",
-    "dist:linux": "electron-builder --linux",
-    "dist:mac": "electron-builder --mac"
+    "dist": "node scripts/bump-version.js && electron-builder",
+    "dist:win": "node scripts/bump-version.js && electron-builder --win",
+    "dist:linux": "node scripts/bump-version.js && electron-builder --linux",
+    "dist:mac": "node scripts/bump-version.js && electron-builder --mac"
   },
   "devDependencies": {
     "electron": "40.0.0-beta.4",
@@ -57,7 +57,9 @@
       {
         "from": "build",
         "to": "build",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "icon": "build/png/256x256.png",

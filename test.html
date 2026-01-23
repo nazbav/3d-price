@@ -50,6 +50,7 @@
         .small-text { font-size: 0.9rem; color: #555; }
         .footer { margin-top: 40px; font-size: 0.9rem; border-top: 1px solid var(--bs-border-color); padding-top: 10px; }
         table td, table th { vertical-align: middle; white-space: nowrap; }
+        .history-client { font-size: 0.85rem; }
         .btn-group-sm > .btn { font-size: 0.8rem; padding: 2px 6px; margin-left: 2px; }
         thead th { background-color: var(--bs-table-bg) !important; color: var(--bs-body-color) !important; }
         [data-bs-theme="dark"] thead th { background-color: var(--bs-dark-bg-subtle) !important; color: var(--bs-light) !important; }
@@ -80,6 +81,33 @@
         #calcClientDropdownMenu {
             max-height: 240px;
             overflow-y: auto;
+        }
+        .material-color-spool {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .material-color-spool svg {
+            width: 40px;
+            height: 40px;
+            display: block;
+        }
+        .materials-profiles-col {
+            display: none;
+        }
+        .material-color-spool .spool-body {
+            fill: currentColor;
+            stroke: rgba(0, 0, 0, 0.35);
+            stroke-width: 0.8;
+        }
+        .material-color-spool .spool-hole {
+            fill: var(--bs-body-bg, #ffffff);
+            stroke: rgba(0, 0, 0, 0.35);
+            stroke-width: 0.6;
         }
         /* Стили для этикетки */
         .label-preview { border: 1px solid #000; width: 30mm; height: 20mm; padding: 2mm; font-family: sans-serif; }
@@ -406,6 +434,16 @@
             overflow: hidden;
         }
 
+        .calc-card-hero .calc-hero-id {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 0.95rem;
+        }
+
+        .calc-card-hero #calcOrderIdHero {
+            color: #fff;
+            font-weight: 600;
+        }
+
         .calc-card-hero .calc-meta {
             display: flex;
             flex-wrap: wrap;
@@ -606,6 +644,504 @@
             display: block;
             font-size: 0.75rem;
             opacity: 0.8;
+        }
+
+        .summary-table-compact .table {
+            font-size: 0.86rem;
+        }
+
+        .summary-table-compact .table > :not(caption) > * > * {
+            padding: 0.35rem 0.55rem;
+        }
+
+        .summary-table-compact .text-muted.small {
+            font-size: 0.75rem;
+        }
+
+        .summary-table-compact .progress {
+            height: 4px;
+            margin-top: 0.35rem;
+        }
+
+        .summary-compact .card {
+            border-radius: 1.15rem;
+            background: var(--app-navbar-bg);
+            border: 1px solid var(--app-navbar-border);
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        [data-bs-theme="dark"] .summary-compact .card {
+            box-shadow: 0 18px 30px rgba(0, 0, 0, 0.55);
+        }
+
+        .summary-compact .card-header {
+            padding: 0.6rem 0.9rem;
+            background: transparent;
+            border-bottom: 1px solid var(--app-navbar-border);
+        }
+
+        .summary-compact .card-body {
+            padding: 0.85rem;
+        }
+
+        .summary-compact .calc-card {
+            padding: 1rem;
+        }
+
+        .summary-block {
+            padding: 1rem;
+        }
+
+        .summary-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .summary-header .calc-section-title {
+            margin-bottom: 0;
+        }
+
+        .summary-badge {
+            border: 1px solid var(--app-navbar-border);
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--bs-body-color);
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        [data-bs-theme="dark"] .summary-badge {
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .summary-table-wrap {
+            border: 1px solid var(--app-navbar-border);
+            border-radius: 0.9rem;
+            overflow: hidden;
+        }
+
+        .summary-kpi-grid {
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.9rem;
+        }
+
+        .summary-kpi-grid .calc-result-info {
+            background: #ffffff;
+            padding: 1.1rem 1.25rem;
+            border-radius: 1rem;
+        }
+
+        [data-bs-theme="dark"] .summary-kpi-grid .calc-result-info {
+            background: #111827;
+        }
+
+        .summary-kpi-grid .calc-result-info strong {
+            font-size: 1.35rem;
+        }
+
+        .summary-kpi-grid .calc-result-info small {
+            font-size: 0.8rem;
+        }
+
+        .summary-list-grid {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 0.7rem;
+        }
+
+        .summary-list-grid .calc-result-info {
+            padding: 0.7rem 0.85rem;
+            background: #ffffff;
+        }
+
+        [data-bs-theme="dark"] .summary-list-grid .calc-result-info {
+            background: #111827;
+        }
+
+        .summary-list-grid .calc-result-info strong {
+            font-size: 1.05rem;
+        }
+
+        .summary-list-grid .calc-result-info small {
+            font-size: 0.72rem;
+        }
+
+        .summary-structure .calc-structure-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .summary-structure .calc-structure-row {
+            padding: 0.45rem 0.6rem;
+        }
+
+        .summary-top-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .summary-top-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.5rem 1rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: 0.85rem;
+            border: 1px solid var(--app-navbar-border);
+            background: rgba(148, 163, 184, 0.08);
+        }
+
+        [data-bs-theme="dark"] .summary-top-item {
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .summary-top-title {
+            font-weight: 600;
+        }
+
+        .summary-top-sub {
+            font-size: 0.75rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-top-values {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .summary-top-value {
+            text-align: right;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .summary-top-label {
+            font-size: 0.7rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-driver-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.65rem;
+        }
+
+        .summary-driver-block {
+            border: 1px solid var(--app-navbar-border);
+            border-radius: 1rem;
+            padding: 0.8rem;
+            background: var(--app-navbar-bg);
+        }
+
+        .summary-driver-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+            color: #5c6b8f;
+            margin-bottom: 0.5rem;
+        }
+
+        [data-bs-theme="dark"] .summary-driver-title {
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .summary-sparkline {
+            width: 100%;
+            height: 90px;
+        }
+
+        .summary-bar-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .summary-bar-row {
+            display: grid;
+            grid-template-columns: 90px 1fr 50px;
+            gap: 0.6rem;
+            align-items: center;
+        }
+
+        .summary-bar-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-bar-track {
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.2);
+            overflow: hidden;
+        }
+
+        .summary-bar-track span {
+            display: block;
+            height: 100%;
+        }
+
+        .summary-bar-value {
+            text-align: right;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .summary-donut {
+            position: relative;
+            width: 150px;
+            height: 150px;
+        }
+
+        .summary-donut svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .summary-donut-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .summary-donut-center .label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-donut-center .value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .summary-charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-chart-card {
+            border: 1px solid var(--app-navbar-border);
+            border-radius: 1rem;
+            padding: 0.9rem;
+            background: var(--app-navbar-bg);
+        }
+
+        .summary-chart-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+            color: #5c6b8f;
+            margin-bottom: 0.6rem;
+        }
+
+        [data-bs-theme="dark"] .summary-chart-title {
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .summary-time-track {
+            display: flex;
+            height: 12px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(148, 163, 184, 0.2);
+        }
+
+        .summary-time-track span {
+            display: block;
+            height: 100%;
+        }
+
+        .summary-time-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.6rem;
+            font-size: 0.75rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .summary-chart-tooltip {
+            position: fixed;
+            z-index: 3000;
+            background: rgba(17, 24, 39, 0.92);
+            color: #fff;
+            padding: 0.4rem 0.6rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            pointer-events: none;
+            transform: translate(-50%, -120%);
+            opacity: 0;
+            transition: opacity 0.08s ease;
+        }
+
+        .summary-chart-tooltip.visible {
+            opacity: 1;
+        }
+
+        .summary-kpi-card {
+            border: 1px dashed var(--app-navbar-border);
+            border-radius: 0.9rem;
+            padding: 0.65rem 0.75rem;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        [data-bs-theme="dark"] .summary-kpi-card {
+            background: rgba(15, 23, 42, 0.45);
+        }
+
+        .summary-kpi-card .kpi-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .summary-kpi-card .kpi-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-kpi-card .kpi-desc {
+            font-size: 0.72rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-capital-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.6rem;
+        }
+
+        .summary-capital-item {
+            border-radius: 0.8rem;
+            border: 1px solid var(--app-navbar-border);
+            padding: 0.6rem 0.75rem;
+            background: rgba(148, 163, 184, 0.12);
+        }
+
+        [data-bs-theme="dark"] .summary-capital-item {
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .summary-capital-title {
+            font-size: 0.75rem;
+            color: var(--bs-secondary-color, #6c757d);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .summary-capital-value {
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .summary-breakdown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .summary-breakdown-item {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 0.4rem 0.75rem;
+            align-items: center;
+            padding: 0.5rem 0.65rem;
+            border-radius: 0.8rem;
+            border: 1px solid var(--app-navbar-border);
+            background: rgba(148, 163, 184, 0.08);
+        }
+
+        .summary-breakdown-item .summary-mini-bar {
+            grid-column: 1 / -1;
+        }
+
+        .summary-cell-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .summary-mini-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(13, 110, 253, 0.15);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .summary-mini-bar > span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(13, 110, 253, 0.9), rgba(13, 110, 253, 0.45));
+        }
+
+        .summary-mini-label {
+            font-size: 0.72rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-header-badges .badge {
+            font-weight: 600;
+        }
+
+        .summary-time-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .summary-time-item {
+            padding: 0.6rem 0.75rem;
+            border-radius: 0.85rem;
+            border: 1px solid var(--app-navbar-border);
+            background: rgba(148, 163, 184, 0.12);
+        }
+
+        [data-bs-theme="dark"] .summary-time-item {
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .summary-time-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .summary-time-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .summary-time-meta {
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color, #6c757d);
+            margin-top: 0.4rem;
         }
 
         .calc-sidebar-actions {
@@ -1477,7 +2013,7 @@
                                 <th onclick="sortTable('materialsTable',7)">Производитель</th>
                                 <th onclick="sortTable('materialsTable',8)">Дата произв.</th>
                                 <th>Принтеры</th>
-<!--                                <th>Профили</th>-->
+                                <th class="materials-profiles-col">Профили</th>
                                 <th>Действия</th>
                             </tr>
                             </thead>
@@ -1530,7 +2066,7 @@
                         <div class="calc-card calc-card-hero">
                             <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
                                 <div>
-                                    <h3 class="mt-1">Расчёт стоимости заказа <span class="text-muted small">(ID: <span id="calcOrderIdHero">—</span>)</span></h3>
+                                    <h3 class="mt-1">Расчёт стоимости заказа <span class="calc-hero-id">(ID: <span id="calcOrderIdHero">—</span>)</span></h3>
                                     <input id="calcOrderId" type="hidden">
                                     </input></div>
                                 <div class="text-lg-end mt-1">
@@ -1834,8 +2370,8 @@
                         <table class="table table-bordered table-hover" id="historyTable">
                             <thead class="">
                             <tr>
-                                <th onclick="sortTable('historyTable',0)">Дата/время</th>
-                                <th onclick="sortTable('historyTable',1)">Код</th>
+                                <th onclick="sortTable('historyTable',0)">Код</th>
+                                <th onclick="sortTable('historyTable',1)">Дата</th>
                                 <th onclick="sortTable('historyTable',2)">Название расчёта</th>
                                 <th onclick="sortTable('historyTable',3)">Клиент</th>
                                 <th onclick="sortTable('historyTable',4)">Статус</th>
@@ -5414,7 +5950,7 @@
                 break;
             case 'globalAdditional':
             {
-                const vals = await showMultiPrompt('Глобальные расходы',[
+                const vals = await showMultiPrompt('Накладные расходы',[
                     {id:'cost',label:'Стоимость (₽)',type:'number'},
                     {id:'hours',label:'Часы окупаемости',type:'number'},
                     {id:'use',label:'Включать в расчёт',type:'checkbox',value:true},
@@ -5783,12 +6319,17 @@
 
             const spoolmanText = m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : '';
 
-//  <td>${(m.profileIds && m.profileIds.length) ? m.profileIds.map(profileNameById).join(', ') : '-'}<\/td>
-//<button class="btn btn-success" onclick="openMaterialProfileLink('${m.id}')">Профиль<\/button>
-            const tc = textColorForBg(col);
             tr.innerHTML = `
       <td><input type="checkbox" id="chk_globalMaterials_${m.id}" class="globalMaterials_chk"><\/td>
-      <td style="background-color:${col};color:${tc};">${m.name} (ID: ${m.id}${spoolmanText})<\/td>
+      <td>
+        <span class="material-color-spool" style="color:${col};" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+            <rect class="spool-body" x="3" y="5" width="18" height="14" rx="3" ry="3"></rect>
+            <circle class="spool-hole" cx="12" cy="12" r="4.2"></circle>
+          </svg>
+        </span>
+        ${m.name} (ID: ${m.id}${spoolmanText})
+      <\/td>
       <td>${m.materialType}<\/td>
       <td>${m.costPerKg}<\/td>
       <td>${m.balance * 1000}<\/td>
@@ -5798,9 +6339,11 @@
       <td>${m.manufacturer || "-"}<\/td>
       <td>${m.productionDate || "-"}<\/td>
       <td>${(m.printers && m.printers.length) ? m.printers.map(printerNameById).join(', ') : 'Все'}<\/td>
+      <td class="materials-profiles-col">${(m.profileIds && m.profileIds.length) ? m.profileIds.map(profileNameById).join(', ') : '-'}<\/td>
       <td>
         <div class="btn-group-sm">
           <button class="btn btn-secondary" onclick="onEditGlobalMaterial('${m.id}')">Ред.<\/button>
+          <button class="btn btn-success" onclick="openMaterialProfileLink('${m.id}')">Профиль<\/button>
 
           <button class="btn btn-info" onclick="downloadMaterialLabelHtml('${m.id}')">Этикетка<\/button>
           <button class="btn btn-warning" onclick="copyElement('globalMaterials', '${m.id}')">Копировать<\/button>
@@ -8829,16 +9372,22 @@
         }
         return '';
     }
+    function formatHistoryDateOnly(str){
+        if (!str) return '';
+        const parts = String(str).split(',');
+        return parts[0].trim();
+    }
+
     function renderHistoryTable(){
         const tb = document.querySelector("#historyTable tbody");
         tb.innerHTML = "";
         appData.calcHistory.forEach(h => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-      <td>${h.dateStr}<\/td>
       <td>${h.id || ''}<\/td>
+      <td>${formatHistoryDateOnly(h.dateStr)}<\/td>
       <td>${h.calcName || "(Без названия)"}<\/td>
-      <td>${h.clientName || "(Не указан)"}<\/td>
+      <td class="history-client">${h.clientName || "(Не указан)"}<\/td>
       <td>
         <select class="form-select form-select-sm" onchange="onChangeCalcHistoryStatus(${h.timestamp}, this.value)">
           <option value="new" ${h.orderStatus==="new"?"selected":""}>Новый<\/option>
@@ -9301,25 +9850,25 @@
   <title>Смета</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <style>
-    body{background:var(--bs-body-bg);color:var(--bs-body-color);font-family:'Segoe UI',Tahoma,sans-serif;padding:2rem;background-image:radial-gradient(circle at 20% 20%,var(--bs-primary-bg-subtle),transparent 60%),radial-gradient(circle at 80% 0,var(--bs-success-bg-subtle),transparent 60%);}
-    .order-summary-card{max-width:1200px;margin:0 auto;background:var(--bs-light-bg-subtle);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;display:flex;flex-wrap:wrap;}
-    .order-info{flex:1 1 300px;padding:1.5rem;background:var(--bs-secondary-bg);}
+    body{background:var(--bs-body-bg,#ffffff);color:var(--bs-body-color,#212529);font-family:'Segoe UI',Tahoma,sans-serif;padding:2rem;background-image:radial-gradient(circle at 20% 20%,var(--bs-primary-bg-subtle,#cfe2ff),transparent 60%),radial-gradient(circle at 80% 0,var(--bs-success-bg-subtle,#d1e7dd),transparent 60%);}
+    .order-summary-card{max-width:1200px;margin:0 auto;background:var(--bs-light-bg-subtle,#f8f9fa);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;display:flex;flex-wrap:wrap;}
+    .order-info{flex:1 1 300px;padding:1.5rem;background:var(--bs-secondary-bg,#e9ecef);}
     .brand-title-row{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;}
-    .brand-title-row h2{font-size:1.4rem;margin:0;color:var(--bs-primary);}
+    .brand-title-row h2{font-size:1.4rem;margin:0;color:var(--bs-primary,#0d6efd);}
     .brand-title-row img{width:48px;height:48px;object-fit:contain;}
     .order-info .info-item{margin-bottom:.5rem;font-size:.95rem;}
-    .order-info .label{font-weight:600;color:var(--bs-secondary-color);}
+    .order-info .label{font-weight:600;color:var(--bs-secondary-color,#6c757d);}
     .order-info .value{margin-left:.5rem;font-weight:500;}
     .order-info .qr{text-align:center;margin-bottom:1rem;}
     .order-info .qr img{width:120px;height:120px;}
     .models{flex:2 1 600px;padding:1.5rem;}
     .models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;}
-    .model-card{background:var(--bs-light-bg-subtle);border-radius:8px;padding:1rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform .3s ease,box-shadow .3s ease;}
+    .model-card{background:var(--bs-light-bg-subtle,#f8f9fa);border-radius:8px;padding:1rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform .3s ease,box-shadow .3s ease;}
     .model-card:hover{transform:translateY(-4px);box-shadow:0 4px 16px rgba(0,0,0,0.1);}
     .model-card img{width:48px;height:48px;margin-bottom:.5rem;}
-    .model-card h3{font-size:1rem;margin-bottom:.5rem;color:var(--bs-primary);}
-    .model-card p{font-size:.9rem;margin:.25rem 0;color:var(--bs-secondary-color);}
-    .model-card p strong{color:var(--bs-body-color);}
+    .model-card h3{font-size:1rem;margin-bottom:.5rem;color:var(--bs-primary,#0d6efd);}
+    .model-card p{font-size:.9rem;margin:.25rem 0;color:var(--bs-secondary-color,#6c757d);}
+    .model-card p strong{color:var(--bs-body-color,#212529);}
     @media (max-width:800px){.order-summary-card{flex-direction:column;}.order-info,.models{flex:1 1 auto;}}
   </style>
 </head>
@@ -10014,6 +10563,43 @@
         }
     }
 
+    function initSummaryChartTooltips(root){
+        if(!root) return;
+        let tooltip = document.getElementById('summaryChartTooltip');
+        if(!tooltip){
+            tooltip = document.createElement('div');
+            tooltip.id = 'summaryChartTooltip';
+            tooltip.className = 'summary-chart-tooltip';
+            document.body.appendChild(tooltip);
+        }
+
+        const move = (event) => {
+            if(!tooltip.classList.contains('visible')) return;
+            tooltip.style.left = `${event.clientX}px`;
+            tooltip.style.top = `${event.clientY}px`;
+        };
+
+        const show = (event) => {
+            const target = event.target.closest('[data-chart-label]');
+            if(!target) return;
+            tooltip.textContent = target.getAttribute('data-chart-label') || '';
+            tooltip.classList.add('visible');
+            move(event);
+        };
+
+        const hide = () => {
+            tooltip.classList.remove('visible');
+        };
+
+        root.querySelectorAll('[data-chart-label]').forEach(el => {
+            el.addEventListener('mouseenter', show);
+            el.addEventListener('mousemove', move);
+            el.addEventListener('mouseleave', hide);
+            el.addEventListener('focus', show);
+            el.addEventListener('blur', hide);
+        });
+    }
+
     function renderSummary() {
         ensureIconsLoaded();
 // Вспомогательные функции форматирования
@@ -10029,6 +10615,217 @@
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals
             }).format(value);
+
+        const formatCompact = (value, decimals = 1) =>
+            new Intl.NumberFormat('ru-RU', {
+                notation: 'compact',
+                compactDisplay: 'short',
+                maximumFractionDigits: decimals
+            }).format(value);
+
+        const getOrderTimestamp = (order) =>
+            order.timestamp || (order.dateStr ? parseHistoryDate(order.dateStr).getTime() : 0);
+
+        const buildDonutChart = (segments, options = {}) => {
+            const size = options.size || 150;
+            const thickness = options.thickness || 18;
+            const centerLabel = options.centerLabel || '';
+            const centerValue = options.centerValue || '';
+            const valueFormatter = options.valueFormatter;
+            const total = segments.reduce((sum, seg) => sum + (seg.value || 0), 0);
+            if (!total) {
+                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+            }
+            const radius = (size - thickness) / 2;
+            const circumference = 2 * Math.PI * radius;
+            let offset = 0;
+            const circles = segments.map(seg => {
+                const value = seg.value || 0;
+                const percent = total > 0 ? (value / total) * 100 : 0;
+                const length = (percent / 100) * circumference;
+                const dashArray = `${length} ${circumference - length}`;
+                const dashOffset = -offset;
+                offset += length;
+                const formattedValue = valueFormatter ? valueFormatter(value) : formatNumber(value, 1);
+                const tooltipLabel = `${seg.label}: ${formattedValue} (${formatNumber(percent, 1)}%)`;
+                return `
+                  <circle cx="${size / 2}" cy="${size / 2}" r="${radius}"
+                          fill="none"
+                          stroke="${seg.color || '#2563eb'}"
+                          stroke-width="${thickness}"
+                          stroke-dasharray="${dashArray}"
+                          stroke-dashoffset="${dashOffset}"
+                          data-chart-label="${escapeHtml(tooltipLabel)}"
+                          tabindex="0"></circle>`;
+            }).join('');
+            const centerHtml = (centerLabel || centerValue)
+                ? `
+                  <div class="summary-donut-center">
+                    <div class="label">${centerLabel}</div>
+                    <div class="value">${centerValue}</div>
+                  </div>`
+                : '';
+            return `
+              <div class="summary-donut" style="width:${size}px;height:${size}px;">
+                <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="${escapeHtml(centerLabel || 'Диаграмма')}" focusable="false">
+                  <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" fill="none" stroke="rgba(148, 163, 184, 0.25)" stroke-width="${thickness}"></circle>
+                  <g transform="rotate(-90 ${size / 2} ${size / 2})">
+                    ${circles}
+                  </g>
+                </svg>
+                ${centerHtml}
+              </div>
+            `;
+        };
+
+        const buildLegend = (segments, valueFormatter) => `
+          <div class="summary-time-legend">
+            ${segments.map(seg => {
+                const formattedValue = valueFormatter ? valueFormatter(seg.value || 0) : formatNumber(seg.value || 0, 1);
+                return `<span><span class="summary-legend-dot" style="background:${seg.color || '#2563eb'};"></span>${seg.label} ${formattedValue}</span>`;
+            }).join('')}
+          </div>
+        `;
+
+        const buildSparklineChart = (series, options = {}) => {
+            if (!series || !series.length) {
+                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+            }
+            const width = options.width || 160;
+            const height = options.height || 60;
+            const color = options.color || '#2563eb';
+            const valueFormatter = options.valueFormatter;
+            const gradientId = `spark-${options.id || Math.random().toString(36).slice(2, 8)}`;
+            const values = series.map(item => item.value || 0);
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+            const range = Math.max(1, maxValue - minValue);
+            const padding = 6;
+            const step = series.length > 1 ? (width - padding * 2) / (series.length - 1) : 0;
+            const points = series.map((item, index) => {
+                const x = padding + index * step;
+                const y = height - padding - ((item.value - minValue) / range) * (height - padding * 2);
+                return { x, y, item };
+            });
+            const path = points.map((pt, index) => `${index === 0 ? 'M' : 'L'}${pt.x},${pt.y}`).join(' ');
+            const areaPath = `${path} L ${points[points.length - 1].x},${height - padding} L ${points[0].x},${height - padding} Z`;
+            const dots = points.map(pt => {
+                const formattedValue = valueFormatter ? valueFormatter(pt.item.value) : formatNumber(pt.item.value, 0);
+                const tooltipLabel = `${pt.item.label}: ${formattedValue}`;
+                return `<circle cx="${pt.x}" cy="${pt.y}" r="2.6" fill="${color}" data-chart-label="${escapeHtml(tooltipLabel)}" tabindex="0"></circle>`;
+            }).join('');
+            return `
+              <svg class="summary-sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="${gradientId}" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="${color}" stop-opacity="0.35"></stop>
+                    <stop offset="100%" stop-color="${color}" stop-opacity="0"></stop>
+                  </linearGradient>
+                </defs>
+                <path d="${areaPath}" fill="url(#${gradientId})"></path>
+                <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round"></path>
+                ${dots}
+              </svg>
+            `;
+        };
+
+        const buildTimeTrack = (segments) => {
+            const total = segments.reduce((sum, seg) => sum + (seg.value || 0), 0);
+            if (!total) {
+                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+            }
+            const bars = segments.map(seg => {
+                const percent = total > 0 ? (seg.value / total) * 100 : 0;
+                const label = `${seg.label}: ${formatNumber(seg.value || 0, 1)} ч (${formatNumber(percent, 1)}%)`;
+                return `<span style="width:${Math.max(1, percent)}%;background:${seg.color};" data-chart-label="${escapeHtml(label)}" tabindex="0"></span>`;
+            }).join('');
+            const legend = segments.map(seg =>
+                `<span><span class="summary-legend-dot" style="background:${seg.color};"></span>${seg.label} ${formatNumber(seg.value || 0, 1)} ч</span>`
+            ).join('');
+            return `<div class="summary-time-track">${bars}</div><div class="summary-time-legend">${legend}</div>`;
+        };
+
+        const buildStatusBars = (items) => {
+            const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
+            if (!total) {
+                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+            }
+            const rows = items.map(item => {
+                const percent = total > 0 ? (item.value / total) * 100 : 0;
+                const label = `${item.label}: ${item.value} (${formatNumber(percent, 1)}%)`;
+                return `
+                  <div class="summary-bar-row">
+                    <div class="summary-bar-label">${item.label}</div>
+                    <div class="summary-bar-track">
+                      <span style="width:${Math.max(2, percent)}%;background:${item.color};" data-chart-label="${escapeHtml(label)}" tabindex="0"></span>
+                    </div>
+                    <div class="summary-bar-value">${formatCompact(item.value, 0)}</div>
+                  </div>
+                `;
+            }).join('');
+            return `<div class="summary-bar-list">${rows}</div>`;
+        };
+
+        const buildRevenueSeries = (orders, fromDate, toDate, days) => {
+            if (!fromDate || !toDate) return [];
+            const start = new Date(fromDate);
+            const end = new Date(toDate);
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+            start.setHours(0, 0, 0, 0);
+            const endSafe = new Date(end);
+            endSafe.setHours(0, 0, 0, 0);
+            if (endSafe <= start) return [];
+
+            const bucketType = days > 120 ? 'month' : (days > 45 ? 'week' : 'day');
+            const buckets = [];
+            const formatDay = (date) => date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+            const formatMonth = (date) => date.toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' });
+
+            let cursor = new Date(start);
+            while (cursor < endSafe) {
+                const bucketStart = new Date(cursor);
+                let bucketEnd = new Date(cursor);
+                if (bucketType === 'month') {
+                    bucketEnd.setMonth(bucketEnd.getMonth() + 1);
+                } else if (bucketType === 'week') {
+                    bucketEnd.setDate(bucketEnd.getDate() + 7);
+                } else {
+                    bucketEnd.setDate(bucketEnd.getDate() + 1);
+                }
+                if (bucketEnd > endSafe) bucketEnd = new Date(endSafe);
+                let label = '';
+                if (bucketType === 'month') {
+                    label = formatMonth(bucketStart);
+                } else if (bucketType === 'week') {
+                    const lastDay = new Date(bucketEnd.getTime() - 24 * 60 * 60 * 1000);
+                    label = `${formatDay(bucketStart)}-${formatDay(lastDay)}`;
+                } else {
+                    label = formatDay(bucketStart);
+                }
+                buckets.push({ start: bucketStart.getTime(), end: bucketEnd.getTime(), label, value: 0 });
+                cursor = bucketEnd;
+            }
+
+            const sortedOrders = Array.isArray(orders) ? orders.slice() : [];
+            sortedOrders.sort((a, b) => getOrderTimestamp(a) - getOrderTimestamp(b));
+            let orderIndex = 0;
+            buckets.forEach(bucket => {
+                let sum = 0;
+                while (orderIndex < sortedOrders.length) {
+                    const ts = getOrderTimestamp(sortedOrders[orderIndex]);
+                    if (ts < bucket.start) {
+                        orderIndex += 1;
+                        continue;
+                    }
+                    if (ts >= bucket.end) break;
+                    sum += sortedOrders[orderIndex].total || 0;
+                    orderIndex += 1;
+                }
+                bucket.value = sum;
+            });
+
+            return buckets.map(bucket => ({ label: bucket.label, value: bucket.value }));
+        };
 
         const period = document.getElementById('summaryPeriod').value;
         let to = new Date();
@@ -10371,6 +11168,7 @@
                 totalModels: results.totalModels
             };
             delete results.batchSizes;
+            results.ordersList = completedOrders;
 
             return results;
         };
@@ -10485,10 +11283,12 @@
                 grossProfit,
                 netProfit,
                 netMargin,
+                grossMargin,
                 paybackOrders,
                 avgOrderRevenue,
                 avgOrderProfit,
                 avgOrderCost,
+                profitPerHour,
                 avgPrintHoursPerOrder,
                 avgMaterialPerOrder,
                 costPerKg,
@@ -10503,6 +11303,8 @@
             } = kpis;
 
             const { periodDays = 1 } = meta;
+            const rangeFrom = meta.from instanceof Date ? meta.from : null;
+            const rangeTo = meta.to instanceof Date ? meta.to : null;
 
             const paybackAbs = netProfit - capital.total;
             const avgModelsPerOrder = batchStats.avgModelsPerOrder || 0;
@@ -10523,21 +11325,21 @@
                 return `
       <tr>
         <td>
-          <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex justify-content-between align-items-start">
             <div>
               <strong>${m.name}</strong>
               <div class="text-muted small">${m.type || '—'} | ${m.manufacturer || '—'}</div>
-              <div class="text-muted small">Расход: ${formatNumber(m.totalGrams / 1000, 3)} кг</div>
-              <div class="text-muted small">₽/кг: ${costPerKg > 0 ? `${formatCurrency(costPerKg)}/кг` : '0.00 ₽/кг'}</div>
+              <div class="text-muted small">Расход: ${formatNumber(m.totalGrams / 1000, 3)} кг · ₽/кг: ${costPerKg > 0 ? `${formatCurrency(costPerKg)}/кг` : '0.00 ₽/кг'}</div>
             </div>
-            <div class="text-end">
+            <div class="text-end ms-2">
               <span class="${margin >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(margin)}</span>
               <div class="small text-muted">Маржа</div>
             </div>
           </div>
-          <div class="progress mt-2" style="height: 6px;">
+          <div class="progress mt-1" style="height: 4px;">
             <div class="progress-bar bg-info" style="width: ${Math.min(100, Math.max(0, share))}%"></div>
           </div>
+          <div class="summary-mini-label">Доля расхода: ${formatNumber(share, 1)}%</div>
         </td>
         <td class="text-end">${formatCurrency(m.totalCost)}</td>
         <td class="text-end">${formatCurrency(m.totalRevenue || 0)}</td>
@@ -10551,12 +11353,23 @@
             const productionHours = totalPrintHours + downtimeHours;
             const downtimeShare = productionHours > 0 ? (downtimeHours / productionHours) * 100 : 0;
             const prepShare = downtimeHours > 0 ? (prepHours / downtimeHours) * 100 : 0;
+            const totalPrinterRevenue = Object.values(printerStats).reduce((sum, p) => sum + p.revenue, 0);
+            const totalPrinterExpenses = Object.values(printerStats).reduce((sum, p) => sum + p.amortization + p.energy + p.material + p.maintenance, 0);
+            const totalPrinterPrints = Object.values(printerStats).reduce((sum, p) => sum + p.prints, 0);
+
             const printerRows = Object.values(printerStats).map(p => {
                 const expenses = p.amortization + p.energy + p.material + p.maintenance;
                 const prepHours = (p.prepMinutes || 0) / 60;
+                const revenueShare = totalPrinterRevenue > 0 ? (p.revenue / totalPrinterRevenue) * 100 : 0;
                 return `
       <tr>
-        <td>${p.name}</td>
+        <td>
+          <div class="summary-cell-stack">
+            <div>${p.name}</div>
+            <div class="summary-mini-bar"><span style="width:${Math.min(100, Math.max(0, revenueShare))}%"></span></div>
+            <div class="summary-mini-label">Доля выручки: ${formatNumber(revenueShare, 1)}%</div>
+          </div>
+        </td>
         <td class="text-end">${formatNumber(p.hours, 1)} ч</td>
         <td class="text-end">${formatNumber(prepHours, 2)} ч</td>
         <td class="text-end">${formatCurrency(p.revenue)}</td>
@@ -10565,25 +11378,161 @@
       </tr>`;
             }).join('') || `<tr><td colspan="6" class="text-center text-muted py-4">Нет данных по принтерам</td></tr>`;
 
-            const totalPrinterRevenue = Object.values(printerStats).reduce((sum, p) => sum + p.revenue, 0);
-            const totalPrinterExpenses = Object.values(printerStats).reduce((sum, p) => sum + p.amortization + p.energy + p.material + p.maintenance, 0);
-            const totalPrinterPrints = Object.values(printerStats).reduce((sum, p) => sum + p.prints, 0);
+            const totalClientRevenue = Object.values(clientStats).reduce((sum, c) => sum + c.revenue, 0);
+            const totalClientCost = Object.values(clientStats).reduce((sum, c) => sum + c.cost, 0);
+            const totalClientProfit = totalClientRevenue - totalClientCost;
+            const totalClientOrders = Object.values(clientStats).reduce((sum, c) => sum + c.orders, 0);
 
             const clientRows = Object.values(clientStats).map(c => {
                 const profit = c.revenue - c.cost;
+                const revenueShare = totalClientRevenue > 0 ? (c.revenue / totalClientRevenue) * 100 : 0;
                 return `
       <tr>
-        <td>${c.name}</td>
+        <td>
+          <div class="summary-cell-stack">
+            <div>${c.name}</div>
+            <div class="summary-mini-bar"><span style="width:${Math.min(100, Math.max(0, revenueShare))}%"></span></div>
+            <div class="summary-mini-label">Доля выручки: ${formatNumber(revenueShare, 1)}%</div>
+          </div>
+        </td>
         <td class="text-end">${formatCurrency(c.revenue)}</td>
         <td class="text-end">${formatCurrency(c.cost)}</td>
         <td class="text-end ${profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(profit)}</td>
         <td class="text-end">${c.orders}</td>
       </tr>`;
             }).join('') || `<tr><td colspan="5" class="text-center text-muted py-4">Нет данных по клиентам</td></tr>`;
-            const totalClientRevenue = Object.values(clientStats).reduce((sum, c) => sum + c.revenue, 0);
-            const totalClientCost = Object.values(clientStats).reduce((sum, c) => sum + c.cost, 0);
-            const totalClientProfit = totalClientRevenue - totalClientCost;
-            const totalClientOrders = Object.values(clientStats).reduce((sum, c) => sum + c.orders, 0);
+            const clientProfitBadgeClass = totalClientProfit >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
+            const printerHoursTotal = formatNumber(ordersAnalysis.totalPrintHours, 1);
+            const printerPrepTotal = formatNumber((ordersAnalysis.totalPrepMinutes || 0) / 60, 2);
+            const materialKgTotal = formatNumber(kpis.totalGrams / 1000, 3);
+
+            const breakdownRows = [
+                {label: 'Материалы', value: totalMaterialCost},
+                {label: 'Электричество', value: totalElectricityCost},
+                {label: 'Оператор', value: totalOperatorExpenses},
+                {label: 'Услуги', value: totalServiceCost},
+                {label: 'Доставка', value: totalShippingCost},
+                {label: 'Накладные', value: totalAdditionalCost},
+                {label: 'Амортизация', value: totalPrinterCost},
+                {label: 'Обслуживание', value: totalMaintenanceCost},
+                {label: 'Налоги', value: totalTax}
+            ];
+
+            const breakdownFiltered = breakdownRows.filter(item => item.value && item.value > 0);
+            const breakdownTotal = (totalCost + totalTax) > 0
+                ? (totalCost + totalTax)
+                : breakdownFiltered.reduce((sum, item) => sum + item.value, 0);
+            const breakdownSorted = [...breakdownFiltered].sort((a, b) => b.value - a.value);
+            const breakdownTop = breakdownSorted.slice(0, 6);
+            const restSum = breakdownSorted.slice(6).reduce((sum, item) => sum + item.value, 0);
+            if (restSum > 0) {
+                breakdownTop.push({label: 'Прочее', value: restSum});
+            }
+            const breakdownSegments = [];
+            const breakdownItems = [];
+            breakdownTop.forEach((item, index) => {
+                const percent = breakdownTotal > 0 ? (item.value / breakdownTotal) * 100 : 0;
+                const color = COST_STRUCTURE_COLORS[index % COST_STRUCTURE_COLORS.length];
+                const width = Math.max(percent, 1);
+                breakdownSegments.push(`
+                <div class="calc-structure-segment" data-label="${percent >= 18 ? `${Math.round(percent)}%` : ''}" style="flex:${width};background:${color};"></div>
+            `);
+                breakdownItems.push(`
+                <div class="calc-structure-row">
+                    <span class="calc-structure-color" style="background:${color};"></span>
+                    <div>
+                        <div class="label">${item.label}</div>
+                        <div class="meta">${percent.toFixed(1)}%</div>
+                    </div>
+                    <strong>${formatCurrency(item.value)}</strong>
+                </div>
+            `);
+            });
+            const breakdownHtml = breakdownTop.length
+                ? `<div class="calc-structure-chart">${breakdownSegments.join('')}</div><div class="calc-structure-breakdown">${breakdownItems.join('')}</div>`
+                : `<div class="calc-empty-placeholder text-muted small">Нет данных по структуре затрат.</div>`;
+
+            const costDonutSegments = breakdownTop.map((item, index) => ({
+                label: item.label,
+                value: item.value,
+                color: COST_STRUCTURE_COLORS[index % COST_STRUCTURE_COLORS.length]
+            }));
+            const costDonut = buildDonutChart(costDonutSegments, {
+                centerLabel: 'Затраты',
+                centerValue: formatCurrency(breakdownTotal),
+                valueFormatter: formatCurrency
+            });
+            const costLegend = buildLegend(costDonutSegments, formatCurrency);
+
+            const materialSorted = Object.values(materialStats)
+                .sort((a, b) => (b.totalGrams || 0) - (a.totalGrams || 0));
+            const materialTop = materialSorted.slice(0, 4);
+            const materialRest = materialSorted.slice(4).reduce((sum, item) => sum + (item.totalGrams || 0), 0);
+            const materialSegments = materialTop.map((item, index) => ({
+                label: item.name,
+                value: item.totalGrams || 0,
+                color: COST_STRUCTURE_COLORS[(index + 2) % COST_STRUCTURE_COLORS.length]
+            }));
+            if (materialRest > 0) {
+                materialSegments.push({
+                    label: 'Прочее',
+                    value: materialRest,
+                    color: COST_STRUCTURE_COLORS[(materialSegments.length + 2) % COST_STRUCTURE_COLORS.length]
+                });
+            }
+            const materialDonut = buildDonutChart(materialSegments, {
+                centerLabel: 'Материалы',
+                centerValue: `${formatNumber((kpis.totalGrams || 0) / 1000, 2)} кг`,
+                valueFormatter: (value) => `${formatNumber(value / 1000, 2)} кг`
+            });
+            const materialLegend = buildLegend(materialSegments, (value) => `${formatNumber(value / 1000, 2)} кг`);
+
+            const revenueSeries = buildRevenueSeries(ordersAnalysis.ordersList || [], rangeFrom, rangeTo, periodDays);
+            const revenueSparkline = buildSparklineChart(revenueSeries, {
+                id: 'revenue',
+                color: '#2563eb',
+                valueFormatter: formatCurrency
+            });
+            const revenueSum = revenueSeries.reduce((sum, item) => sum + (item.value || 0), 0);
+
+            const downtimeIdleHours = Math.max(0, downtimeHours - coolingHours);
+            const timeSegments = [
+                { label: 'Печать', value: totalPrintHours, color: '#2563eb' },
+                { label: 'Подготовка', value: prepHours, color: '#f97316' },
+                { label: 'Остывание', value: coolingHours, color: '#38bdf8' },
+                { label: 'Простой', value: downtimeIdleHours, color: '#94a3b8' }
+            ];
+            const timeTrack = buildTimeTrack(timeSegments);
+
+            const statusOrders = Array.isArray(appData.calcHistory)
+                ? appData.calcHistory.filter(order => {
+                    if (!rangeFrom || !rangeTo) return true;
+                    const ts = getOrderTimestamp(order);
+                    return ts >= rangeFrom.getTime() && ts < rangeTo.getTime();
+                })
+                : [];
+            const statusCounts = {
+                new: 0,
+                inprogress: 0,
+                done: 0,
+                paid: 0,
+                canceled: 0
+            };
+            statusOrders.forEach(order => {
+                let status = order.orderStatus || 'new';
+                if (status === 'cancelled') status = 'canceled';
+                if (statusCounts[status] !== undefined) {
+                    statusCounts[status] += 1;
+                }
+            });
+            const statusItems = [
+                { key: 'new', label: 'Новые', color: '#93c5fd', value: statusCounts.new },
+                { key: 'inprogress', label: 'В работе', color: '#2563eb', value: statusCounts.inprogress },
+                { key: 'done', label: 'Готово', color: '#10b981', value: statusCounts.done },
+                { key: 'paid', label: 'Оплачено', color: '#22c55e', value: statusCounts.paid },
+                { key: 'canceled', label: 'Отменено', color: '#ef4444', value: statusCounts.canceled }
+            ];
+            const statusBars = buildStatusBars(statusItems.filter(item => item.value > 0));
 
             const activeAdditional = Object.values(additionalStats).filter(stat =>
                 stat.baseCost <= 0 || stat.distributed < stat.baseCost
@@ -10604,6 +11553,7 @@
           <div class="progress mt-2" style="height: 6px;">
             <div class="progress-bar ${paidOff ? 'bg-success' : 'bg-warning'}" style="width: ${Math.min(100, Math.max(0, progress))}%"></div>
           </div>
+          <div class="summary-mini-label">Заполнение: ${formatNumber(progress, 1)}%</div>
         </td>
         <td class="text-end">${formatCurrency(stat.distributed)}</td>
         <td class="text-end">${formatCurrency(Math.max(0, stat.baseCost - stat.distributed))}</td>
@@ -10611,24 +11561,91 @@
       </tr>`;
             }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">Нет активных накладных расходов</td></tr>`;
 
+            const topMaterials = Object.values(materialStats)
+                .sort((a, b) => (b.totalGrams || 0) - (a.totalGrams || 0))
+                .slice(0, 5);
+            const materialsTopHtml = topMaterials.map(m => {
+                const share = kpis.totalGrams > 0 ? (m.totalGrams / kpis.totalGrams) * 100 : 0;
+                return `
+      <div class="calc-result-info">
+        <span>${m.name}</span>
+        <strong>${formatNumber(m.totalGrams / 1000, 2)} кг</strong>
+        <small>Себест.: ${formatCurrency(m.totalCost || 0)} · Доля: ${formatNumber(share, 1)}%</small>
+        <div class="progress mt-2" style="height:4px;">
+          <div class="progress-bar bg-info" style="width:${Math.min(100, Math.max(0, share))}%"></div>
+        </div>
+      </div>
+    `;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет данных по материалам.</div>`;
+
+            const topPrinters = Object.values(printerStats)
+                .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
+                .slice(0, 5);
+            const printersTopHtml = topPrinters.map(p => {
+                const expenses = p.amortization + p.energy + p.material + p.maintenance;
+                const profit = (p.revenue || 0) - expenses;
+                const share = totalPrinterRevenue > 0 ? (p.revenue / totalPrinterRevenue) * 100 : 0;
+                return `
+      <div class="calc-result-info">
+        <span>${p.name}</span>
+        <strong>${formatCurrency(p.revenue || 0)}</strong>
+        <small>Прибыль: ${formatCurrency(profit)} · Часы: ${formatNumber(p.hours, 1)} · Модели: ${p.prints}</small>
+        <div class="progress mt-2" style="height:4px;">
+          <div class="progress-bar bg-primary" style="width:${Math.min(100, Math.max(0, share))}%"></div>
+        </div>
+      </div>
+    `;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет данных по принтерам.</div>`;
+
+            const topClients = Object.values(clientStats)
+                .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
+                .slice(0, 5);
+            const clientsTopHtml = topClients.map(c => {
+                const profit = (c.revenue || 0) - (c.cost || 0);
+                const share = totalClientRevenue > 0 ? (c.revenue / totalClientRevenue) * 100 : 0;
+                return `
+      <div class="calc-result-info">
+        <span>${c.name}</span>
+        <strong>${formatCurrency(c.revenue)}</strong>
+        <small>Прибыль: ${formatCurrency(profit)} · Заказы: ${c.orders}</small>
+        <div class="progress mt-2" style="height:4px;">
+          <div class="progress-bar bg-success" style="width:${Math.min(100, Math.max(0, share))}%"></div>
+        </div>
+      </div>
+    `;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет данных по клиентам.</div>`;
+
+            const topAdditional = Object.values(additionalStats)
+                .sort((a, b) => (b.distributed || 0) - (a.distributed || 0))
+                .slice(0, 5);
+            const additionalTopHtml = topAdditional.map(stat => {
+                const progress = stat.baseCost > 0 ? Math.min(100, (stat.distributed / stat.baseCost) * 100) : 0;
+                return `
+      <div class="calc-result-info">
+        <span>${stat.name}</span>
+        <strong>${formatCurrency(stat.distributed)}</strong>
+        <small>Остаток: ${formatCurrency(Math.max(0, stat.baseCost - stat.distributed))} · База: ${formatCurrency(stat.baseCost)}</small>
+        <div class="progress mt-2" style="height:4px;">
+          <div class="progress-bar bg-warning" style="width:${Math.min(100, Math.max(0, progress))}%"></div>
+        </div>
+      </div>
+    `;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет накладных расходов.</div>`;
+
             const kpiCardItems = [
-                {title: 'Завершённых заказов', value: completedOrdersCount, desc: 'За выбранный период', icon: 'bi-check2-square', decimals: 0},
-                {title: 'Общая выручка', value: totalRevenue, desc: 'Оплаченные заказы', icon: 'bi-cash-stack', format: formatCurrency},
-                {title: 'Общие расходы', value: totalCost, desc: 'Все затраты', icon: 'bi-receipt-cutoff', format: formatCurrency},
-                {title: 'Чистая прибыль', value: netProfit, desc: 'После налогов', icon: 'bi-graph-up-arrow', format: formatCurrency, valueClass: netProfit >= 0 ? 'text-success' : 'text-danger'},
-                {title: 'Средний чек', value: avgOrderRevenue, desc: '₽ за заказ', icon: 'bi-receipt', format: formatCurrency},
-                {title: 'Средний расход', value: avgMaterialPerOrder / 1000, unit: ' кг', desc: 'Материал / заказ', icon: 'bi-bezier', decimals: 2},
-                {title: 'Чистая маржа', value: netMargin, unit: ' %', desc: 'Чистая прибыль / выручка', icon: 'bi-graph-down', decimals: 1},
-                {title: 'Цена печати', value: avgClientPricePerGram, unit: ' ₽/г', desc: 'Средняя клиентская цена за грамм', icon: 'bi-currency-ruble', decimals: 2},
-                {title: 'Среднее время печати', value: avgPrintHoursPerOrder, unit: ' ч', desc: 'Часов печати / заказ', icon: 'bi-clock-history', decimals: 1},
-                {title: 'Средняя партия', value: avgModelsPerOrder, unit: ' моделей', desc: 'Моделей в заказе', icon: 'bi-layers', decimals: 1},
-                {title: 'Выход годных', value: yieldRate, unit: '%', desc: 'Годные без брака', icon: 'bi-check-circle', decimals: 1},
+                {title: 'Окупаемость', value: paybackAbs, desc: 'Прибыль минус капвложения', format: formatCurrency, valueClass: paybackAbs >= 0 ? 'text-success' : 'text-danger'},
+                {title: 'Прибыль/час', value: profitPerHour, unit: ' ₽/ч', desc: 'Чистая прибыль на час', decimals: 0},
+                {title: 'Себестоимость на кг', value: costPerKg, unit: ' ₽/кг', desc: 'Все расходы / масса', decimals: 0},
+                {title: 'Цена клиента', value: avgClientPricePerGram, unit: ' ₽/г', desc: 'Средняя цена за грамм', decimals: 2},
+                {title: 'Средний расход', value: avgMaterialPerOrder / 1000, unit: ' кг', desc: 'Материал / заказ', decimals: 2},
+                {title: 'Среднее время печати', value: avgPrintHoursPerOrder, unit: ' ч', desc: 'Часов печати / заказ', decimals: 1},
+                {title: 'Средняя партия', value: avgModelsPerOrder, unit: ' моделей', desc: 'Моделей в заказе', decimals: 1},
+                {title: 'Выход годных', value: yieldRate, unit: '%', desc: 'Без брака', decimals: 1},
                 {
                     title: 'Брак (кг)',
                     value: totalRejectGrams / 1000,
                     unit: ' кг',
-                    desc: 'Вес бракованных моделей',
-                    icon: 'bi-x-circle',
+                    desc: 'Масса брака',
                     decimals: 3
                 }
             ];
@@ -10641,271 +11658,317 @@
                 return `${formatNumber(card.value, decimals)}${unit}`;
             };
             const kpiCards = kpiCardItems.map(card => `
-      <div class="col-xl-3 col-md-4 col-sm-6 mb-3">
-        <div class="card h-100 shadow-sm">
-          <div class="card-body p-3">
-            <div class="d-flex align-items-center">
-              <i class="bi ${card.icon} fs-3 text-primary me-3"></i>
-              <div>
-                <h5 class="mb-0 ${card.valueClass || ''}">${formatCardValue(card)}</h5>
-                <small class="text-muted">${card.title}</small>
-              </div>
-            </div>
-            <div class="mt-2 text-muted small">${card.desc}</div>
-          </div>
-        </div>
+      <div class="calc-result-info">
+        <span>${card.title}</span>
+        <strong class="${card.valueClass || ''}">${formatCardValue(card)}</strong>
+        <small>${card.desc}</small>
       </div>
     `).join('');
 
             return `
-    <div class="container-fluid p-0">
-      <!-- Капитальные вложения -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Капитальные вложения</h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-4">
-              <h6>Принтеры:</h6>
-              <p>Всего: ${appData.printers.length} шт</p>
-              <p>Сумма: <strong>${formatCurrency(capital.printersCost)}</strong></p>
-            </div>
-            <div class="col-md-4">
-              <h6>Материалы:</h6>
-              <p class="mb-1">Сумма: <strong>${formatCurrency(capital.materialsCost)}</strong></p>
-              <p class="mb-1">Вес: <strong>${formatNumber(capital.materialsWeight, 2)} кг</strong></p>
-            </div>
-            <div class="col-md-4">
-              <h6>Накладные расходы:</h6>
-              <p class="mb-1">Сумма: <strong>${formatCurrency(capital.additionalCost)}</strong></p>
-            </div>
-          </div>
-          <div class="alert alert-primary mt-3 mb-0">
-            <div class="d-flex justify-content-between align-items-center">
-              <span>Общие капитальные вложения:</span>
-              <strong class="fs-5">${formatCurrency(capital.total)}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ключевые показатели -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <h5 class="mb-0"><i class="bi bi-bar-chart-line me-2"></i>Ключевые показатели</h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3 mb-4">
+    <div class="calc-layout summary-layout">
+      <div class="calc-main">
+        <div class="calc-card">
+          <div class="calc-section-title"><i class="bi bi-bar-chart-line me-2"></i>Ключевые показатели</div>
+          <div class="calc-result-info-grid summary-kpi-grid">
             ${kpiCards}
           </div>
+        </div>
 
-          <div class="row mb-4">
-            <div class="col-12">
-              <div class="card mb-3">
-                <div class="card-body">
-                  <h6>Детализация расходов</h6>
-                  <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Материалы:</span>
-                      <span>${formatCurrency(totalMaterialCost)} (${formatNumber(costStructure.material,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Электричество:</span>
-                      <span>${formatCurrency(totalElectricityCost)} (${formatNumber(costStructure.electricity,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Оператор:</span>
-                      <span>${formatCurrency(totalOperatorExpenses)} (${formatNumber(costStructure.operator,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Услуги:</span>
-                      <span>${formatCurrency(totalServiceCost)} (${formatNumber(costStructure.services,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Доставка:</span>
-                      <span>${formatCurrency(totalShippingCost)} (${formatNumber(costStructure.shipping,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Накладные расходы:</span>
-                      <span>${formatCurrency(totalAdditionalCost)} (${formatNumber(costStructure.additional,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Амортизация:</span>
-                      <span>${formatCurrency(totalPrinterCost)} (${formatNumber(costStructure.amortization,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Обслуживание:</span>
-                      <span>${formatCurrency(totalMaintenanceCost)} (${formatNumber(costStructure.maintenance,1)}%)</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Налоги:</span>
-                      <span>${formatCurrency(totalTax)}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                      <span>Окупаемость (прибыль - вложения):</span>
-                      <span class="${paybackAbs >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(paybackAbs)}</span>
-                    </li>
-                  </ul>
+        <div class="calc-card">
+          <div class="calc-section-title"><i class="bi bi-pie-chart me-2"></i>Диаграммы и тренды</div>
+          <div class="summary-charts-grid">
+            <div class="summary-chart-card">
+              <div class="summary-chart-title">Структура затрат</div>
+              <div class="d-flex flex-column align-items-center gap-2">
+                ${costDonut}
+                ${costLegend}
+              </div>
+            </div>
+            <div class="summary-chart-card">
+              <div class="summary-chart-title">Материалы по расходу</div>
+              <div class="d-flex flex-column align-items-center gap-2">
+                ${materialDonut}
+                ${materialLegend}
+              </div>
+            </div>
+            <div class="summary-chart-card">
+              <div class="summary-chart-title">Выручка по периоду</div>
+              ${revenueSparkline}
+              <div class="d-flex justify-content-between small text-muted mt-2">
+                <span>Итого: ${formatCurrency(revenueSum)}</span>
+                <span>Точек: ${revenueSeries.length}</span>
+              </div>
+            </div>
+            <div class="summary-chart-card">
+              <div class="summary-chart-title">Время производства</div>
+              ${timeTrack}
+              <div class="small text-muted mt-2">Всего: ${formatNumber(totalPrintHours + downtimeHours + prepHours, 1)} ч</div>
+            </div>
+            <div class="summary-chart-card">
+              <div class="summary-chart-title">Статусы заказов</div>
+              ${statusBars}
+              <div class="small text-muted mt-2">Всего: ${statusOrders.length}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-card summary-structure">
+          <div class="calc-section-title"><i class="bi bi-receipt-cutoff me-2"></i>Структура затрат</div>
+          ${breakdownHtml}
+        </div>
+
+          <div class="row g-3">
+          <div class="col-12">
+            <div class="calc-card">
+              <div class="calc-section-title"><i class="bi bi-printer me-2"></i>Топ принтеров</div>
+              <div class="calc-result-info-grid summary-list-grid">
+                ${printersTopHtml}
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="calc-card">
+              <div class="calc-section-title"><i class="bi bi-people me-2"></i>Топ клиентов</div>
+              <div class="calc-result-info-grid summary-list-grid">
+                ${clientsTopHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="calc-card">
+              <div class="calc-section-title"><i class="bi bi-boxes me-2"></i>Топ материалов</div>
+              <div class="calc-result-info-grid summary-list-grid">
+                ${materialsTopHtml}
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="calc-card">
+              <div class="calc-section-title"><i class="bi bi-diagram-2"></i>Накладные расходы</div>
+              <div class="calc-result-info-grid summary-list-grid">
+                ${additionalTopHtml}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="calc-card">
+          <div class="calc-section-title"><i class="bi bi-list-check me-2"></i>Подробные таблицы</div>
+          <div class="accordion" id="summaryDetailsAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="summaryPrintersHeading">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryPrintersCollapse" aria-expanded="false" aria-controls="summaryPrintersCollapse">
+                    Все принтеры
+                  </button>
+                </h2>
+                <div id="summaryPrintersCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
+                  <div class="accordion-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="">
+                          <tr>
+                            <th>Принтер</th>
+                            <th class="text-end">Время</th>
+                            <th class="text-end">Подготовка</th>
+                            <th class="text-end">Выручка</th>
+                            <th class="text-end">Расходы</th>
+                            <th class="text-end">Кол-во моделей</th>
+                          </tr>
+                        </thead>
+                        <tbody>${printerRows}</tbody>
+                        <tfoot class="">
+                          <tr>
+                            <th>Итого</th>
+                            <th class="text-end">${formatNumber(ordersAnalysis.totalPrintHours, 1)} ч</th>
+                            <th class="text-end">${formatNumber((ordersAnalysis.totalPrepMinutes || 0) / 60, 2)} ч</th>
+                            <th class="text-end">${formatCurrency(totalPrinterRevenue)}</th>
+                            <th class="text-end">${formatCurrency(totalPrinterExpenses)}</th>
+                            <th class="text-end">${totalPrinterPrints}</th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="summaryClientsHeading">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryClientsCollapse" aria-expanded="false" aria-controls="summaryClientsCollapse">
+                    Все клиенты
+                  </button>
+                </h2>
+                <div id="summaryClientsCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
+                  <div class="accordion-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="">
+                          <tr>
+                            <th>Клиент</th>
+                            <th class="text-end">Выручка</th>
+                            <th class="text-end">Расходы</th>
+                            <th class="text-end">Прибыль</th>
+                            <th class="text-end">Заказы</th>
+                          </tr>
+                        </thead>
+                        <tbody>${clientRows}</tbody>
+                        <tfoot class="">
+                          <tr>
+                            <th>Итого</th>
+                            <th class="text-end">${formatCurrency(totalClientRevenue)}</th>
+                            <th class="text-end">${formatCurrency(totalClientCost)}</th>
+                            <th class="text-end">${formatCurrency(totalClientProfit)}</th>
+                            <th class="text-end">${totalClientOrders}</th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="summaryMaterialsHeading">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryMaterialsCollapse" aria-expanded="false" aria-controls="summaryMaterialsCollapse">
+                    Все материалы
+                  </button>
+                </h2>
+                <div id="summaryMaterialsCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
+                  <div class="accordion-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-hover table-striped table-sm mb-0">
+                        <thead class="">
+                          <tr>
+                            <th>Материал</th>
+                            <th class="text-end">Себестоимость</th>
+                            <th class="text-end">Выручка</th>
+                            <th class="text-end">Ср. цена (₽/г)</th>
+                          </tr>
+                        </thead>
+                        <tbody>${materialRows}</tbody>
+                        <tfoot class="">
+                          <tr>
+                            <th>Итого: ${materialKgTotal} кг</th>
+                            <th class="text-end">${formatCurrency(kpis.totalMaterialCost)}</th>
+                            <th class="text-end">${formatCurrency(totalMaterialRevenue)}</th>
+                            <th class="text-end">${formatNumber(avgClientPricePerGram, 2)} ₽/г</th>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="summaryAdditionalHeading">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryAdditionalCollapse" aria-expanded="false" aria-controls="summaryAdditionalCollapse">
+                    Все накладные расходы
+                  </button>
+                </h2>
+                <div id="summaryAdditionalCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
+                  <div class="accordion-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-hover table-striped table-sm mb-0">
+                        <thead>
+                          <tr>
+                            <th>Статья</th>
+                            <th class="text-end">Распределено</th>
+                            <th class="text-end">Остаток</th>
+                            <th class="text-end">Заказы</th>
+                          </tr>
+                        </thead>
+                        <tbody>${additionalRows}</tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
+      <aside class="calc-sidebar">
+        <div class="calc-summary-card">
+          <div class="text-uppercase small opacity-75 mb-2">Выручка</div>
+          <h2>${formatCurrency(totalRevenue)}</h2>
+          <div class="calc-summary-meta">
+            <div>
+              <span>Чистая прибыль</span>
+              <strong class="${netProfit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(netProfit)}</strong>
+            </div>
+            <div>
+              <span>Маржа</span>
+              <strong>${formatCurrency(grossProfit)}</strong>
+              <small>${formatNumber(grossMargin, 1)}%</small>
+            </div>
+          </div>
+          <div class="mt-3 small text-muted">Заказов: ${completedOrdersCount} · Средний чек: ${formatCurrency(avgOrderRevenue)}</div>
+        </div>
 
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="card mb-3 h-100">
-            <div class="card-body">
-              <h6>Время и простои</h6>
-              <div class="d-flex justify-content-between mb-2">
-                <span>Время печати</span>
-                <strong>${formatNumber(totalPrintHours, 1)} ч</strong>
-              </div>
-              <div class="d-flex justify-content-between mb-2">
-                <span>Простой оборудования</span>
-                <strong>${formatNumber(downtimeHours, 2)} ч</strong>
-              </div>
-              <div class="text-muted small mb-2">Остывание: ${formatNumber(coolingHours, 2)} ч · Подготовка: ${formatNumber(prepHours, 2)} ч (${formatNumber(prepShare, 1)}% простоя)</div>
-              <div class="progress mb-2" style="height: 6px;">
-                <div class="progress-bar bg-warning" style="width: ${Math.min(100, Math.max(0, downtimeShare))}%"></div>
-              </div>
-              <div class="text-muted small">Простой ${formatNumber(downtimeShare, 1)}% от цикла печати</div>
+        <div class="calc-sidebar-card">
+          <div class="calc-section-title mb-2">Время и простои</div>
+          <div class="calc-result-info-grid compact">
+            <div class="calc-result-info">
+              <span>Печать</span>
+              <strong>${formatNumber(totalPrintHours, 1)} ч</strong>
+              <small>Чистое время печати</small>
+            </div>
+            <div class="calc-result-info">
+              <span>Простой</span>
+              <strong>${formatNumber(downtimeHours, 2)} ч</strong>
+              <small>Остывание + ожидания</small>
+            </div>
+            <div class="calc-result-info">
+              <span>Доля простоя</span>
+              <strong>${formatNumber(downtimeShare, 1)}%</strong>
+              <small>От цикла печати</small>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Статистика -->
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <div class="card shadow-sm h-100">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-boxes me-2"></i>Расход материалов</h6>
+        <div class="calc-sidebar-card">
+          <div class="calc-section-title mb-2">Капвложения</div>
+          <div class="calc-result-info-grid compact">
+            <div class="calc-result-info">
+              <span>Принтеры</span>
+              <strong>${formatCurrency(capital.printersCost)}</strong>
+              <small>${appData.printers.length} шт</small>
             </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead class="">
-                    <tr>
-                      <th>Материал</th>
-                      <th class="text-end">Себестоимость</th>
-                      <th class="text-end">Выручка</th>
-                      <th class="text-end">Ср. цена (₽/г)</th>
-                    </tr>
-                  </thead>
-                  <tbody>${materialRows}</tbody>
-                  <tfoot class="">
-                    <tr>
-                      <th>Итого: ${formatNumber(kpis.totalGrams / 1000, 3)} кг</th>
-                      <th class="text-end">${formatCurrency(kpis.totalMaterialCost)}</th>
-                      <th class="text-end">${formatCurrency(totalMaterialRevenue)}</th>
-                      <th class="text-end">${formatNumber(avgClientPricePerGram, 2)} ₽/г</th>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+            <div class="calc-result-info">
+              <span>Материалы</span>
+              <strong>${formatCurrency(capital.materialsCost)}</strong>
+              <small>${formatNumber(capital.materialsWeight, 2)} кг</small>
+            </div>
+            <div class="calc-result-info">
+              <span>Накладные</span>
+              <strong>${formatCurrency(capital.additionalCost)}</strong>
+              <small>Вложений</small>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <div class="card shadow-sm h-100">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-printer me-2"></i>Показатели по принтерам</h6>
+        <div class="calc-sidebar-card">
+          <div class="calc-section-title mb-2">Качество</div>
+          <div class="calc-result-info-grid compact">
+            <div class="calc-result-info">
+              <span>Выход годных</span>
+              <strong>${formatNumber(yieldRate, 1)}%</strong>
+              <small>Без брака</small>
             </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead class="">
-                    <tr>
-                      <th>Принтер</th>
-                      <th class="text-end">Время</th>
-                      <th class="text-end">Подготовка</th>
-                      <th class="text-end">Выручка</th>
-                      <th class="text-end">Расходы</th>
-                      <th class="text-end">Кол-во моделей</th>
-                    </tr>
-                  </thead>
-                  <tbody>${printerRows}</tbody>
-                  <tfoot class="">
-                    <tr>
-                      <th>Итого</th>
-                      <th class="text-end">${formatNumber(ordersAnalysis.totalPrintHours, 1)} ч</th>
-                      <th class="text-end">${formatNumber((ordersAnalysis.totalPrepMinutes || 0) / 60, 2)} ч</th>
-                      <th class="text-end">${formatCurrency(totalPrinterRevenue)}</th>
-                      <th class="text-end">${formatCurrency(totalPrinterExpenses)}</th>
-                      <th class="text-end">${totalPrinterPrints}</th>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+            <div class="calc-result-info">
+              <span>Брак (кг)</span>
+              <strong>${formatNumber(totalRejectGrams / 1000, 3)} кг</strong>
+              <small>Масса брака</small>
+            </div>
+            <div class="calc-result-info">
+              <span>Брак (ч)</span>
+              <strong>${formatNumber(totalRejectHours, 2)} ч</strong>
+              <small>Время брака</small>
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <div class="card shadow-sm h-100">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-people me-2"></i>Показатели по клиентам</h6>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead class="">
-                    <tr>
-                      <th>Клиент</th>
-                      <th class="text-end">Выручка</th>
-                      <th class="text-end">Расходы</th>
-                      <th class="text-end">Прибыль</th>
-                      <th class="text-end">Заказы</th>
-                    </tr>
-                  </thead>
-                  <tbody>${clientRows}</tbody>
-                  <tfoot class="">
-                    <tr>
-                      <th>Итого</th>
-                      <th class="text-end">${formatCurrency(totalClientRevenue)}</th>
-                      <th class="text-end">${formatCurrency(totalClientCost)}</th>
-                      <th class="text-end">${formatCurrency(totalClientProfit)}</th>
-                      <th class="text-end">${totalClientOrders}</th>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="row mb-4">
-        <div class="col-md-12">
-          <div class="card shadow-sm h-100">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-diagram-2"></i> Дополнительные расходы</h6>
-            </div>
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead>
-                    <tr>
-                      <th>Статья</th>
-                      <th class="text-end">Распределено</th>
-                      <th class="text-end">Остаток</th>
-                      <th class="text-end">Заказы</th>
-                    </tr>
-                  </thead>
-                  <tbody>${additionalRows}</tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </aside>
     </div>`;
         };
 
@@ -10916,7 +11979,8 @@
 
         // Рендеринг результата
         const summaryContent = document.getElementById("summaryContent");
-        summaryContent.innerHTML = generateHTML(capital, ordersAnalysis, kpis, { periodDays });
+        summaryContent.innerHTML = generateHTML(capital, ordersAnalysis, kpis, { periodDays, from, to });
+        initSummaryChartTooltips(summaryContent);
     }
 
     function parseIncomingLinkParams(params){
