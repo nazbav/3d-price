@@ -11644,14 +11644,6 @@
                 {title: 'Средний расход', value: avgMaterialPerOrder / 1000, unit: ' кг', desc: 'Материал / заказ', decimals: 2},
                 {title: 'Среднее время печати', value: avgPrintHoursPerOrder, unit: ' ч', desc: 'Часов печати / заказ', decimals: 1},
                 {title: 'Средняя партия', value: avgModelsPerOrder, unit: ' моделей', desc: 'Моделей в заказе', decimals: 1},
-                {title: 'Выход годных', value: yieldRate, unit: '%', desc: 'Без брака', decimals: 1},
-                {
-                    title: 'Брак (кг)',
-                    value: totalRejectGrams / 1000,
-                    unit: ' кг',
-                    desc: 'Масса брака',
-                    decimals: 3
-                }
             ];
             const formatCardValue = (card) => {
                 if (typeof card.format === 'function') {
@@ -11908,27 +11900,6 @@
             </div>
           </div>
           <div class="mt-3 small text-muted">Заказов: ${completedOrdersCount} · Средний чек: ${formatCurrency(avgOrderRevenue)}</div>
-        </div>
-
-        <div class="calc-sidebar-card">
-          <div class="calc-section-title mb-2">Время и простои</div>
-          <div class="calc-result-info-grid compact">
-            <div class="calc-result-info">
-              <span>Печать</span>
-              <strong>${formatNumber(totalPrintHours, 1)} ч</strong>
-              <small>Чистое время печати</small>
-            </div>
-            <div class="calc-result-info">
-              <span>Простой</span>
-              <strong>${formatNumber(downtimeHours, 2)} ч</strong>
-              <small>Остывание + ожидания</small>
-            </div>
-            <div class="calc-result-info">
-              <span>Доля простоя</span>
-              <strong>${formatNumber(downtimeShare, 1)}%</strong>
-              <small>От цикла печати</small>
-            </div>
-          </div>
         </div>
 
         <div class="calc-sidebar-card">
