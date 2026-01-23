@@ -95,6 +95,13 @@ let offlineSiteDir = path.join(offlineRootPath, 'site');
 let offlineIndexPath = path.join(offlineSiteDir, 'index.html');
 const OFFLINE_STUB = path.join(__dirname, 'offline_stub.html');
 
+const DEFAULT_EXPORT_ROOT = path.join(app.getPath('documents'), '3d-price');
+let exportRootSetting = DEFAULT_EXPORT_ROOT;
+let exportRootPath = DEFAULT_EXPORT_ROOT;
+let exportAutoOpen = true;
+const EXPORT_CLIENTS_DIR = 'clients';
+const EXPORT_MATERIALS_DIR = 'materials';
+
 const SYNC_DIR = path.join(app.getPath('userData'), 'orca-sync');
 const SYNC_BACKUP_DIR = path.join(SYNC_DIR, 'backups');
 const CALC_STORE_PATH = path.join(SYNC_DIR, 'calc_data_master.json');
@@ -1045,6 +1052,36 @@ function applyOfflineRootOverride(raw, skipSave = false) {
   return offlineRootPath;
 }
 
+function applyExportRootOverride(raw, skipSave = false) {
+  const trimmed = typeof raw === 'string' ? raw.trim() : '';
+  const target = trimmed || DEFAULT_EXPORT_ROOT;
+  try {
+    fs.mkdirSync(target, { recursive: true });
+  } catch (e) {
+    throw new Error('Не удалось создать/использовать папку экспорта: ' + (e?.message || e));
+  }
+  exportRootPath = target;
+  exportRootSetting = target;
+  if (!skipSave) {
+    const s = loadSettings();
+    if (trimmed) s.exportRoot = target;
+    else delete s.exportRoot;
+    saveSettings(s);
+  }
+  return exportRootPath;
+}
+
+function applyExportAutoOpenOverride(raw, skipSave = false) {
+  const next = raw !== false;
+  exportAutoOpen = !!next;
+  if (!skipSave) {
+    const s = loadSettings();
+    s.exportAutoOpen = exportAutoOpen;
+    saveSettings(s);
+  }
+  return exportAutoOpen;
+}
+
 function applyPathOverridesFromSettings() {
   try {
     const settings = loadSettings();
@@ -1060,9 +1097,22 @@ function applyPathOverridesFromSettings() {
     } else {
       applyOfflineRootOverride(DEFAULT_OFFLINE_ROOT, true);
     }
+    if (settings && typeof settings.exportRoot === 'string' && settings.exportRoot.trim()) {
+      try { applyExportRootOverride(settings.exportRoot, true); }
+      catch { applyExportRootOverride(DEFAULT_EXPORT_ROOT, true); }
+    } else {
+      applyExportRootOverride(DEFAULT_EXPORT_ROOT, true);
+    }
+    if (typeof settings.exportAutoOpen === 'boolean') {
+      exportAutoOpen = settings.exportAutoOpen;
+    } else {
+      exportAutoOpen = true;
+    }
   } catch {
     applyRemoteSourceOverride(DEFAULT_REMOTE_SOURCE, true);
     applyOfflineRootOverride(DEFAULT_OFFLINE_ROOT, true);
+    applyExportRootOverride(DEFAULT_EXPORT_ROOT, true);
+    exportAutoOpen = true;
   }
 }
 
@@ -1092,12 +1142,102 @@ function hydrateOfflineMetaFromDisk() {
   }
 }
 
+const RESERVED_WINDOWS_NAMES = new Set([
+  'CON','PRN','AUX','NUL',
+  'COM1','COM2','COM3','COM4','COM5','COM6','COM7','COM8','COM9',
+  'LPT1','LPT2','LPT3','LPT4','LPT5','LPT6','LPT7','LPT8','LPT9'
+]);
+
+function sanitizePathSegment(value, fallback = 'item') {
+  let str = String(value ?? '').trim();
+  if (!str) return fallback;
+  str = str.replace(/[\\/:*?"<>|]/g, '_');
+  str = str.replace(/[\x00-\x1F]/g, '_');
+  str = str.replace(/\s+/g, ' ');
+  str = str.replace(/[. ]+$/g, '');
+  if (!str) return fallback;
+  if (str.length > 80) str = str.slice(0, 80);
+  const upper = str.toUpperCase();
+  if (RESERVED_WINDOWS_NAMES.has(upper)) str = '_' + str;
+  return str;
+}
+
+function ensureUniqueFilePath(dir, baseName, ext) {
+  const safeExt = ext.startsWith('.') ? ext : `.${ext}`;
+  let candidate = path.join(dir, `${baseName}${safeExt}`);
+  if (!fs.existsSync(candidate)) return candidate;
+  for (let i = 2; i < 1000; i++) {
+    candidate = path.join(dir, `${baseName}_${i}${safeExt}`);
+    if (!fs.existsSync(candidate)) return candidate;
+  }
+  return path.join(dir, `${baseName}_${Date.now()}${safeExt}`);
+}
+
+async function ensureExportRootReady() {
+  try {
+    fs.mkdirSync(exportRootPath, { recursive: true });
+  } catch (e) {
+    throw new Error('Не удалось создать папку экспорта: ' + (e?.message || e));
+  }
+  return exportRootPath;
+}
+
+async function saveHtmlExport(payload = {}) {
+  const kind = typeof payload.kind === 'string' ? payload.kind : '';
+  const html = typeof payload.html === 'string' ? payload.html : '';
+  if (!html) throw new Error('Пустой документ');
+
+  const root = await ensureExportRootReady();
+  let targetPath = '';
+
+  if (kind === 'material-label') {
+    const matName = sanitizePathSegment(payload.materialName, 'material');
+    const matId = sanitizePathSegment(payload.materialId, 'id');
+    const dir = path.join(root, EXPORT_MATERIALS_DIR);
+    await fsp.mkdir(dir, { recursive: true });
+    targetPath = path.join(dir, `${matName}_${matId}.html`);
+  } else if (kind === 'estimate' || kind === 'model-label') {
+    const clientId = sanitizePathSegment(payload.clientId, '0');
+    const clientName = sanitizePathSegment(payload.clientName, 'client');
+    const orderId = sanitizePathSegment(payload.orderId, '0');
+    const orderName = sanitizePathSegment(payload.orderName, 'order');
+    const clientDir = path.join(root, EXPORT_CLIENTS_DIR, `${clientId}_${clientName}`);
+    const orderDir = path.join(clientDir, `${orderId}_${orderName}`);
+    await fsp.mkdir(orderDir, { recursive: true });
+
+    if (kind === 'estimate') {
+      targetPath = path.join(orderDir, 'estimate.html');
+    } else {
+      const modelName = sanitizePathSegment(payload.modelName, 'model');
+      targetPath = ensureUniqueFilePath(orderDir, modelName, '.html');
+    }
+  } else {
+    throw new Error('Неизвестный тип экспорта');
+  }
+
+  await fsp.writeFile(targetPath, html, 'utf-8');
+
+  let opened = false;
+  if (exportAutoOpen) {
+    try {
+      await shell.openPath(targetPath);
+      opened = true;
+    } catch (e) {
+      log('export.open.failed', { error: e?.message, targetPath });
+    }
+  }
+
+  return { path: targetPath, opened };
+}
+
 function getPathsPayload() {
   return {
     remoteUrl,
     remoteSource: remoteSourceSetting,
     offlinePath: offlineRootPath,
-    orcaPath: getOrcaPathSetting() || ORCA_DEFAULT_PATH
+    orcaPath: getOrcaPathSetting() || ORCA_DEFAULT_PATH,
+    exportPath: exportRootPath,
+    exportAutoOpen
   };
 }
 
@@ -2076,6 +2216,12 @@ ipcMain.handle('settings:updatePaths', async (_event, payload = {}) => {
       applyOfflineRootOverride(payload.offlinePath || '', false);
       await refreshOfflineAvailability();
     }
+    if (Object.prototype.hasOwnProperty.call(payload, 'exportPath')) {
+      applyExportRootOverride(payload.exportPath || '', false);
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, 'exportAutoOpen')) {
+      applyExportAutoOpenOverride(payload.exportAutoOpen, false);
+    }
     if (Object.prototype.hasOwnProperty.call(payload, 'orcaPath')) {
       const raw = typeof payload.orcaPath === 'string' ? payload.orcaPath.trim() : '';
       if (raw) {
@@ -2210,6 +2356,22 @@ ipcMain.handle('offline:openFolder', async () => {
   await fsp.mkdir(offlineRootPath, { recursive: true });
   shell.openPath(offlineRootPath);
   return true;
+});
+
+ipcMain.handle('exports:openFolder', async () => {
+  await ensureExportRootReady();
+  shell.openPath(exportRootPath);
+  return true;
+});
+
+ipcMain.handle('exports:saveHtml', async (_event, payload = {}) => {
+  try {
+    const result = await saveHtmlExport(payload);
+    return { ok: true, path: result.path, opened: result.opened };
+  } catch (e) {
+    log('export.save.failed', { error: e?.message });
+    return { ok: false, error: e?.message || String(e) };
+  }
 });
 
 ipcMain.handle('offline:build', async () => {

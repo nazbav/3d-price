@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('toolbarApi', {
   // Offline snapshot builder
   buildOffline: () => ipcRenderer.invoke('offline:build'),
   openOfflineFolder: () => ipcRenderer.invoke('offline:openFolder'),
+  openExportFolder: () => ipcRenderer.invoke('exports:openFolder'),
 
   // Proxy (settings + ops)
   getProxySettings: () => ipcRenderer.invoke('proxy:getSettings'),

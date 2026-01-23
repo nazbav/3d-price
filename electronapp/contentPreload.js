@@ -38,3 +38,7 @@ contextBridge.exposeInMainWorld('backupBridge', {
     return () => ipcRenderer.removeListener('backups:status', listener);
   }
 });
+
+contextBridge.exposeInMainWorld('exportBridge', {
+  saveHtml: (payload) => ipcRenderer.invoke('exports:saveHtml', payload || {})
+});

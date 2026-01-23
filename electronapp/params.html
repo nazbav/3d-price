@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Параметры</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #0b1220;
+      color: #e5e7eb;
+    }
+    .wrap { padding: 16px; }
+    .header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 14px; }
+    h1 { font-size: 16px; margin:0; }
+
+    table { width:100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+    th, td { border-bottom: 1px solid #1f2937; padding: 6px 4px; text-align: left; }
+    th { color:#94a3b8; font-weight: 600; }
+    .pill { display:inline-block; padding: 2px 8px; border:1px solid #1f2937; border-radius: 999px; color:#cbd5e1; }
+    .bad { color: #fca5a5; }
+
+    .card { background:#111827; border:1px solid #1f2937; border-radius:16px; padding: 14px; margin-bottom: 12px; box-shadow: 0 12px 28px rgba(0,0,0,.28); }
+    .card h3 { margin:0 0 10px; font-size: 12px; color:#94a3b8; text-transform: uppercase; letter-spacing:.08em; }
+
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
+    .hint { font-size: 12px; color:#94a3b8; margin: 0 0 8px; line-height: 1.3; }
+    input {
+      flex: 1 1 320px;
+      min-width: 240px;
+      background:#0f172a;
+      border:1px solid #1f2937;
+      border-radius: 10px;
+      padding: 10px 12px;
+      color:#e5e7eb;
+      font-size: 12px;
+    }
+    input[readonly] { opacity: .9; }
+    .btn {
+      border:1px solid #1f2937;
+      background:#1f2937;
+      color:#e5e7eb;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn.mini { padding: 6px 8px; font-size: 11px; border-radius: 8px; }
+    .btn.danger { background:#7f1d1d; border-color:#450a0a; }
+    .btn.ok { background:#065f46; border-color:#064e3b; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+    .tableWrap {
+      max-height: 240px;
+      overflow: auto;
+      border:1px solid #1f2937;
+      border-radius: 12px;
+      padding: 6px;
+      background:#0f172a;
+    }
+    .proxyCell { word-break: break-all; white-space: normal; }
+    .errCell { word-break: break-word; white-space: normal; }
+
+    .status { font-size: 12px; color:#cbd5e1; min-height: 18px; margin-top: 8px; }
+    .status.err { color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>Параметры</h1>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Операции</h3>
+      <p class="hint">Все действия вынесены сюда, чтобы тулбар оставался чистым.</p>
+      <div class="row">
+        <button class="btn ok" type="button" id="btnBuildOffline">Обновить офлайн версию</button>
+        <button class="btn" type="button" id="btnOpenOffline">Открыть папку офлайна</button>
+        <button class="btn" type="button" id="btnOpenSync">Синхронизация Orca</button>
+      </div>
+      <div class="status" id="statusOps"></div>
+    </div>
+
+    <div class="card">
+      <h3>Источник интерфейса</h3>
+      <p class="hint">URL онлайн-версии (HTTP(S)) или путь к локальному HTML. Используется как источник для обновления офлайн версии.</p>
+      <div class="row">
+        <input type="text" id="remoteUrlInput" placeholder="https://c.n4v.ru/test.html" />
+        <button class="btn ok" type="button" id="btnSaveRemote">Сохранить</button>
+      </div>
+      <div class="status" id="statusRemote"></div>
+    </div>
+
+    <div class="card">
+      <h3>Офлайн папка</h3>
+      <p class="hint">Куда сохраняется офлайн-копия (должно быть доступно на запись).</p>
+      <div class="row">
+        <input type="text" id="offlinePathInput" placeholder="C:\\Users\\...\\offline" />
+        <button class="btn" type="button" id="btnBrowseOffline">Обзор</button>
+        <button class="btn" type="button" id="btnOpenOffline2">Открыть</button>
+        <button class="btn ok" type="button" id="btnSaveOffline">Сохранить</button>
+      </div>
+      <div class="status" id="statusOffline"></div>
+    </div>
+
+    <div class="card">
+      <h3>Сметы и этикетки</h3>
+      <p class="hint">Папка для сохранения смет и этикеток, создаётся структура по клиентам и заказам.</p>
+      <div class="row">
+        <input type="text" id="exportPathInput" placeholder="C:\\Users\\...\\3d-price" />
+        <button class="btn" type="button" id="btnBrowseExport">Обзор</button>
+        <button class="btn" type="button" id="btnOpenExport">Открыть</button>
+        <button class="btn ok" type="button" id="btnSaveExport">Сохранить</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label style="display:flex; gap:10px; align-items:center; user-select:none">
+          <input type="checkbox" id="exportAutoOpenToggle" />
+          <span>Открывать после сохранения</span>
+        </label>
+      </div>
+      <div class="status" id="statusExport"></div>
+    </div>
+
+    <div class="card">
+      <h3>OrcaSlicer</h3>
+      <p class="hint">Папка OrcaSlicer (для профилей и синхронизации).</p>
+      <div class="row">
+        <input type="text" id="orcaPathInput" placeholder="%APPDATA%\\OrcaSlicer\\user\\default" />
+        <button class="btn" type="button" id="btnBrowseOrca">Обзор</button>
+        <button class="btn ok" type="button" id="btnSaveOrca">Сохранить</button>
+      </div>
+      <div class="status" id="statusOrca"></div>
+
+      <div style="height:10px"></div>
+      <p class="hint">Путь к приложению (для интеграции с Orca):</p>
+      <div class="row">
+        <input type="text" id="appPathInput" readonly value="…" />
+        <button class="btn" type="button" id="btnCopyPath">Копировать путь</button>
+        <button class="btn" type="button" id="btnCopyOrcaCmd">Команда Orca</button>
+      </div>
+      <div class="status" id="statusApp"></div>
+    </div>
+
+    <div class="card">
+      <h3>Прокси</h3>
+      <div class="row" style="margin-bottom:8px">
+        <label style="display:flex; gap:10px; align-items:center; user-select:none">
+          <input type="checkbox" id="proxyEnabledToggle" />
+          <span>Использовать прокси</span>
+        </label>
+      </div>
+      <div id="proxyUiBlock">
+
+      <p class="hint">Прокси используются для всех внешних запросов (проверка обновлений, сборка офлайна). Форматы: <span class="pill">socks5://user:pass@ip:port</span>, <span class="pill">http://user:pass@ip:port</span>, <span class="pill">ip:port</span> (SOCKS5), а также ссылки формата Telegram.</p>
+      <div class="row" style="margin-bottom:8px">
+        <label class="hint" style="margin:0; flex: 1 1 220px">Таймаут на попытку (сек):</label>
+        <input type="number" id="proxyTimeoutInput" min="3" max="60" step="1" value="7" style="flex: 0 0 90px; min-width: 90px" />
+        <button class="btn" type="button" id="btnProxyPing">Пинги</button>
+        <button class="btn" type="button" id="btnProxyImport">Импорт</button>
+        <button class="btn" type="button" id="btnProxyExport">Экспорт</button>
+        <button class="btn ok" type="button" id="btnProxySave">Сохранить</button>
+      </div>
+      <div class="hint" style="margin-bottom:6px">Пинги считаются до <b>Источника интерфейса</b> (по его протоколу). <span class="pill">HTTP 404</span> — это нормально (связь есть).</div>
+      <div class="hint" style="margin-bottom:6px">Список прокси ("!" — помечена как проблемная):</div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:18px"> </th>
+              <th>Прокси</th>
+              <th style="width:80px">Ping</th>
+              <th>Ошибка</th>
+              <th style="width:78px"></th>
+            </tr>
+          </thead>
+          <tbody id="proxyTableBody"></tbody>
+        </table>
+      </div>
+      <div class="status" id="statusProxy"></div>
+    </div>
+
+    <div class="status" id="statusGlobal"></div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const remoteUrlInput = $('remoteUrlInput');
+  const offlinePathInput = $('offlinePathInput');
+  const exportPathInput = $('exportPathInput');
+  const exportAutoOpenToggle = $('exportAutoOpenToggle');
+  const orcaPathInput = $('orcaPathInput');
+  const appPathInput = $('appPathInput');
+
+  const statusGlobal = $('statusGlobal');
+  const statusRemote = $('statusRemote');
+  const statusOffline = $('statusOffline');
+  const statusExport = $('statusExport');
+  const statusOrca = $('statusOrca');
+  const statusApp = $('statusApp');
+  const statusOps = $('statusOps');
+  const statusProxy = $('statusProxy');
+
+  function setStatus(el, text, isErr = false) {
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'status' + (isErr ? ' err' : '');
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+  }
+
+  // Фикс фокуса: клики по кнопкам "Сохранить" / "Обзор" не должны уводить фокус с инпута.
+  // Иначе на Windows выделение становится серым (input blur) и ввод выглядит "глючно".
+  let lastInputState = null;
+
+  function snapshotActiveInput() {
+    const el = document.activeElement;
+    if (!el || el.tagName !== 'INPUT') { lastInputState = null; return; }
+    lastInputState = {
+      id: el.id,
+      start: (typeof el.selectionStart === 'number') ? el.selectionStart : null,
+      end: (typeof el.selectionEnd === 'number') ? el.selectionEnd : null,
+      dir: el.selectionDirection || 'none'
+    };
+  }
+
+  function restoreInputFocus(fallbackEl) {
+    const el = (lastInputState?.id && document.getElementById(lastInputState.id)) || fallbackEl;
+    if (!el || typeof el.focus !== 'function') return;
+    try { el.focus({ preventScroll: true }); } catch { try { el.focus(); } catch {} }
+    if (lastInputState && typeof el.setSelectionRange === 'function' && lastInputState.start !== null && lastInputState.end !== null) {
+      try { el.setSelectionRange(lastInputState.start, lastInputState.end, lastInputState.dir); } catch {}
+    }
+  }
+
+  async function refresh() {
+    try {
+      const s = await window.toolbarApi.getStatus();
+      if (s?.paths) {
+        remoteUrlInput.value = s.paths.remoteSource || s.paths.remoteUrl || '';
+        offlinePathInput.value = s.paths.offlinePath || '';
+        exportPathInput.value = s.paths.exportPath || '';
+        if (exportAutoOpenToggle) exportAutoOpenToggle.checked = !!s.paths.exportAutoOpen;
+        orcaPathInput.value = s.paths.orcaPath || '';
+      }
+      if (typeof s?.appPath === 'string') appPathInput.value = s.appPath;
+      setStatus(statusGlobal, '');
+      await loadProxySettings();
+    } catch (e) {
+      setStatus(statusGlobal, 'Не удалось загрузить параметры', true);
+    }
+  }
+
+  async function updatePaths(payload, okMsg, statusEl, focusEl) {
+    setStatus(statusEl, 'Сохраняю…');
+    try {
+      const res = await window.toolbarApi.updatePaths(payload);
+      if (!res || !res.ok) throw new Error(res?.error || 'Ошибка сохранения');
+      setStatus(statusEl, okMsg);
+      await refresh();
+      // Возвращаем фокус (и выделение) в поле после уведомления "Сохранено".
+      restoreInputFocus(focusEl);
+    } catch (e) {
+      setStatus(statusEl, e?.message || 'Ошибка', true);
+    }
+  }
+
+
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.close(); });
+
+  // ---------- Ops (moved from toolbar) ----------
+  let offlineBuildInFlight = false;
+
+  $('btnBuildOffline').addEventListener('click', async () => {
+    if (offlineBuildInFlight) return;
+    offlineBuildInFlight = true;
+    const btn = $('btnBuildOffline');
+    if (btn) btn.disabled = true;
+    setStatus(statusOps, 'Подготовка…');
+    try {
+      const r = await window.toolbarApi.buildOffline();
+      setStatus(statusOps, 'Готово: ' + (r?.summary || 'офлайн версия обновлена'));
+      await refresh();
+    } catch (e) {
+      setStatus(statusOps, 'Отмена/ошибка: ' + (e?.message || String(e)), true);
+    } finally {
+      offlineBuildInFlight = false;
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  $('btnOpenOffline').addEventListener('click', async () => {
+    setStatus(statusOps, 'Открываю папку…');
+    try { await window.toolbarApi.openOfflineFolder(); setStatus(statusOps, 'Открыто'); }
+    catch (e) { setStatus(statusOps, 'Не удалось открыть папку', true); }
+  });
+
+  $('btnOpenOffline2').addEventListener('click', async () => {
+    setStatus(statusOffline, 'Открываю папку…');
+    try { await window.toolbarApi.openOfflineFolder(); setStatus(statusOffline, 'Открыто'); }
+    catch (e) { setStatus(statusOffline, 'Не удалось открыть папку', true); }
+  });
+
+  $('btnBrowseExport').addEventListener('click', async () => {
+    snapshotActiveInput();
+    const selected = await window.toolbarApi.pickFolder(exportPathInput.value);
+    if (selected) exportPathInput.value = selected;
+    restoreInputFocus(exportPathInput);
+  });
+
+  $('btnOpenExport').addEventListener('click', async () => {
+    setStatus(statusExport, 'Открываю папку…');
+    try { await window.toolbarApi.openExportFolder(); setStatus(statusExport, 'Открыто'); }
+    catch (e) { setStatus(statusExport, 'Не удалось открыть папку', true); }
+  });
+
+  $('btnSaveExport').addEventListener('click', async () => {
+    snapshotActiveInput();
+    await updatePaths(
+      { exportPath: exportPathInput.value || '', exportAutoOpen: !!exportAutoOpenToggle?.checked },
+      'Сохранено',
+      statusExport,
+      exportPathInput
+    );
+  });
+
+  $('btnOpenSync').addEventListener('click', async () => {
+    setStatus(statusOps, 'Открываю синхронизацию…');
+    try { await window.toolbarApi.openSync(); setStatus(statusOps, 'Открыто'); }
+    catch (e) { setStatus(statusOps, 'Не удалось открыть синхронизацию', true); }
+  });
+
+  // ----- Proxy UI -----
+  const proxyEnabledToggle = $('proxyEnabledToggle');
+  const proxyUiBlock = $('proxyUiBlock');
+  const proxyTimeoutInput = $('proxyTimeoutInput');
+  const proxyTableBody = $('proxyTableBody');
+
+  let lastProxySettings = { enabled: false, timeoutMs: 7000, proxies: [] };
+
+  function setProxyUiVisible(enabled) {
+    if (!proxyUiBlock) return;
+    proxyUiBlock.style.display = enabled ? 'block' : 'none';
+  }
+
+  function escapeHtmlAttr(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderProxyTable(proxies = []) {
+    if (!proxyTableBody) return;
+    const rows = [];
+    for (const p of proxies) {
+      const bad = !!p.bad;
+      const ping = (p.pingMs != null) ? (p.pingMs + 'ms') : '—';
+      const err = String(p.lastError || '').slice(0, 200);
+      const display = p.display || p.raw || '';
+      rows.push(
+        `<tr>
+          <td class="${bad ? 'bad' : ''}">${bad ? '!' : ''}</td>
+          <td class="proxyCell">${escapeHtml(display)}</td>
+          <td>${escapeHtml(ping)}</td>
+          <td class="errCell ${bad ? 'bad' : ''}">${escapeHtml(err)}</td>
+          <td style="text-align:right">
+            <button class="btn mini danger" type="button" data-act="del" data-raw="${escapeHtmlAttr(p.raw || '')}">Удалить</button>
+          </td>
+        </tr>`
+      );
+    }
+    proxyTableBody.innerHTML = rows.join('') || '<tr><td colspan="5" style="color:#94a3b8">Прокси не настроены</td></tr>';
+  }
+
+  async function loadProxySettings() {
+    try {
+      const s = await window.toolbarApi.getProxySettings();
+      lastProxySettings = {
+        enabled: !!s.enabled,
+        timeoutMs: (typeof s.timeoutMs === 'number' ? s.timeoutMs : 7000),
+        proxies: Array.isArray(s.proxies) ? s.proxies : []
+      };
+      if (proxyEnabledToggle) proxyEnabledToggle.checked = lastProxySettings.enabled;
+      setProxyUiVisible(lastProxySettings.enabled);
+      const timeoutSec = Math.max(3, Math.min(60, Math.round(lastProxySettings.timeoutMs / 1000)));
+      if (proxyTimeoutInput) proxyTimeoutInput.value = String(timeoutSec);
+      renderProxyTable(lastProxySettings.proxies);
+      setStatus(statusProxy, lastProxySettings.proxies.length ? `Прокси: ${lastProxySettings.proxies.length}` : '');
+    } catch (e) {
+      setStatus(statusProxy, e?.message || String(e), true);
+    }
+  }
+
+  if (proxyEnabledToggle) {
+    proxyEnabledToggle.addEventListener('change', async () => {
+      try {
+        const enabled = !!proxyEnabledToggle.checked;
+        setProxyUiVisible(enabled);
+        setStatus(statusProxy, 'Сохраняю…');
+        const r = await window.toolbarApi.setProxySettings({ enabled });
+        lastProxySettings = {
+          enabled: !!r.enabled,
+          timeoutMs: (typeof r.timeoutMs === 'number' ? r.timeoutMs : lastProxySettings.timeoutMs),
+          proxies: Array.isArray(r.proxies) ? r.proxies : []
+        };
+        renderProxyTable(lastProxySettings.proxies);
+        setStatus(statusProxy, enabled ? 'Прокси включены' : 'Прокси выключены');
+      } catch (e) {
+        setStatus(statusProxy, e?.message || String(e), true);
+      }
+    });
+  }
+
+  $('btnProxySave').addEventListener('click', async () => {
+    try {
+      const timeoutSec = Number(proxyTimeoutInput?.value || 7);
+      const payload = {
+        enabled: !!proxyEnabledToggle?.checked,
+        timeoutMs: Math.max(3000, Math.min(60000, Math.round(timeoutSec * 1000)))
+      };
+      const r = await window.toolbarApi.setProxySettings(payload);
+      lastProxySettings = { enabled: !!r.enabled, timeoutMs: r.timeoutMs, proxies: Array.isArray(r.proxies) ? r.proxies : [] };
+      renderProxyTable(lastProxySettings.proxies);
+      setStatus(statusProxy, 'Сохранено');
+    } catch (e) {
+      setStatus(statusProxy, e?.message || String(e), true);
+    }
+  });
+
+  $('btnProxyPing').addEventListener('click', async () => {
+    try {
+      setStatus(statusProxy, 'Проверяю…');
+      const r = await window.toolbarApi.pingAllProxies();
+      lastProxySettings = { enabled: !!r.enabled, timeoutMs: r.timeoutMs, proxies: Array.isArray(r.proxies) ? r.proxies : [] };
+      renderProxyTable(lastProxySettings.proxies);
+      setStatus(statusProxy, 'Пинги обновлены');
+    } catch (e) {
+      setStatus(statusProxy, e?.message || String(e), true);
+    }
+  });
+
+  $('btnProxyImport').addEventListener('click', async () => {
+    try {
+      const t = await window.toolbarApi.readClipboardText();
+      if (!t) return setStatus(statusProxy, 'Буфер пуст', true);
+      setStatus(statusProxy, 'Импортирую…');
+      const r = await window.toolbarApi.importProxyText(String(t));
+      lastProxySettings = { enabled: !!r.enabled, timeoutMs: r.timeoutMs, proxies: Array.isArray(r.proxies) ? r.proxies : [] };
+      renderProxyTable(lastProxySettings.proxies);
+      setStatus(statusProxy, `Импортировано: ${lastProxySettings.proxies.length}`);
+    } catch (e) {
+      setStatus(statusProxy, e?.message || String(e), true);
+    }
+  });
+
+  $('btnProxyExport').addEventListener('click', async () => {
+    try {
+      const text = await window.toolbarApi.exportProxyText();
+      await window.toolbarApi.writeClipboardText(String(text || ''));
+      setStatus(statusProxy, text ? 'Скопировано в буфер' : 'Прокси пустые');
+    } catch (e) {
+      setStatus(statusProxy, e?.message || String(e), true);
+    }
+  });
+
+  if (proxyTableBody) {
+    proxyTableBody.addEventListener('click', async (e) => {
+      const btn = e?.target?.closest?.('button');
+      const act = btn?.getAttribute?.('data-act');
+      if (act !== 'del') return;
+      const raw = btn.getAttribute('data-raw') || '';
+      try {
+        setStatus(statusProxy, 'Удаляю…');
+        const r = await window.toolbarApi.removeProxy(raw);
+        lastProxySettings = { enabled: !!r.enabled, timeoutMs: r.timeoutMs, proxies: Array.isArray(r.proxies) ? r.proxies : [] };
+        renderProxyTable(lastProxySettings.proxies);
+        setStatus(statusProxy, 'Удалено');
+      } catch (err) {
+        setStatus(statusProxy, err?.message || String(err), true);
+      }
+    });
+  }
+
+  window.toolbarApi.onProgress((p) => {
+    if (!p?.message) return;
+    // Прогресс сборки офлайна подсвечиваем в секции операций.
+    setStatus(statusOps, p.message);
+  });
+
+  $('btnSaveRemote').addEventListener('click', () => updatePaths(
+    { remoteSource: remoteUrlInput.value || '' },
+    'Источник обновлён',
+    statusRemote,
+    remoteUrlInput
+  ));
+
+  $('btnBrowseOffline').addEventListener('click', async () => {
+    const selected = await window.toolbarApi.pickFolder(offlinePathInput.value);
+    if (selected) offlinePathInput.value = selected;
+    restoreInputFocus(offlinePathInput);
+  });
+
+  $('btnSaveOffline').addEventListener('click', () => updatePaths(
+    { offlinePath: offlinePathInput.value || '' },
+    'Папка офлайна обновлена',
+    statusOffline,
+    offlinePathInput
+  ));
+
+  $('btnBrowseOrca').addEventListener('click', async () => {
+    const selected = await window.toolbarApi.pickFolder(orcaPathInput.value);
+    if (selected) orcaPathInput.value = selected;
+    restoreInputFocus(orcaPathInput);
+  });
+
+  $('btnSaveOrca').addEventListener('click', () => updatePaths(
+    { orcaPath: orcaPathInput.value || '' },
+    'Путь OrcaSlicer обновлён',
+    statusOrca,
+    orcaPathInput
+  ));
+
+  // Не даём кнопкам "Сохранить" / "Обзор" перехватывать фокус у инпутов.
+  // (Нужно именно для Windows: иначе выделение "серое" и кажется, что ввод сломан.)
+  ['btnSaveRemote', 'btnSaveOffline', 'btnSaveOrca', 'btnBrowseOffline', 'btnBrowseOrca'].forEach((id) => {
+    const btn = $(id);
+    if (!btn) return;
+    btn.addEventListener('mousedown', (e) => {
+      snapshotActiveInput();
+      e.preventDefault();
+    });
+  });
+
+  $('btnCopyPath').addEventListener('click', async () => {
+    setStatus(statusApp, 'Копирую…');
+    try {
+      const res = await window.toolbarApi.copyAppPath();
+      if (res?.path) setStatus(statusApp, 'Скопировано: ' + res.path);
+      else setStatus(statusApp, 'Скопировано');
+    } catch (e) {
+      setStatus(statusApp, 'Не удалось скопировать', true);
+    }
+  });
+
+  $('btnCopyOrcaCmd').addEventListener('click', async () => {
+    setStatus(statusApp, 'Копирую…');
+    try {
+      const res = await window.toolbarApi.copyOrcaCommand();
+      if (res?.command) setStatus(statusApp, 'Скопировано: ' + res.command);
+      else setStatus(statusApp, 'Скопировано');
+    } catch (e) {
+      setStatus(statusApp, 'Не удалось скопировать', true);
+    }
+  });
+
+  refresh();
+</script>
+</body>
+</html>
