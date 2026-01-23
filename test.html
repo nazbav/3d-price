@@ -11427,11 +11427,16 @@
                 ? (totalCost + totalTax)
                 : breakdownFiltered.reduce((sum, item) => sum + item.value, 0);
             const breakdownSorted = [...breakdownFiltered].sort((a, b) => b.value - a.value);
-            const breakdownTop = breakdownSorted.slice(0, 6);
-            const restSum = breakdownSorted.slice(6).reduce((sum, item) => sum + item.value, 0);
-            if (restSum > 0) {
-                breakdownTop.push({label: 'Прочее', value: restSum});
-            }
+
+            const restSum = 0;
+
+       //     const breakdownTop = breakdownSorted.slice(0, 6);
+            // const restSum = breakdownSorted.slice(6).reduce((sum, item) => sum + item.value, 0);
+            // if (restSum > 0) {
+            //     breakdownTop.push({label: 'Прочее', value: restSum});
+            // }
+            const breakdownTop = breakdownSorted; // без агрегации
+
             const breakdownSegments = [];
             const breakdownItems = [];
             breakdownTop.forEach((item, index) => {
@@ -11467,8 +11472,14 @@
 
             const materialSorted = Object.values(materialStats)
                 .sort((a, b) => (b.totalGrams || 0) - (a.totalGrams || 0));
-            const materialTop = materialSorted.slice(0, 4);
-            const materialRest = materialSorted.slice(4).reduce((sum, item) => sum + (item.totalGrams || 0), 0);
+
+            const materialTop = materialSorted.slice(0, 6);
+            const materialRest = materialSorted.slice(6).reduce((sum, item) => sum + (item.totalGrams || 0), 0);
+
+            //смотреть все
+        //    const materialRest = 0;
+        //    const materialTop = materialSorted;
+
             const materialSegments = materialTop.map((item, index) => ({
                 label: item.name,
                 value: item.totalGrams || 0,
