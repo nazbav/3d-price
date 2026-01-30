@@ -2523,7 +2523,7 @@
                                 <div class="tab-content border rounded p-3" id="operatorWeekContent"></div>
                                 <div class="form-text" id="urgencyScheduleHint"></div>
                                 <div class="form-text">Оставьте строки пустыми, если день нерабочий. Перерывы
-                                    автоматически проверяются на соответствие ст. 108 и 109 ТК РФ.
+                                    добавляйте по необходимости.
                                 </div>
                                 <div class="form-text">Используйте кнопку автозаполнения, чтобы быстро задать шаблон
                                     (6/8/12 часовые смены, обед и спецперерывы). Изменения вступят в силу после
@@ -2758,14 +2758,13 @@
                     <div class="col-md-4 d-flex align-items-end">
                         <div class="form-check">
                             <input class="form-check-input" id="workdaySkipLunch" type="checkbox"/>
-                            <label class="form-check-label" for="workdaySkipLunch">Без отдельного обеда (смены ≤ 4
-                                ч)</label>
+                            <label class="form-check-label" for="workdaySkipLunch">Без отдельного обеда</label>
                         </div>
                     </div>
                 </div>
                 <div class="mt-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <label class="form-label mb-0">Спецперерывы (ст.109 ТК РФ)</label>
+                        <label class="form-label mb-0">Дополнительные перерывы</label>
                         <div class="btn-group btn-group-sm" role="group">
                             <button class="btn btn-outline-secondary" id="addSpecialBreakBtn" type="button">Добавить
                                 перерыв
@@ -2800,8 +2799,8 @@
                     </div>
                 </div>
                 <div class="alert alert-secondary mt-3 mb-0 small">
-                    <p class="mb-1"><strong>Требования ТК РФ:</strong> обед 30–120 минут обязателен при сменах свыше 4
-                        часов (ст.108), спецперерывы определяются ПВТР и включаются в рабочее время (ст.109).</p>
+                    <p class="mb-1"><strong>Подсказка:</strong> обед и дополнительные перерывы можно указывать по
+                        необходимости.</p>
                     <p class="mb-0">Шаблоны учитывают примеры для 6/8/12-часовых смен. Применяйте настройки к выбранным
                         дням, затем сохраните раздел «Брендинг».</p>
                 </div>
@@ -4151,6 +4150,19 @@
         return list;
     }
 
+    function isPrinterUsedInHistory(printerId){
+        const pid = String(printerId);
+        const history = Array.isArray(appData.calcHistory) ? appData.calcHistory : [];
+        return history.some(h => {
+            const details = Array.isArray(h.details)
+                ? h.details
+                : (Array.isArray(h.detailsByPrinter) ? h.detailsByPrinter : []);
+            if (details.some(d => String(d.printerId) === pid)) return true;
+            if (h.calcData && Object.prototype.hasOwnProperty.call(h.calcData, pid)) return true;
+            return false;
+        });
+    }
+
     function showPrinterMapModal(list){
         if(!list || list.length===0) return;
         const tbody=document.querySelector('#printerMapTable tbody');
@@ -5295,16 +5307,9 @@
                     alert('Обед должен попадать в рабочее время.');
                     return;
                 }
-                if (totalWorkMinutes > 240 && (lunchDuration < 30 || lunchDuration > 120)) {
-                    alert('Обед при сменах >4 ч должен быть 30–120 минут.');
-                    return;
-                }
                 if (lunchDuration > 0) {
                     breaks.push({start: lunchStart, duration: lunchDuration, label: 'Обед'});
                 }
-            } else if (totalWorkMinutes > 240) {
-                alert('Смена свыше 4 часов требует обеденного перерыва по ст.108 ТК РФ.');
-                return;
             }
             const specialBreaks = collectSpecialBreaks(startMinutes, totalWorkMinutes);
             breaks.push(...specialBreaks);
@@ -5852,9 +5857,14 @@
         switch(type) {
             case 'printers':
                 const removed = [];
+                const blocked = [];
                 appData.printers = appData.printers.filter(p => {
                     const chk = document.getElementById("chk_printers_"+p.id);
                     const del = chk && chk.checked;
+                    if(del && isPrinterUsedInHistory(p.id)){
+                        blocked.push(p.name || p.id);
+                        return true;
+                    }
                     if(del) removed.push(String(p.id));
                     return !del;
                 });
@@ -5864,6 +5874,9 @@
                 if(removed.length){
                     const unresolved = collectUnresolvedPrinters();
                     if(unresolved.length) showPrinterMapModal(unresolved);
+                }
+                if(blocked.length){
+                    alert(`Не удалось удалить принтеры, которые уже есть в истории заказов:\n${blocked.join(', ')}`);
                 }
                 break;
             case 'globalMaterials':
@@ -6092,6 +6105,10 @@
         bootstrap.Modal.getInstance(document.getElementById('printerModal')).hide();
     }
     function onDeletePrinter(id){
+        if(isPrinterUsedInHistory(id)){
+            alert("Нельзя удалить принтер: он используется в истории заказов.");
+            return;
+        }
         if(!confirm("Удалить принтер?")) return;
         appData.printers = appData.printers.filter(x => String(x.id) !== String(id));
         saveToLocalStorage();
@@ -9529,29 +9546,17 @@
                 .filter(Boolean)
                 .sort((a, b) => a.startMinutes - b.startMinutes);
             const sanitizedDay = [];
-            let dayMinutes = 0;
-            let hasBreak = false;
             normalized.forEach((segment, idx) => {
                 if (idx > 0 && segment.startMinutes < normalized[idx - 1].endMinutes) {
                     errors.push(`${profileLabel}: ${day.label} имеет пересечение интервалов #${idx} и #${idx + 1}`);
-                }
-                if (idx > 0) {
-                    const gap = segment.startMinutes - normalized[idx - 1].endMinutes;
-                    if (gap >= 30 && gap <= 120) {
-                        hasBreak = true;
-                    }
                 }
                 sanitizedDay.push({
                     start: minutesToTimeString(segment.startMinutes),
                     end: minutesToTimeString(segment.endMinutes)
                 });
-                dayMinutes += segment.endMinutes - segment.startMinutes;
             });
             if (sanitizedDay.length) {
                 workingDays.push(day.value);
-                if (dayMinutes > 240 && !hasBreak) {
-                    errors.push(`${profileLabel}: ${day.label} требует перерыв 30–120 минут по ст. 108 ТК РФ`);
-                }
             }
             schedule[day.value] = sanitizedDay;
         });
