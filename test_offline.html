@@ -4794,6 +4794,8 @@
             updateClientSummaryLabels(clientInput.value);
         }
 
+        maybeShowMissingMaterialsToast();
+
         window.__gcodecalc_ready = true;
         if (window.__gcodecalc_readyResolve) {
             window.__gcodecalc_readyResolve();
@@ -8021,6 +8023,56 @@
         if (settingsSection) {
             settingsSection.scrollIntoView({behavior: 'smooth', block: 'start'});
         }
+    }
+
+    function openGlobalMaterialsTab() {
+        const tabTrigger = document.getElementById('globalMaterials-tab');
+        if (!tabTrigger) return;
+        const tab = new bootstrap.Tab(tabTrigger);
+        tab.show();
+        const section = document.getElementById('globalMaterialsPane');
+        if (section) {
+            section.scrollIntoView({behavior: 'smooth', block: 'start'});
+        }
+    }
+
+    function showToast(message, options = {}) {
+        const container = document.getElementById('globalToastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        const type = options.type || 'dark';
+        const delay = Number.isFinite(options.delay) ? options.delay : 10000;
+        const actionHtml = options.actionHtml || '';
+        toast.className = `toast text-bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
+        toast.innerHTML = `
+        <div class="d-flex align-items-center">
+            <div class="toast-body">${message}</div>
+            ${actionHtml}
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                    aria-label="Close"><\/button>
+        <\/div>`;
+        container.appendChild(toast);
+        const toastInstance = new bootstrap.Toast(toast, {delay});
+        toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        toastInstance.show();
+    }
+
+    function maybeShowMissingMaterialsToast() {
+        if (window.__missingMaterialsToastShown) return;
+        const hasMaterials = Array.isArray(appData.materials) && appData.materials.length > 0;
+        if (hasMaterials) return;
+        window.__missingMaterialsToastShown = true;
+        showToast(
+            'Нет общих материалов. Заполните таблицу «Общие материалы».',
+            {
+                delay: 10000,
+                type: 'dark',
+                actionHtml: '<div class="me-2"><button class="btn btn-sm btn-outline-light" onclick="openGlobalMaterialsTab()">Открыть<\/button><\/div>'
+            }
+        );
     }
 
     function getCalcOrderId() {
@@ -13002,5 +13054,6 @@ curl -vk -X OPTIONS https://127.0.0.1/api/v1/info \
     };
 
 </script>
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="globalToastContainer"></div>
 </body>
 </html>
