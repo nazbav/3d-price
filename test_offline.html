@@ -12530,6 +12530,8 @@
             showToastAuto("Ссылка синхронизации требует HTTP(S) источника. Укажите «Источник интерфейса» и пересоберите офлайн.");
             return;
         }
+        if (kind === 'history') await saveHistoryToCloud();
+        else await saveSettingsToCloudConfig();
         let url;
         try { url = new URL(baseUrl); }
         catch { url = new URL(window.location.href); }
