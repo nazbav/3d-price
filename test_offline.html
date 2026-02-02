@@ -4123,6 +4123,29 @@
         }));
     }
 
+    async function showConfirmModal(message, options = {}) {
+        const title = options.title || 'Подтверждение';
+        const safe = escapeHtml(message || '').replace(/\n/g, '<br>');
+        const result = await showMultiPrompt(title, [
+            { type: 'html', className: 'mb-0', html: `<div class="mb-0">${safe}</div>` }
+        ]);
+        return !!result;
+    }
+
+    async function showTextPrompt(title, label, defaultValue = '', options = {}) {
+        const res = await showMultiPrompt(title, [
+            {
+                id: 'value',
+                label: label || '',
+                type: options.type || 'textarea',
+                rows: options.rows || 3,
+                value: defaultValue || ''
+            }
+        ]);
+        if (!res) return null;
+        return (res.value !== undefined && res.value !== null) ? String(res.value) : '';
+    }
+
     function showMaterialSelectionForGcode(fileName, thumbnail, materialOptions, profile){
         const safeProfile = (profile || '').trim();
         const infoHtml = (() => {
@@ -5956,8 +5979,8 @@
         tb.dataset.sortCol=col;
         tb.dataset.sortDir=asc?'asc':'desc';
     }
-    function massDelete(type) {
-        if(!confirm("Удалить выбранные элементы?")) return;
+    async function massDelete(type) {
+        if(!await showConfirmModal("Удалить выбранные элементы?")) return;
         switch(type) {
             case 'printers':
                 const removed = [];
@@ -6208,12 +6231,12 @@
         renderSummary();
         bootstrap.Modal.getInstance(document.getElementById('printerModal')).hide();
     }
-    function onDeletePrinter(id){
+    async function onDeletePrinter(id){
         if(isPrinterUsedInHistory(id)){
             showToastAuto("Нельзя удалить принтер: он используется в истории заказов.");
             return;
         }
-        if(!confirm("Удалить принтер?")) return;
+        if(!await showConfirmModal("Удалить принтер?")) return;
         appData.printers = appData.printers.filter(x => String(x.id) !== String(id));
         saveToLocalStorage();
         renderPrintersTable();
@@ -6563,8 +6586,8 @@
         renderSummary();
         bootstrap.Modal.getInstance(document.getElementById('materialModal')).hide();
     }
-    function onDeleteGlobalMaterial(id){
-        if(!confirm("Удалить материал?")) return;
+    async function onDeleteGlobalMaterial(id){
+        if(!await showConfirmModal("Удалить материал?")) return;
         appData.materials = appData.materials.filter(x => String(x.id) !== String(id));
         saveToLocalStorage();
         renderGlobalMaterialsTable();
@@ -6630,8 +6653,8 @@
         renderGlobalAdditionalTable();
         renderSummary();
     }
-    function onDeleteGlobalAdditional(id){
-        if(!confirm("Удалить статью?")) return;
+    async function onDeleteGlobalAdditional(id){
+        if(!await showConfirmModal("Удалить статью?")) return;
         appData.additionalGlobal = appData.additionalGlobal.filter(a => String(a.id) !== String(id));
         saveToLocalStorage();
         renderGlobalAdditionalTable();
@@ -6885,8 +6908,8 @@
         await openClientModalAndSave({id: c.id, name: c.name, phone: c.phone || '', links: c.links || ''});
     }
 
-    function onDeleteClient(id){
-        if(!confirm('Удалить клиента?')) return;
+    async function onDeleteClient(id){
+        if(!await showConfirmModal('Удалить клиента?')) return;
         appData.clients=appData.clients.filter(c=>c.id!=id);
         saveToLocalStorage();
         renderClientsTable();
@@ -9712,8 +9735,8 @@
         const div = document.getElementById('historyStats');
         div.textContent = `Всего заказов: ${list.length}, сумма: ${safeFixed(sum)} ₽, часы печати: ${safeFixed(hrs)}`;
     }
-    function onDeleteCalcHistoryEntry(timestamp) {
-        if(!confirm("Удалить выбранный расчет из истории?")) return;
+    async function onDeleteCalcHistoryEntry(timestamp) {
+        if(!await showConfirmModal("Удалить выбранный расчет из истории?")) return;
         appData.calcHistory = appData.calcHistory.filter(entry => entry.timestamp !== timestamp);
         saveToLocalStorage();
         renderHistoryTable();
@@ -10331,7 +10354,9 @@
             const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
             const inn = localStorage.getItem('my_nalog_inn') || '';
             const url = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${last.uuid}/print` : '';
-            const force = confirm('Чек уже сформирован' + (url ? '\n'+url : '') + '\nПерегенерировать?');
+            const force = await showConfirmModal(
+                'Чек уже сформирован' + (url ? '\n' + url : '') + '\nПерегенерировать?'
+            );
             if(!force) return;
             await cancelReceiptInternal(last, 'ошибочное формирование');
         }
@@ -10405,7 +10430,7 @@
             return;
         }
         const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
-        const comment = prompt('Причина отмены чекa:','');
+        const comment = await showTextPrompt('Причина отмены чека', 'Причина', '');
         if (!comment || !comment.trim()) {
             showToastAuto('Не указана причина отмены чека.\nЧек не будет отменён.');
             return;
