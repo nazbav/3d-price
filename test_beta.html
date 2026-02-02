@@ -4546,19 +4546,6 @@
         });
     }
 
-    function loadLegacyHistoryLayer() {
-        try {
-            const raw = localStorage.getItem(STORAGE_HISTORY_KEY);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) return parsed;
-            if (parsed && Array.isArray(parsed.calcHistory)) return parsed.calcHistory;
-        } catch (e) {
-            console.warn('historyLayer.legacy.load.failed', e);
-        }
-        return null;
-    }
-
     async function loadHistoryLayer() {
         const db = await openHistoryDb();
         return await new Promise((resolve, reject) => {
@@ -4614,28 +4601,14 @@
         });
     }
 
-    async function hydrateCalcHistoryFromLayers(debugInfo, options = {}) {
-        const allowAutoMigrate = options.allowAutoMigrate !== false;
-        let historySource = 'inline';
-        let historyData = Array.isArray(appData && appData.calcHistory) ? appData.calcHistory : [];
-        const layer = await loadHistoryLayer();
-        if (Array.isArray(layer)) {
-            historyData = layer;
-            historySource = 'indexeddb';
-        } else {
-            const legacyLayer = loadLegacyHistoryLayer();
-            if (Array.isArray(legacyLayer)) {
-                historyData = legacyLayer;
-                historySource = 'localStorage';
-                if (allowAutoMigrate) {
-                    const result = await persistHistoryLayerAsync(historyData);
-                    if (result && result.ok && result.used === 'indexeddb') {
-                        try { localStorage.removeItem(STORAGE_HISTORY_KEY); } catch {}
-                    }
-                }
-            } else if (historyData.length && allowAutoMigrate) {
-                persistHistoryLayer(historyData);
-            }
+    async function hydrateCalcHistoryFromLayers(debugInfo) {
+        let historyData = [];
+        let historySource = 'indexeddb';
+        try {
+            const layer = await loadHistoryLayer();
+            if (Array.isArray(layer)) historyData = layer;
+        } catch (e) {
+            console.warn('historyLayer.load.failed', e);
         }
         if (!Array.isArray(historyData)) historyData = [];
         appData.calcHistory = historyData;
@@ -4764,10 +4737,6 @@
             let backupPayload = migrationState.rawData;
             try {
                 const parsed = JSON.parse(migrationState.rawData);
-                const legacyHistory = loadLegacyHistoryLayer();
-                if (Array.isArray(legacyHistory)) {
-                    parsed.calcHistory = legacyHistory;
-                }
                 backupPayload = JSON.stringify(parsed, null, 2);
             } catch {
             }
@@ -4816,10 +4785,9 @@
                     next.migrationInfo = next.migrationInfo || {};
                     next.migrationInfo.lastMigrationAt = new Date().toISOString();
 
-                    const legacyLayer = loadLegacyHistoryLayer();
                     const inlineHistory = Array.isArray(next.calcHistory) ? next.calcHistory : [];
                     const runtimeHistory = Array.isArray(appData.calcHistory) ? appData.calcHistory : [];
-                    const historySnapshot = Array.isArray(legacyLayer) ? legacyLayer : (inlineHistory.length ? inlineHistory : runtimeHistory);
+                    const historySnapshot = inlineHistory.length ? inlineHistory : runtimeHistory;
                     next.calcHistory = Array.isArray(historySnapshot) ? historySnapshot : [];
                     normalizeIds(next);
 
@@ -4827,9 +4795,6 @@
                     const historyResult = await persistHistoryLayerAsync(next.calcHistory);
                     if (!historyResult || !historyResult.ok) {
                         throw historyResult?.error || new Error('history_migration_failed');
-                    }
-                    if (historyResult.used === 'indexeddb') {
-                        try { localStorage.removeItem(STORAGE_HISTORY_KEY); } catch {}
                     }
                     next.migrationInfo.historyStorage = historyResult.used || 'indexeddb';
                     next.migrationInfo.historyMovedAt = new Date().toISOString();
@@ -4881,9 +4846,7 @@
         resetCalculationInsights();
 
         const debugInfo = window.__migrationDebug || {};
-        await hydrateCalcHistoryFromLayers(debugInfo, {
-            allowAutoMigrate: !migrationState.needsMigration && appData.schemaVersion >= CURRENT_SCHEMA_VERSION
-        });
+        await hydrateCalcHistoryFromLayers(debugInfo);
         window.__migrationDebug = debugInfo;
 
         const validationResult = validateUniqueIds(appData);

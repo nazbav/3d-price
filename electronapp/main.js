@@ -1807,7 +1807,11 @@ async function exportCalcSnapshot() {
           const cfg = readConfig();
           if (!cfg) return { configRaw: null, historyRaw: null, source: 'none' };
           if (cfg.calcHistory) delete cfg.calcHistory;
-          return { configRaw: JSON.stringify(cfg), historyRaw: JSON.stringify(Array.isArray(history) ? history : []), source: 'snapshot' };
+          return {
+            configRaw: JSON.stringify(cfg),
+            historyRaw: JSON.stringify(Array.isArray(history) ? history : []),
+            source: 'snapshot'
+          };
         });
       })()
     `, true);
