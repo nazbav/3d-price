@@ -12483,8 +12483,56 @@
         }
     }
 
-    function generateSyncLinkAndQR(kind = 'config') {
-        const url = new URL(window.location.href);
+    async function resolveSyncBaseUrl() {
+        if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+            return window.location.href;
+        }
+
+        const candidates = [];
+        if (typeof window.__syncSourceUrl === 'string' && window.__syncSourceUrl.trim()) {
+            candidates.push(window.__syncSourceUrl.trim());
+        }
+        if (typeof window.__remoteSourceUrl === 'string' && window.__remoteSourceUrl.trim()) {
+            candidates.push(window.__remoteSourceUrl.trim());
+        }
+        const stored = localStorage.getItem('remote_source_url')
+            || localStorage.getItem('remoteSource')
+            || localStorage.getItem('remote_source');
+        if (stored && stored.trim()) candidates.push(stored.trim());
+
+        const normalize = (value) => {
+            if (!value) return null;
+            try { return new URL(value).toString(); }
+            catch { return null; }
+        };
+
+        for (const c of candidates) {
+            const normalized = normalize(c);
+            if (normalized) return normalized;
+        }
+
+        try {
+            const metaUrl = new URL('meta.json', window.location.href);
+            const res = await fetch(metaUrl.toString(), { cache: 'no-store' });
+            if (res.ok) {
+                const meta = await res.json();
+                const normalized = normalize(meta && meta.sourceUrl);
+                if (normalized) return normalized;
+            }
+        } catch {}
+
+        return null;
+    }
+
+    async function generateSyncLinkAndQR(kind = 'config') {
+        const baseUrl = await resolveSyncBaseUrl();
+        if (!baseUrl) {
+            showToastAuto("Ссылка синхронизации требует HTTP(S) источника. Укажите «Источник интерфейса» и пересоберите офлайн.");
+            return;
+        }
+        let url;
+        try { url = new URL(baseUrl); }
+        catch { url = new URL(window.location.href); }
         const id = kind === 'history' ? syncHistoryId : syncId;
         url.searchParams.set("sync_id", id);
         url.searchParams.set("key", encryptionKey);
