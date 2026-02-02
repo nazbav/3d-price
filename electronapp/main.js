@@ -74,8 +74,9 @@ let autoSyncEnabled = false;
 // Settings
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const STORAGE_KEY = 'ThreeDPrintCalc_Extended_v5';
-const STORAGE_HISTORY_KEY = `${STORAGE_KEY}_history`;
+const STORAGE_HISTORY_KEY = `${STORAGE_KEY}_history`; // legacy fallback for migration only
 const BACKUP_FILE_PREFIX = 'gcodecalc_backup_';
+const BACKUP_HISTORY_SUFFIX = '_history';
 const DEFAULT_BACKUP_DIR = path.join(app.getPath('userData'), 'backups');
 const BACKUP_STATUS_CHANNEL = 'backups:status';
 
@@ -105,6 +106,7 @@ const EXPORT_MATERIALS_DIR = 'materials';
 const SYNC_DIR = path.join(app.getPath('userData'), 'orca-sync');
 const SYNC_BACKUP_DIR = path.join(SYNC_DIR, 'backups');
 const CALC_STORE_PATH = path.join(SYNC_DIR, 'calc_data_master.json');
+const CALC_HISTORY_PATH = path.join(SYNC_DIR, 'calc_history_master.json');
 const ORCA_DEFAULT_PATH = path.join(app.getPath('appData'), 'OrcaSlicer', 'user', 'default');
 
 // ---------- Logging ----------
@@ -176,6 +178,7 @@ const BACKUP_DEFAULTS = {
   maxFiles: 80,
   lastSuccessAt: null,
   lastFile: null,
+  lastHistoryFile: null,
   lastReason: null,
   lastDailyRun: null
 };
@@ -195,6 +198,7 @@ function normalizeBackupSettings(rawSettings) {
     maxFiles: clampInt(src.maxFiles, 5, 1000, BACKUP_DEFAULTS.maxFiles),
     lastSuccessAt: src.lastSuccessAt || null,
     lastFile: src.lastFile || null,
+    lastHistoryFile: src.lastHistoryFile || null,
     lastReason: src.lastReason || null,
     lastDailyRun: src.lastDailyRun || null
   };
@@ -245,21 +249,62 @@ async function ensureBackupDir(dirPath) {
   return dir;
 }
 
+function parseBackupFileName(name) {
+  if (typeof name !== 'string') return null;
+  if (!name.startsWith(BACKUP_FILE_PREFIX) || !name.endsWith('.json')) return null;
+  let core = name.slice(BACKUP_FILE_PREFIX.length, -5);
+  let isHistory = false;
+  if (core.endsWith(BACKUP_HISTORY_SUFFIX)) {
+    isHistory = true;
+    core = core.slice(0, -BACKUP_HISTORY_SUFFIX.length);
+  }
+  if (!core) return null;
+  return { stamp: core, isHistory };
+}
+
+function buildBackupFileName(stamp, isHistory) {
+  return `${BACKUP_FILE_PREFIX}${stamp}${isHistory ? BACKUP_HISTORY_SUFFIX : ''}.json`;
+}
+
 async function listBackupFiles(targetDir) {
   const dir = await ensureBackupDir(targetDir);
   try {
     const entries = await fsp.readdir(dir, { withFileTypes: true });
-    const files = [];
+    const groups = new Map();
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       if (!entry.name.endsWith('.json')) continue;
+      const info = parseBackupFileName(entry.name);
+      if (!info) continue;
       const full = path.join(dir, entry.name);
       try {
         const stat = await fsp.stat(full);
-        files.push({ name: entry.name, path: full, size: stat.size, modified: stat.mtime.toISOString() });
+        const group = groups.get(info.stamp) || { stamp: info.stamp, config: null, history: null, mtime: 0 };
+        const payload = { name: entry.name, path: full, size: stat.size, modified: stat.mtime.toISOString(), mtimeMs: stat.mtimeMs };
+        if (info.isHistory) {
+          group.history = payload;
+        } else {
+          group.config = payload;
+        }
+        group.mtime = Math.max(group.mtime, stat.mtimeMs);
+        groups.set(info.stamp, group);
       } catch {}
     }
-    files.sort((a, b) => b.modified.localeCompare(a.modified));
+    const files = [];
+    for (const group of groups.values()) {
+      if (!group.config) continue;
+      const item = Object.assign({}, group.config);
+      if (group.history) {
+        item.historyName = group.history.name;
+        item.historyPath = group.history.path;
+        item.historySize = group.history.size;
+        item.historyModified = group.history.modified;
+      }
+      item._mtimeMs = group.mtime;
+      files.push(item);
+    }
+    files.sort((a, b) => (b._mtimeMs || 0) - (a._mtimeMs || 0));
+    for (const item of files) delete item._mtimeMs;
     return { ok: true, dir, files };
   } catch (e) {
     return { ok: false, error: e?.message || String(e), dir };
@@ -270,29 +315,38 @@ async function enforceBackupRetention(dir, settings) {
   const removed = [];
   try {
     const entries = await fsp.readdir(dir, { withFileTypes: true });
-    const stats = [];
+    const groups = new Map();
     for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.startsWith(BACKUP_FILE_PREFIX) || !entry.name.endsWith('.json')) continue;
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      const info = parseBackupFileName(entry.name);
+      if (!info) continue;
       const full = path.join(dir, entry.name);
       try {
         const st = await fsp.stat(full);
-        stats.push({ path: full, mtime: st.mtimeMs });
+        const group = groups.get(info.stamp) || { stamp: info.stamp, files: [], mtime: 0 };
+        group.files.push({ path: full, mtime: st.mtimeMs });
+        group.mtime = Math.max(group.mtime, st.mtimeMs);
+        groups.set(info.stamp, group);
       } catch {}
     }
-    stats.sort((a, b) => a.mtime - b.mtime);
+    const stats = Array.from(groups.values()).sort((a, b) => a.mtime - b.mtime);
     const expireBefore = settings.retentionDays > 0 ? Date.now() - (settings.retentionDays * 86400000) : null;
     const bucket = [];
-    for (const item of stats) {
-      if (expireBefore && item.mtime < expireBefore) {
-        try { await fsp.unlink(item.path); removed.push(item.path); } catch {}
+    for (const group of stats) {
+      if (expireBefore && group.mtime < expireBefore) {
+        for (const file of group.files) {
+          try { await fsp.unlink(file.path); removed.push(file.path); } catch {}
+        }
       } else {
-        bucket.push(item);
+        bucket.push(group);
       }
     }
     while (bucket.length > settings.maxFiles) {
       const oldest = bucket.shift();
       if (!oldest) break;
-      try { await fsp.unlink(oldest.path); removed.push(oldest.path); } catch {}
+      for (const file of oldest.files) {
+        try { await fsp.unlink(file.path); removed.push(file.path); } catch {}
+      }
     }
   } catch (e) {
     log('backup.retention.failed', { error: e?.message });
@@ -320,15 +374,19 @@ async function runBackupTask(reason = 'manual', options = {}) {
   const snapshot = await exportCalcSnapshot();
   const dir = await ensureBackupDir(settings.targetDir);
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const fileName = `${BACKUP_FILE_PREFIX}${stamp}.json`;
+  const fileName = buildBackupFileName(stamp, false);
+  const historyFileName = buildBackupFileName(stamp, true);
   const filePath = path.join(dir, fileName);
+  const historyFilePath = path.join(dir, historyFileName);
   await fsp.writeFile(filePath, snapshot.raw, 'utf-8');
+  await fsp.writeFile(historyFilePath, snapshot.historyRaw || '[]', 'utf-8');
   const retention = await enforceBackupRetention(dir, settings);
   const timestamp = new Date().toISOString();
   const patch = {
     targetDir: dir,
     lastSuccessAt: timestamp,
     lastFile: filePath,
+    lastHistoryFile: historyFilePath,
     lastReason: reason
   };
   if (options.markDaily) {
@@ -340,6 +398,8 @@ async function runBackupTask(reason = 'manual', options = {}) {
     reason,
     filePath,
     fileName,
+    historyFilePath,
+    historyFileName,
     timestamp,
     removed: retention.removed || [],
     settings: updatedSettings
@@ -1270,12 +1330,29 @@ async function readCalcStoreRaw() {
   }
 }
 
+async function readHistoryStoreRaw() {
+  try {
+    return await fsp.readFile(CALC_HISTORY_PATH, 'utf-8');
+  } catch {
+    return null;
+  }
+}
+
 async function writeCalcStoreRaw(raw) {
   try {
     await fsp.mkdir(path.dirname(CALC_STORE_PATH), { recursive: true });
     await fsp.writeFile(CALC_STORE_PATH, raw, 'utf-8');
   } catch (e) {
     log('calcStore.write.error', { error: e?.message });
+  }
+}
+
+async function writeHistoryStoreRaw(raw) {
+  try {
+    await fsp.mkdir(path.dirname(CALC_HISTORY_PATH), { recursive: true });
+    await fsp.writeFile(CALC_HISTORY_PATH, raw, 'utf-8');
+  } catch (e) {
+    log('historyStore.write.error', { error: e?.message });
   }
 }
 
@@ -1300,13 +1377,13 @@ async function hasCalcDataInRenderer() {
   }
 }
 
-async function hydrateCalcFromStoreIfNeeded(storeRaw) {
+async function hydrateCalcFromStoreIfNeeded(storeRaw, historyRaw) {
   if (!storeRaw) return false;
   try {
     const already = await hasCalcDataInRenderer();
     if (already) return false;
 
-    await importCalcData(storeRaw, { skipResnapshot: true });
+    await importCalcData(storeRaw, { skipResnapshot: true, historyRaw });
     return true;
   } catch (e) {
     log('calcStore.hydrate.error', { error: e?.message });
@@ -1335,9 +1412,16 @@ async function getCalcDataForSync() {
   }
 
   const raw = await readCalcStoreRaw();
+  const historyRaw = await readHistoryStoreRaw();
   if (raw) {
     try {
       const data = JSON.parse(raw);
+      if (historyRaw) {
+        try {
+          const hist = JSON.parse(historyRaw);
+          if (Array.isArray(hist)) data.calcHistory = hist;
+        } catch {}
+      }
       return { raw, data, source: 'store' };
     } catch (e) {
       log('calcStore.parse.error', { error: e?.message });
@@ -1683,70 +1767,101 @@ async function ensureContentReady() {
 
 async function exportCalcSnapshot() {
   let attempts = 0;
-  let raw = null;
-  while (attempts < 5 && !raw) {
+  let configRaw = null;
+  let historyRaw = null;
+  while (attempts < 5 && !configRaw) {
     await ensureContentReady();
     await waitForAppDataReady();
     const result = await contentView.webContents.executeJavaScript(`
       (() => {
         const storageKey = ${JSON.stringify(STORAGE_KEY)};
-        const historyKey = ${JSON.stringify(STORAGE_HISTORY_KEY)};
-        const readHistory = () => {
-          try {
-            const rawHistory = localStorage.getItem(historyKey);
-            if (!rawHistory) return [];
-            const parsedHistory = JSON.parse(rawHistory);
-            if (Array.isArray(parsedHistory)) return parsedHistory;
-            if (parsedHistory && Array.isArray(parsedHistory.calcHistory)) return parsedHistory.calcHistory;
-          } catch {}
-          return [];
+        const clone = (obj) => {
+          try { return JSON.parse(JSON.stringify(obj)); } catch { return null; }
         };
-        try {
-          const stored = localStorage.getItem(storageKey);
-          if (stored && stored.length > 2) {
-            const parsed = JSON.parse(stored);
-            if (!Array.isArray(parsed.calcHistory) || parsed.calcHistory.length === 0) {
-              parsed.calcHistory = readHistory();
-            }
-            return { raw: JSON.stringify(parsed), source: 'storage' };
-          }
-        } catch {}
-        try {
-          if (typeof appData !== 'undefined') {
-            return { raw: JSON.stringify(appData), source: 'appData' };
-          }
-        } catch (error) {
-          return { raw: null, error: error.message };
-        }
-        return { raw: null };
+        const readConfig = () => {
+          try {
+            const raw = localStorage.getItem(storageKey);
+            if (raw && raw.length > 2) return JSON.parse(raw);
+          } catch {}
+          if (typeof appData !== 'undefined') return clone(appData);
+          return null;
+        };
+        const readHistoryIdb = () => new Promise((resolve) => {
+          if (!('indexedDB' in window)) return resolve([]);
+          const req = indexedDB.open('ThreeDPrintCalc_Extended_v5_db', 1);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('history')) db.createObjectStore('history');
+          };
+          req.onerror = () => resolve([]);
+          req.onsuccess = () => {
+            const db = req.result;
+            const tx = db.transaction('history', 'readonly');
+            const store = tx.objectStore('history');
+            const getReq = store.get('calcHistory');
+            getReq.onsuccess = () => { resolve(getReq.result || []); db.close(); };
+            getReq.onerror = () => { resolve([]); db.close(); };
+          };
+        });
+        return readHistoryIdb().then(history => {
+          const cfg = readConfig();
+          if (!cfg) return { configRaw: null, historyRaw: null, source: 'none' };
+          if (cfg.calcHistory) delete cfg.calcHistory;
+          return { configRaw: JSON.stringify(cfg), historyRaw: JSON.stringify(Array.isArray(history) ? history : []), source: 'snapshot' };
+        });
       })()
     `, true);
-    raw = result?.raw || null;
-    if (raw) break;
+    if (result?.configRaw) {
+      configRaw = result.configRaw;
+      historyRaw = result.historyRaw || '[]';
+      break;
+    }
     attempts++;
     await sleep(200);
   }
-  if (!raw) throw new Error('Не удалось получить данные калькулятора. Открой калькулятор и попробуй снова.');
+  if (!configRaw) throw new Error('Не удалось получить данные калькулятора. Открой калькулятор и попробуй снова.');
   await fsp.mkdir(SYNC_DIR, { recursive: true });
   const exportPath = path.join(SYNC_DIR, 'calc_data.json');
-  await fsp.writeFile(exportPath, raw, 'utf-8');
-  await writeCalcStoreRaw(raw);
-  const data = JSON.parse(raw);
-  return { data, raw, exportPath, exportedAt: new Date().toISOString() };
+  const historyPath = path.join(SYNC_DIR, 'calc_history.json');
+  await fsp.writeFile(exportPath, configRaw, 'utf-8');
+  await fsp.writeFile(historyPath, historyRaw, 'utf-8');
+  await writeCalcStoreRaw(configRaw);
+  await writeHistoryStoreRaw(historyRaw);
+  const cfg = JSON.parse(configRaw);
+  const histArr = JSON.parse(historyRaw);
+  const merged = Object.assign({}, cfg, { calcHistory: histArr });
+  return { data: merged, raw: configRaw, historyRaw, exportPath, historyPath, exportedAt: new Date().toISOString() };
 }
 
 async function importCalcData(updatedJson, options = {}) {
   await ensureContentReady();
-  const rawString = typeof updatedJson === 'string' ? updatedJson : JSON.stringify(updatedJson);
+  const initialObj = typeof updatedJson === 'string' ? JSON.parse(updatedJson) : JSON.parse(JSON.stringify(updatedJson));
+  let historyForStore = null;
+  if (typeof options.historyRaw === 'string') {
+    historyForStore = options.historyRaw;
+  } else if (Array.isArray(options.historyRaw)) {
+    historyForStore = JSON.stringify(options.historyRaw);
+  } else if (Array.isArray(initialObj.calcHistory)) {
+    historyForStore = JSON.stringify(initialObj.calcHistory);
+  }
+  const configClone = JSON.parse(JSON.stringify(initialObj || {}));
+  delete configClone.calcHistory;
+  const rawString = JSON.stringify(configClone);
+  const historyRaw = historyForStore;
 
   const script = `
     (() => {
       try {
         const storageKey = ${JSON.stringify(STORAGE_KEY)};
         const raw = ${JSON.stringify(rawString)};
+        const historyRaw = ${historyRaw ? JSON.stringify(historyRaw) : 'null'};
         const dataObj = JSON.parse(raw);
+        const historyObj = historyRaw ? JSON.parse(historyRaw) : null;
 
         let next = dataObj;
+        if (historyObj) {
+          next.calcHistory = historyObj;
+        }
         if (typeof migrateOldData === 'function') {
           next = migrateOldData(next);
         }
@@ -1757,7 +1872,7 @@ async function importCalcData(updatedJson, options = {}) {
         window.appData = next;
 
         if (typeof saveToLocalStorage === 'function') {
-          try { saveToLocalStorage(); } catch {}
+          try { saveToLocalStorage({awaitHistory: true}); } catch {}
         } else {
           try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch {}
         }
@@ -1788,6 +1903,11 @@ async function importCalcData(updatedJson, options = {}) {
   await waitForAppDataReady();
 
   await writeCalcStoreRaw(rawString);
+  if (historyRaw) {
+    await writeHistoryStoreRaw(historyRaw);
+  } else {
+    await writeHistoryStoreRaw('[]');
+  }
   if (!options.skipResnapshot) {
     try {
       await exportCalcSnapshot();
@@ -1888,8 +2008,9 @@ async function loadOnline() {
   // Не затираем уже существующее localStorage (иначе "не сохраняется при перезагрузке").
   // Подтягиваем master-store только если UI пустой.
   const storeRaw = await readCalcStoreRaw();
+  const historyRaw = await readHistoryStoreRaw();
   if (storeRaw) {
-    await hydrateCalcFromStoreIfNeeded(storeRaw);
+    await hydrateCalcFromStoreIfNeeded(storeRaw, historyRaw);
   }
 }
 
@@ -1905,8 +2026,9 @@ async function loadOffline(message) {
   // Важно: НЕ перетираем данные калькулятора при каждом "обновить/перезагрузить".
   // Если localStorage уже содержит данные — оставляем их. Если пусто — подтягиваем из master-store.
   const storeRaw = await readCalcStoreRaw();
+  const historyRaw = await readHistoryStoreRaw();
   if (storeRaw) {
-    await hydrateCalcFromStoreIfNeeded(storeRaw);
+    await hydrateCalcFromStoreIfNeeded(storeRaw, historyRaw);
   }
 }
 
