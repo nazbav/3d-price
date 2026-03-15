@@ -2547,6 +2547,11 @@
                                 </select>
                                 <div class="form-text">Можно оставить автоопределение или принудительно выбрать язык интерфейса.</div>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="uiCurrencyOverride">Валюта отображения:</label>
+                                <select class="form-select" id="uiCurrencyOverride"></select>
+                                <div class="form-text">Меняет отображение валюты в интерфейсе и отчетах без перерасчета сумм по курсу.</div>
+                            </div>
                             <div class="mb-3 form-check">
                                 <input class="form-check-input" id="printLabelsCheckbox" type="checkbox"/>
                                 <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
@@ -3548,7 +3553,12 @@
     }
     const THEME_STORAGE_KEY = "themePreference";
     const I18N_OVERRIDE_STORAGE_KEY = "ui_language_override";
+    const CURRENCY_OVERRIDE_STORAGE_KEY = "ui_currency_override";
     const I18N_SUPPORTED_LANGUAGES = ['ru', 'en'];
+    const SUPPORTED_CURRENCIES = [
+        'RUB', 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR', 'KRW', 'TRY', 'CHF',
+        'CAD', 'AUD', 'NZD', 'SGD', 'HKD', 'AED', 'SEK', 'NOK', 'DKK', 'PLN'
+    ];
     const I18N_LOCALE_MAP = {
         ru: 'ru-RU',
         en: 'en-US'
@@ -3600,6 +3610,8 @@
         'Язык интерфейса:': 'Interface language:',
         'Авто (по языку браузера)': 'Auto (browser language)',
         'Можно оставить автоопределение или принудительно выбрать язык интерфейса.': 'You can keep auto detection or force a specific interface language.',
+        'Валюта отображения:': 'Display currency:',
+        'Меняет отображение валюты в интерфейсе и отчетах без перерасчета сумм по курсу.': 'Changes the display currency in the interface and reports without exchange-rate conversion.',
         'Печатать этикетки': 'Print labels',
         'Стоимость 1 этикетки (₽):': 'Cost of 1 label (RUB):',
         'Учитывать печать сметы': 'Include estimate printing',
@@ -4049,6 +4061,52 @@
         return I18N_LOCALE_MAP[getCurrentLanguage()] || I18N_LOCALE_MAP.ru;
     }
 
+    function normalizeSupportedCurrency(code) {
+        const normalized = String(code || '').toUpperCase();
+        return SUPPORTED_CURRENCIES.includes(normalized) ? normalized : 'RUB';
+    }
+
+    function getCurrencyOverride() {
+        const runtimeAppData = window.appData;
+        const fromAppData = runtimeAppData && runtimeAppData.calcSettings ? runtimeAppData.calcSettings.currencyOverride : '';
+        if (SUPPORTED_CURRENCIES.includes(fromAppData)) return fromAppData;
+        const fromStorage = localStorage.getItem(CURRENCY_OVERRIDE_STORAGE_KEY);
+        return SUPPORTED_CURRENCIES.includes(fromStorage) ? fromStorage : 'RUB';
+    }
+
+    function getCurrencySymbol(code = getCurrencyOverride()) {
+        try {
+            const parts = new Intl.NumberFormat(getCurrentLocale(), {
+                style: 'currency',
+                currency: normalizeSupportedCurrency(code),
+                currencyDisplay: 'narrowSymbol',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).formatToParts(1);
+            const symbol = parts.find(part => part.type === 'currency')?.value;
+            return symbol || normalizeSupportedCurrency(code);
+        } catch (e) {
+            return normalizeSupportedCurrency(code);
+        }
+    }
+
+    function getCurrentCurrencyConfig() {
+        const code = getCurrencyOverride();
+        return {
+            code,
+            symbol: getCurrencySymbol(code)
+        };
+    }
+
+    function localizeCurrencyText(text) {
+        const source = String(text ?? '');
+        if (!source) return source;
+        const {symbol} = getCurrentCurrencyConfig();
+        return source
+            .replace(/RUB/gu, symbol)
+            .replace(/₽/gu, symbol);
+    }
+
     function translateDynamicString(text) {
         for (const rule of I18N_REGEX_TRANSLATIONS) {
             if (rule.pattern.test(text)) {
@@ -4060,7 +4118,8 @@
 
     function translateUiText(text) {
         const source = String(text ?? '');
-        if (!source || getCurrentLanguage() === 'ru') return source;
+        if (!source) return source;
+        if (getCurrentLanguage() === 'ru') return localizeCurrencyText(source);
         const leading = source.match(/^\s*/u)?.[0] || '';
         const trailing = source.match(/\s*$/u)?.[0] || '';
         const normalized = source.replace(/^\s+|\s+$/gu, '').replace(/\s+/gu, ' ');
@@ -4072,7 +4131,7 @@
         if (translated === normalized) {
             translated = translateDynamicString(normalized);
         }
-        return `${leading}${translated}${trailing}`;
+        return `${leading}${localizeCurrencyText(translated)}${trailing}`;
     }
 
     function getLocalizedProfileTitle(profile) {
@@ -4147,6 +4206,24 @@
         }
     }
 
+    function buildCurrencyOverrideOptions() {
+        const select = document.getElementById('uiCurrencyOverride');
+        if (!select || select.dataset.initialized === '1') return;
+        select.innerHTML = SUPPORTED_CURRENCIES.map(code => {
+            const symbol = getCurrencySymbol(code);
+            return `<option value="${code}">${code} (${symbol})</option>`;
+        }).join('');
+        select.dataset.initialized = '1';
+    }
+
+    function syncCurrencyOverrideControl() {
+        buildCurrencyOverrideOptions();
+        const select = document.getElementById('uiCurrencyOverride');
+        if (select) {
+            select.value = getCurrencyOverride();
+        }
+    }
+
     function updateThemeToggleLabel() {
         const btn = document.getElementById("themeToggle");
         if (!btn) return;
@@ -4166,6 +4243,7 @@
         document.title = translateUiText(originalTitle);
         if (document.body) translateElementTree(document.body);
         syncLanguageOverrideControl();
+        syncCurrencyOverrideControl();
         updateThemeToggleLabel();
     }
 
@@ -4255,6 +4333,16 @@
         } else {
             applyI18nToPage();
         }
+    }
+
+    function setCurrencyOverride(value) {
+        const next = normalizeSupportedCurrency(value);
+        localStorage.setItem(CURRENCY_OVERRIDE_STORAGE_KEY, next);
+        const runtimeAppData = window.appData;
+        if (runtimeAppData && runtimeAppData.calcSettings) {
+            runtimeAppData.calcSettings.currencyOverride = next;
+        }
+        refreshLocalizedUi();
     }
 
     function setTheme(theme) {
@@ -5254,6 +5342,7 @@
         if (!['auto', 'ru', 'en'].includes(obj.calcSettings.languageOverride)) {
             obj.calcSettings.languageOverride = 'auto';
         }
+        obj.calcSettings.currencyOverride = normalizeSupportedCurrency(obj.calcSettings.currencyOverride);
         if (!Array.isArray(obj.calcSettings.customServices)) obj.calcSettings.customServices = [];
         if (!obj.migrationInfo) obj.migrationInfo = {};
         if (!obj.schemaVersion) obj.schemaVersion = CURRENT_SCHEMA_VERSION;
@@ -5629,6 +5718,8 @@
         document.getElementById("calcRoundingMode").value = appData.calcSettings.roundingMode || "none";
         const languageOverrideEl = document.getElementById("uiLanguageOverride");
         if (languageOverrideEl) languageOverrideEl.value = appData.calcSettings.languageOverride || "auto";
+        const currencyOverrideEl = document.getElementById("uiCurrencyOverride");
+        if (currencyOverrideEl) currencyOverrideEl.value = normalizeSupportedCurrency(appData.calcSettings.currencyOverride);
         document.getElementById("calcShipping").value = appData.calcSettings.shipping || "";
         ensureCalcStartDate();
         const deadlineInput = document.getElementById("calcDeadlineDate");
@@ -10654,11 +10745,13 @@
         appData.calcSettings.estimatePrintCost = parseFloat(document.getElementById("estimatePrintCostInput").value) || 0;
         appData.calcSettings.roundingMode = document.getElementById("calcRoundingMode").value || "none";
         appData.calcSettings.languageOverride = document.getElementById("uiLanguageOverride").value || "auto";
+        appData.calcSettings.currencyOverride = normalizeSupportedCurrency(document.getElementById("uiCurrencyOverride").value || "RUB");
         appData.calcSettings.includeAmortization = document.getElementById("settingsIncludeAmortization").checked;
         appData.calcSettings.includeRejects = document.getElementById("settingsIncludeRejects").checked;
         appData.calcSettings.includeOverheads = document.getElementById("settingsIncludeOverheads").checked;
         appData.calcSettings.ignoreCoolingRejects = document.getElementById("settingsIgnoreCoolingRejects").checked;
         setLanguageOverride(appData.calcSettings.languageOverride);
+        setCurrencyOverride(appData.calcSettings.currencyOverride);
         saveToLocalStorage();
         showToastAuto("Сохранено");
     }
@@ -11664,7 +11757,8 @@
 // Вспомогательные функции форматирования
         const formatCurrency = (value) => new Intl.NumberFormat(getCurrentLocale(), {
             style: 'currency',
-            currency: 'RUB',
+            currency: getCurrentCurrencyConfig().code,
+            currencyDisplay: 'narrowSymbol',
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }).format(value);
@@ -13526,6 +13620,15 @@
                 if (!appData.calcSettings) appData.calcSettings = {};
                 appData.calcSettings.languageOverride = languageOverrideEl.value || 'auto';
                 setLanguageOverride(appData.calcSettings.languageOverride);
+                saveToLocalStorage();
+            });
+        }
+        const currencyOverrideEl = document.getElementById('uiCurrencyOverride');
+        if (currencyOverrideEl) {
+            currencyOverrideEl.addEventListener('change', () => {
+                if (!appData.calcSettings) appData.calcSettings = {};
+                appData.calcSettings.currencyOverride = normalizeSupportedCurrency(currencyOverrideEl.value || 'RUB');
+                setCurrencyOverride(appData.calcSettings.currencyOverride);
                 saveToLocalStorage();
             });
         }
