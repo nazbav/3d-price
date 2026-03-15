@@ -218,14 +218,14 @@ flowchart LR
 ```mermaid
 classDiagram
     class appData {
-      printers[]
-      materials[]
-      clients[]
-      additionalGlobal[]
-      calcHistory[]
+      printers array
+      materials array
+      clients array
+      additionalGlobal array
+      calcHistory array
       labelSettings
-      printerProfiles[]
-      materialProfiles[]
+      printerProfiles array
+      materialProfiles array
     }
 
     class Printer {
@@ -258,9 +258,9 @@ classDiagram
       clientName
       total
       totalHours
-      detailsByPrinter[]
-      services[]
-      nalogReceipts[]
+      detailsByPrinter array
+      services array
+      nalogReceipts array
     }
 
     class ModelLine {
@@ -351,7 +351,7 @@ flowchart TD
 - стоимость материалов считается по каждой записи отдельно.
 
 ```mermaid
-sequenceDiagram
+    sequenceDiagram
     participant U as Пользователь
     participant ROW as Строка модели
     participant MODAL as Модалка материалов
@@ -362,7 +362,7 @@ sequenceDiagram
     ROW->>MODAL: Загружает material entries
     U->>MODAL: Меняет состав
     MODAL->>CAT: Ищет выбранные материалы
-    MODAL->>ROW: Сохраняет materialEntries[]
+    MODAL->>ROW: Сохраняет массив material entries
     ROW->>ROW: Пересчитывает общий вес
     ROW->>ENG: Передаёт entries в расчёт
     ENG->>CAT: Берёт цену, тип, cooling, prep
@@ -449,7 +449,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A[calcHistory[]] --> B[Фильтр по периоду]
+    A[calcHistory array] --> B[Фильтр по периоду]
     B --> C[Агрегация заказов]
     B --> D[Агрегация принтеров]
     B --> E[Агрегация материалов]

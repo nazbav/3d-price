@@ -198,14 +198,14 @@ The runtime state centers around a single in-memory structure (`appData`) that m
 ```mermaid
 classDiagram
     class appData {
-      printers[]
-      materials[]
-      clients[]
-      additionalGlobal[]
-      calcHistory[]
+      printers array
+      materials array
+      clients array
+      additionalGlobal array
+      calcHistory array
       labelSettings
-      printerProfiles[]
-      materialProfiles[]
+      printerProfiles array
+      materialProfiles array
     }
 
     class Printer {
@@ -238,9 +238,9 @@ classDiagram
       clientName
       total
       totalHours
-      detailsByPrinter[]
-      services[]
-      nalogReceipts[]
+      detailsByPrinter array
+      services array
+      nalogReceipts array
     }
 
     class ModelLine {
@@ -331,7 +331,7 @@ Multimaterial support is implemented as a real data path, not just a UI switch:
 - final material cost is calculated from each entry separately.
 
 ```mermaid
-sequenceDiagram
+    sequenceDiagram
     participant U as User
     participant ROW as Model row
     participant MODAL as Materials modal
@@ -342,7 +342,7 @@ sequenceDiagram
     ROW->>MODAL: Load material entries
     U->>MODAL: Edit composition
     MODAL->>CAT: Resolve selected materials
-    MODAL->>ROW: Save materialEntries[]
+    MODAL->>ROW: Save material entries array
     ROW->>ROW: Recompute total weight
     ROW->>ENG: Pass entries to calculation
     ENG->>CAT: Read price/type/cooling/prep
@@ -420,7 +420,7 @@ The `Summary` tab is a reporting layer built on top of saved history, not just t
 
 ```mermaid
 flowchart TD
-    A[calcHistory[]] --> B[Filter by period]
+    A[calcHistory array] --> B[Filter by period]
     B --> C[Orders aggregation]
     B --> D[Printers aggregation]
     B --> E[Materials aggregation]
