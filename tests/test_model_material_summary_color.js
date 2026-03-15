@@ -27,7 +27,7 @@ function extractFunctionSource(fileContent, functionName) {
     throw new Error(`Function ${functionName} is not closed properly`);
 }
 
-test('buildModelMaterialSummaryHtml renders material color markers', () => {
+test('buildModelMaterialSummaryHtml renders compact stacked material labels', () => {
     const indexPath = path.join(__dirname, '..', 'index.html');
     const indexContent = fs.readFileSync(indexPath, 'utf8');
     const fnSource = extractFunctionSource(indexContent, 'buildModelMaterialSummaryHtml');
@@ -44,6 +44,9 @@ test('buildModelMaterialSummaryHtml renders material color markers', () => {
         safeFixed(value) {
             const num = Number(value);
             return Number.isFinite(num) ? num.toFixed(2).replace(/\.?0+$/, '') : '0';
+        },
+        translateUiText(value) {
+            return value;
         }
     };
 
@@ -61,6 +64,12 @@ test('buildModelMaterialSummaryHtml renders material color markers', () => {
             matName: 'PETG Black',
             weight: 7,
             materialData: { color: '#111111', name: 'PETG Black' }
+        },
+        {
+            matName: 'ABS Gray',
+            weight: 4,
+            sourceTool: 'T3',
+            materialData: { color: '#888888', name: 'ABS Gray' }
         }
     ]);
 
@@ -68,6 +77,9 @@ test('buildModelMaterialSummaryHtml renders material color markers', () => {
     assert.match(html, /background:\s*#111111/i);
     assert.match(html, /PLA White/);
     assert.match(html, /PETG Black/);
-    assert.match(html, /12\.5г/);
-    assert.match(html, /7г/);
+    assert.match(html, /\+1 ещё/);
+    assert.doesNotMatch(html, /12\.5г/);
+    assert.doesNotMatch(html, /7г/);
+    assert.doesNotMatch(html, /\[T0\]/);
+    assert.doesNotMatch(html, /ABS Gray/);
 });

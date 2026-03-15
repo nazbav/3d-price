@@ -1410,6 +1410,41 @@
             background: rgba(255,255,255,0.08);
         }
 
+        .model-material-summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            max-width: 100%;
+        }
+
+        .model-material-summary-item,
+        .model-material-summary-more {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-width: 0;
+            line-height: 1.25;
+        }
+
+        .model-material-summary-dot {
+            width: 0.7em;
+            height: 0.7em;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+
+        .model-material-summary-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .model-material-summary-more {
+            color: var(--bs-secondary-color, #6c757d);
+            padding-left: 1.05rem;
+        }
+
         .calc-alert {
             border-radius: 0.75rem;
             padding: 1rem;
@@ -9528,16 +9563,32 @@
     }
 
     function buildModelMaterialSummaryHtml(materialEntriesDetail) {
-        return (materialEntriesDetail || [])
-            .map(entry => {
-                const color = entry.materialData?.color || '';
-                const text = `${entry.matName || entry.materialData?.name || translateUiText('Материал')}${entry.weight ? ` ${safeFixed(entry.weight)}г` : ''}${entry.sourceTool ? ` [${entry.sourceTool}]` : ''}`;
-                const dot = color
-                    ? `<span style="display:inline-block;width:0.7em;height:0.7em;border-radius:50%;background:${escapeHtml(color)};border:1px solid rgba(0,0,0,0.2);vertical-align:middle;margin-right:0.35em;"></span>`
-                    : '';
-                return `${dot}${escapeHtml(text)}`;
+        const uniqueMaterials = [];
+        const seen = new Set();
+        (materialEntriesDetail || []).forEach(entry => {
+            const rawName = String(entry.materialData?.name || entry.matName || '').trim();
+            if (!rawName) return;
+            const key = `${rawName}__${entry.materialData?.color || ''}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            uniqueMaterials.push({
+                color: entry.materialData?.color || '',
+                name: rawName
+            });
+        });
+        if (!uniqueMaterials.length) return escapeHtml(translateUiText('Материалы не выбраны'));
+
+        const visibleItems = uniqueMaterials.slice(0, 2)
+            .map(item => {
+                const dot = `<span class="model-material-summary-dot" style="background:${escapeHtml(item.color || '#9ca3af')};"></span>`;
+                return `<div class="model-material-summary-item">${dot}<span class="model-material-summary-name">${escapeHtml(item.name)}</span></div>`;
             })
-            .join(' <span class="text-muted">+</span> ');
+            .join('');
+        const extraCount = uniqueMaterials.length - 2;
+        const more = extraCount > 0
+            ? `<div class="model-material-summary-more">+${extraCount} ${escapeHtml(translateUiText('ещё'))}</div>`
+            : '';
+        return `<div class="model-material-summary-list">${visibleItems}${more}</div>`;
     }
 
     function buildModelMaterialSummary(materialEntriesDetail) {
