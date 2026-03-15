@@ -9301,6 +9301,16 @@
         row.dataset.materialEntries = JSON.stringify(normalizedEntries);
         const summary = row.querySelector('[data-role="model-material-summary"]');
         if (summary) {
+            const materialEntryDetails = normalizedEntries.map(entry => {
+                const material = findMaterialById(entry.materialId);
+                return {
+                    ...entry,
+                    matName: material ? material.name : (entry.sourceName || translateUiText('Материал')),
+                    materialData: material
+                        ? { color: material.color || '', name: material.name }
+                        : { color: '', name: entry.sourceName || translateUiText('Материал') }
+                };
+            });
             const fullLabel = normalizedEntries.length
                 ? normalizedEntries.map(entry => {
                     const material = findMaterialById(entry.materialId);
@@ -9309,16 +9319,12 @@
                 }).join(', ')
                 : translateUiText('Материалы не выбраны');
             const compactLabel = normalizedEntries.length
-                ? buildModelMaterialCompactLabel(normalizedEntries.map(entry => {
-                    const material = findMaterialById(entry.materialId);
-                    return {
-                        ...entry,
-                        matName: material ? material.name : (entry.sourceName || translateUiText('Материал')),
-                        materialData: material ? { name: material.name } : { name: entry.sourceName || translateUiText('Материал') }
-                    };
-                }))
+                ? buildModelMaterialCompactLabel(materialEntryDetails)
                 : translateUiText('Материалы не выбраны');
-            summary.textContent = compactLabel;
+            summary.innerHTML = normalizedEntries.length
+                ? buildModelMaterialSummaryHtml(materialEntryDetails)
+                : escapeHtml(translateUiText('Материалы не выбраны'));
+            summary.setAttribute('aria-label', compactLabel);
             summary.title = fullLabel;
         }
         syncModelRowWeightFromEntries(row);
@@ -9456,6 +9462,7 @@
             const costPerGram = (parseFloat(material.costPerKg) || 0) / 1000;
             const materialCost = weight * costPerGram;
             const materialData = {
+                color: material.color || '',
                 id: material.id,
                 declaredWeight: material.declaredWeight,
                 manufacturer: material.manufacturer,
@@ -9475,6 +9482,19 @@
             materials.push(material);
         });
         return { details, materials };
+    }
+
+    function buildModelMaterialSummaryHtml(materialEntriesDetail) {
+        return (materialEntriesDetail || [])
+            .map(entry => {
+                const color = entry.materialData?.color || '';
+                const text = `${entry.matName || entry.materialData?.name || translateUiText('Материал')}${entry.weight ? ` ${safeFixed(entry.weight)}г` : ''}${entry.sourceTool ? ` [${entry.sourceTool}]` : ''}`;
+                const dot = color
+                    ? `<span style="display:inline-block;width:0.7em;height:0.7em;border-radius:50%;background:${escapeHtml(color)};border:1px solid rgba(0,0,0,0.2);vertical-align:middle;margin-right:0.35em;"></span>`
+                    : '';
+                return `${dot}${escapeHtml(text)}`;
+            })
+            .join(' <span class="text-muted">+</span> ');
     }
 
     function buildModelMaterialSummary(materialEntriesDetail) {
