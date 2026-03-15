@@ -122,6 +122,393 @@ npm run dist:mac
 
 Electron-specific details live in [`electronapp/README.md`](./electronapp/README.md).
 
+## How the Calculator Works
+
+This section is a practical architecture map of the calculator. It is written for two audiences at once:
+
+- users who need to understand the correct operating flow;
+- developers who need a stable mental model before changing calculation logic, import flows, storage, or Electron behavior.
+
+### System Overview
+
+The active application lives in [`index.html`](./index.html). It acts as a local-first production calculator with optional desktop wrapping through [`electronapp/`](./electronapp/).
+
+```mermaid
+flowchart TD
+    U[User] --> APP[index.html]
+
+    APP --> CALC[Calculate]
+    APP --> HIST[History]
+    APP --> CLI[Clients]
+    APP --> PRN[Printers]
+    APP --> MAT[Materials]
+    APP --> ADD[Additional Costs]
+    APP --> SET[Settings]
+    APP --> SUM[Summary]
+
+    APP --> LS[localStorage]
+    APP --> JSON[JSON import/export]
+    APP --> CLOUD[Cloud sync]
+    APP --> SPOOL[Spoolman]
+
+    ELEC[Electron wrapper] --> APP
+    ELEC --> OFF[Offline copy]
+    ELEC --> BAK[Backup bridge]
+```
+
+### Main User Workflow
+
+For day-to-day use, the calculator is designed around a consistent order flow:
+
+1. maintain reference data;
+2. create or open an order in `Calculate`;
+3. add models manually or import G-code;
+4. verify printer, materials, time, weight, urgency, and pricing modifiers;
+5. run the calculation;
+6. save the result to history;
+7. export labels, estimate cards, or use the data in analytics.
+
+```mermaid
+flowchart LR
+    A[Set up printers and materials] --> B[Create order]
+    B --> C[Add models]
+    C --> D[Assign printer and materials]
+    D --> E[Run calculation]
+    E --> F[Review result]
+    F --> G[Save to history]
+    G --> H[Export / labels / analytics]
+```
+
+### Functional Modules
+
+At the product level, the calculator is split into a few stable responsibilities:
+
+- reference catalogs: printers, materials, clients, global overheads;
+- order composition: models, weights, material entries, statuses, thumbnails;
+- calculation engine: material, electricity, depreciation, maintenance, operator time, downtime, preparation, shipping, markup, discount, tax;
+- import layer: G-code parsing, printer/material matching, thumbnail extraction, remembered selections;
+- persistence: local-first app snapshot, JSON import/export, encrypted short-lived cloud sync;
+- reporting: history, summary analytics, estimate HTML, labels;
+- optional platform/integration layer: Electron and Spoolman.
+
+### Data Model Overview
+
+The runtime state centers around a single in-memory structure (`appData`) that mirrors what is persisted locally.
+
+```mermaid
+classDiagram
+    class appData {
+      printers[]
+      materials[]
+      clients[]
+      additionalGlobal[]
+      calcHistory[]
+      labelSettings
+      printerProfiles[]
+      materialProfiles[]
+    }
+
+    class Printer {
+      id
+      name
+      cost
+      hoursToRecoup
+      power
+      maintCostHour
+      multiMaterialEnabled
+    }
+
+    class Material {
+      id
+      name
+      materialType
+      color
+      costPerKg
+      balance
+      declaredWeight
+      manufacturer
+      coolingTime
+      printerPrepMinutes
+      spoolmanSpoolId
+    }
+
+    class HistoryEntry {
+      id
+      calcName
+      clientName
+      total
+      totalHours
+      detailsByPrinter[]
+      services[]
+      nalogReceipts[]
+    }
+
+    class ModelLine {
+      id
+      name
+      hours
+      realWeight
+      materialEntriesDetail[]
+      subTotalModel
+      status
+    }
+
+    appData --> Printer
+    appData --> Material
+    appData --> HistoryEntry
+    HistoryEntry --> ModelLine
+```
+
+For development, the important distinction is:
+
+- reference data lives in catalogs;
+- active order state is assembled in the `Calculate` UI;
+- completed results are materialized into `lastCalcFullData`;
+- saved results become `calcHistory`;
+- analytics are computed from `calcHistory`.
+
+### Calculation Pipeline
+
+The calculator builds the final price from multiple cost layers, not just material weight.
+
+```mermaid
+flowchart TD
+    A[Input data] --> B[Models by printer]
+    A --> C[Materials]
+    A --> D[Global overheads]
+    A --> E[Operator settings]
+    A --> F[Tax, markup, discount]
+    A --> G[Urgency and schedule]
+
+    B --> H[Print hours]
+    B --> I[Model weight]
+    B --> J[Material entries]
+
+    J --> K[Material cost]
+    H --> L[Electricity]
+    H --> M[Depreciation]
+    H --> N[Maintenance]
+    E --> O[Operator labor]
+    G --> P[Downtime and finish date]
+    D --> Q[Allocated overheads]
+
+    K --> R[Base production cost]
+    L --> R
+    M --> R
+    N --> R
+    O --> R
+    P --> R
+    Q --> R
+
+    R --> S[Markup]
+    S --> T[Discount]
+    T --> U[Tax]
+    U --> V[Final price]
+```
+
+In practical terms, the final amount may include:
+
+- materials;
+- printer electricity;
+- printer amortization;
+- maintenance;
+- operator work;
+- preparation time;
+- cooling / downtime effects;
+- shipping / packaging;
+- markup and discount;
+- tax;
+- optional estimate-printing or label-printing costs.
+
+### Multimaterial Models
+
+Multimaterial support is implemented as a real data path, not just a UI switch:
+
+- a printer can be flagged as multimaterial;
+- a model can contain one or many `materialEntries`;
+- the modal editor manages the material composition;
+- total model weight is derived from the sum of all entries;
+- final material cost is calculated from each entry separately.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant ROW as Model row
+    participant MODAL as Materials modal
+    participant CAT as Materials catalog
+    participant ENG as Calculation engine
+
+    U->>ROW: Open model materials
+    ROW->>MODAL: Load material entries
+    U->>MODAL: Edit composition
+    MODAL->>CAT: Resolve selected materials
+    MODAL->>ROW: Save materialEntries[]
+    ROW->>ROW: Recompute total weight
+    ROW->>ENG: Pass entries to calculation
+    ENG->>CAT: Read price/type/cooling/prep
+    ENG->>ENG: Build materialEntriesDetail
+    ENG->>U: Show final model cost
+```
+
+This is one of the most sensitive areas for regressions because UI rendering, stored data, weight synchronization, and final cost all depend on the same material-entry structure.
+
+### G-code Import Flow
+
+The calculator supports both direct drag-and-drop and external import flows such as [`open_calc.py`](./open_calc.py).
+
+```mermaid
+flowchart TD
+    A[G-code input] --> B[Parse metadata]
+    B --> C[Extract print time]
+    B --> D[Extract thumbnail]
+    B --> E[Extract printer/profile hints]
+    B --> F[Extract material/tool usage]
+
+    E --> G[Resolve printer]
+    F --> H[Resolve material entries]
+
+    G --> I{Printer found?}
+    H --> J{Materials found?}
+
+    I -- No --> K[Ask user / manual mapping]
+    J -- No --> L[Ask user / remembered mapping]
+
+    I -- Yes --> M[Create model row]
+    J -- Yes --> M
+
+    K --> M
+    L --> M
+
+    M --> N[Set hours]
+    M --> O[Set thumbnail]
+    M --> P[Set material entries]
+    P --> Q[Recompute model weight]
+```
+
+This flow is useful for both users and contributors:
+
+- users get faster order creation from slicer output;
+- developers need to understand that printer matching, material matching, thumbnails, and multimaterial parsing all converge into the same model-row state.
+
+### Persistence and Saved Results
+
+The calculator is local-first. Active state is persisted locally, and completed calculations are transformed into history records.
+
+```mermaid
+flowchart LR
+    A[Reference data + active order] --> B[appData]
+    B --> C[localStorage snapshot]
+    B --> D[JSON export/import]
+    B --> E[Cloud sync payload]
+
+    F[Calculation result] --> G[lastCalcFullData]
+    G --> H[History entry]
+    H --> I[calcHistory]
+    I --> J[History tab]
+    I --> K[Summary tab]
+```
+
+For maintenance and future changes, this means:
+
+- schema changes affect both current UI state and saved history;
+- import/export compatibility matters whenever object shapes change;
+- analytics stability depends on the structure of saved history entries.
+
+### Summary / Analytics
+
+The `Summary` tab is a reporting layer built on top of saved history, not just the current order.
+
+```mermaid
+flowchart TD
+    A[calcHistory[]] --> B[Filter by period]
+    B --> C[Orders aggregation]
+    B --> D[Printers aggregation]
+    B --> E[Materials aggregation]
+    B --> F[Clients aggregation]
+    B --> G[Statuses aggregation]
+
+    C --> H[KPI cards]
+    D --> I[Printer charts/tables]
+    E --> J[Material charts/tables]
+    F --> K[Client stats]
+    G --> L[Status distribution]
+
+    H --> M[Summary UI]
+    I --> M
+    J --> M
+    K --> M
+    L --> M
+```
+
+If you change how orders are saved, you should assume `Summary` may need verification as well.
+
+### Electron Layer
+
+Electron is not a separate calculator implementation; it is a desktop wrapper around the same `index.html`.
+
+```mermaid
+flowchart TD
+    MAIN[Electron main] --> PRELOAD[Preload bridge]
+    PRELOAD --> RENDERER[index.html]
+
+    PRELOAD --> BACKUP[backupBridge]
+    MAIN --> OFFLINE[Offline site copy]
+    BACKUP --> NOTIFY[Migration / backup signals]
+    RENDERER --> UI[Same calculator UI]
+```
+
+Desktop mode adds:
+
+- offline delivery;
+- backup integration;
+- desktop environment detection;
+- browser-like rendering with desktop-specific bridge hooks.
+
+### Spoolman Integration
+
+Spoolman is optional and sits beside the core calculator, not inside the primary pricing engine.
+
+```mermaid
+flowchart LR
+    A[Spoolman API] --> B[Filaments]
+    A --> C[Spools]
+    B --> D[Map to materials]
+    C --> D
+    D --> E[appData.materials]
+
+    F[Completed calculation] --> G[Aggregate used material]
+    G --> H[Update spool usage]
+```
+
+It is mainly relevant when users want material catalog synchronization and automatic spool usage tracking after successful calculations.
+
+### What to Check First When Modifying the Calculator
+
+If you change one of these areas, verify the connected flows as well:
+
+- **model row UI**: weight sync, material summary, history details;
+- **multimaterial modal**: material entries, total weight, final cost, label/export output;
+- **G-code import**: parsed time, printer matching, material matching, thumbnails;
+- **history schema**: import/export, saved reload, summary analytics;
+- **price logic**: operator cost, tax, markup, discount, preparation, downtime;
+- **Electron-specific behavior**: environment detection, offline mode, backup bridge;
+- **Spoolman**: mapping, duplicate spool IDs, usage update calls.
+
+### Recommended User Operating Order
+
+For reliable everyday use:
+
+1. maintain `Printers`;
+2. maintain `Materials`;
+3. maintain `Additional Costs`;
+4. configure `Settings` if needed;
+5. create the order in `Calculate`;
+6. add/import models;
+7. verify printers, materials, urgency, and modifiers;
+8. calculate;
+9. save to history;
+10. use exports and analytics as needed.
+
 ## G-code Import Notes
 
 The calculator can import G-code and map it into model rows. Current import-related behavior includes:
