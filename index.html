@@ -1445,6 +1445,21 @@
             padding-left: 1.05rem;
         }
 
+        .model-material-entry-preview {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-width: 0;
+            margin-top: 0.4rem;
+            color: var(--bs-secondary-color, #6c757d);
+        }
+
+        .model-material-entry-preview-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .calc-alert {
             border-radius: 0.75rem;
             padding: 1rem;
@@ -9438,6 +9453,14 @@
         }
     }
 
+    function buildModelMaterialEntryPreviewHtml(materialId) {
+        const material = findMaterialById(materialId);
+        if (!material) return '';
+        const color = escapeHtml(material.color || '#9ca3af');
+        const name = escapeHtml(material.name || translateUiText('Материал'));
+        return `<div class="model-material-entry-preview"><span class="model-material-summary-dot" style="background:${color};"></span><span class="model-material-entry-preview-name">${name}</span></div>`;
+    }
+
     function renderModelMaterialsModalRows(printerId, entries = []) {
         const container = document.getElementById('modelMaterialsModalEntries');
         if (!container) return;
@@ -9449,9 +9472,10 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-md-7">
                         <label class="form-label mb-1">${translateUiText('Материал')} ${index + 1}</label>
-                        <select class="form-select form-select-sm" data-role="model-material-entry-select" data-source-tool="${escapeHtml(entry.sourceTool || '')}" data-source-name="${escapeHtml(entry.sourceName || '')}">
+                        <select class="form-select form-select-sm" data-role="model-material-entry-select" data-source-tool="${escapeHtml(entry.sourceTool || '')}" data-source-name="${escapeHtml(entry.sourceName || '')}" onchange="updateModelMaterialEntryPreview(this)">
                             ${buildMaterialOptionsHtml(getAllMaterialsForPrinter(printerId, true), entry.materialId)}
                         </select>
+                        <div data-role="model-material-entry-preview">${buildModelMaterialEntryPreviewHtml(entry.materialId)}</div>
                         ${(entry.sourceTool || entry.sourceName) ? `<div class="form-text">G-code: ${(entry.sourceTool ? `${escapeHtml(entry.sourceTool)} · ` : '')}${escapeHtml(entry.sourceName || translateUiText('Материал').toLowerCase())}</div>` : ''}
                     </div>
                     <div class="col-md-3">
@@ -9465,6 +9489,15 @@
             </div>
         `).join('');
         syncModelMaterialsModalTotal();
+    }
+
+    function updateModelMaterialEntryPreview(selectEl) {
+        if (!selectEl) return;
+        const row = selectEl.closest('[data-role="model-material-entry"]');
+        if (!row) return;
+        const preview = row.querySelector('[data-role="model-material-entry-preview"]');
+        if (!preview) return;
+        preview.innerHTML = buildModelMaterialEntryPreviewHtml(selectEl.value || '');
     }
 
     function collectModelMaterialsModalEntries() {
