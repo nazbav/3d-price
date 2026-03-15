@@ -1305,52 +1305,89 @@
         .desktop-app-banner {
             display: none;
             align-items: center;
-            gap: 0.85rem;
-            padding: 0.8rem 1.1rem;
+            gap: 1rem;
+            padding: 1rem 1.1rem;
             margin-top: 1rem;
-            border-radius: 0.85rem;
-            border: 1px solid rgba(13, 110, 253, 0.18);
-            background: linear-gradient(120deg, rgba(13, 110, 253, 0.06) 0%, rgba(13, 202, 240, 0.04) 100%);
-            font-size: 0.875rem;
-            color: var(--bs-secondary-color, #6c757d);
-            transition: border-color 0.2s;
+            border-radius: 1rem;
+            border: 1px solid rgba(59, 130, 246, 0.16);
+            background:
+                radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 42%),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.94));
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+            font-size: 0.92rem;
+            color: #526071;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         }
         .desktop-app-banner:hover {
-            border-color: rgba(13, 110, 253, 0.35);
+            border-color: rgba(59, 130, 246, 0.28);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+            transform: translateY(-1px);
         }
         [data-bs-theme="dark"] .desktop-app-banner {
-            border-color: rgba(99, 157, 255, 0.2);
-            background: linear-gradient(120deg, rgba(99, 157, 255, 0.07) 0%, rgba(13, 202, 240, 0.05) 100%);
-            color: var(--bs-secondary-color, #9ea6b0);
+            border-color: rgba(148, 163, 184, 0.2);
+            background:
+                radial-gradient(circle at top left, rgba(96, 165, 250, 0.14), transparent 38%),
+                linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.94));
+            box-shadow: 0 18px 36px rgba(2, 6, 23, 0.28);
+            color: #c2cddd;
         }
         [data-bs-theme="dark"] .desktop-app-banner:hover {
-            border-color: rgba(99, 157, 255, 0.4);
+            border-color: rgba(148, 163, 184, 0.34);
+            box-shadow: 0 22px 40px rgba(2, 6, 23, 0.34);
         }
         .desktop-app-banner-icon {
-            font-size: 1.5rem;
-            line-height: 1;
+            width: 2.8rem;
+            height: 2.8rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.9rem;
             flex-shrink: 0;
-            opacity: 0.75;
+            color: #1d4ed8;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(59, 130, 246, 0.12);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+        }
+        [data-bs-theme="dark"] .desktop-app-banner-icon {
+            color: #bfdbfe;
+            background: rgba(15, 23, 42, 0.55);
+            border-color: rgba(148, 163, 184, 0.16);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+        .desktop-app-banner-icon svg {
+            width: 1.3rem;
+            height: 1.3rem;
         }
         .desktop-app-banner-body {
             flex: 1;
-            line-height: 1.45;
+            line-height: 1.5;
         }
         .desktop-app-banner-title {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--bs-body-color);
-            font-size: 0.9rem;
+            font-size: 0.98rem;
+            margin-bottom: 0.2rem;
         }
         .desktop-app-banner a.desktop-app-link {
-            color: var(--bs-primary);
-            font-weight: 600;
+            color: #0f5cc0;
+            font-weight: 700;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.35rem;
+            padding: 0.45rem 0.75rem;
+            margin-top: 0.55rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(59, 130, 246, 0.15);
         }
         .desktop-app-banner a.desktop-app-link:hover {
             text-decoration: underline;
+        }
+        [data-bs-theme="dark"] .desktop-app-banner a.desktop-app-link {
+            color: #dbeafe;
+            background: rgba(30, 41, 59, 0.78);
+            border-color: rgba(148, 163, 184, 0.16);
         }
         .desktop-app-banner-close {
             background: none;
@@ -2351,13 +2388,19 @@
                             </div>
                             <div class="calc-result-panel" id="calcResult" style="display:none;"></div>
                             <div class="desktop-app-banner" id="desktopAppBanner" role="note" aria-label="Рекомендация">
-                                <div class="desktop-app-banner-icon">🖥️</div>
+                                <div class="desktop-app-banner-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+                                        <path d="M8 20h8"></path>
+                                        <path d="M12 16v4"></path>
+                                    </svg>
+                                </div>
                                 <div class="desktop-app-banner-body">
-                                    <div class="desktop-app-banner-title">Используете Windows?</div>
-                                    <div>Для удобства рекомендуем
+                                    <div class="desktop-app-banner-title">Для удобства использования рекомендуем десктопную версию</div>
+                                    <div>Если вы работаете в Windows вне Electron-приложения, удобнее открыть калькулятор в отдельном приложении.
                                         <a class="desktop-app-link" href="https://github.com/nazbav/3d-price/releases" target="_blank" rel="noopener noreferrer">
                                             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="margin-bottom:1px"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
-                                            скачать десктопную версию
+                                            Скачать
                                         </a>
                                     </div>
                                 </div>
@@ -10100,6 +10143,11 @@
         return !!(window && window.backupBridge);
     }
 
+    function shouldShowDesktopAppBanner({ platform = '', userAgent = '', isElectron = false } = {}) {
+        if (isElectron) return false;
+        return /Win/i.test(platform || '') || /Windows/i.test(userAgent || '');
+    }
+
     function ensureElectronToastHost() {
         if (document.getElementById('electronToastContainer')) return;
         if (!document.body) return;
@@ -11327,9 +11375,12 @@
 
         // Рекомендуем десктоп-версию Windows-пользователям вне Electron
         const _daBanner = document.getElementById('desktopAppBanner');
-        if (_daBanner && !isElectronEnv()) {
-            const _isWin = /Win/i.test(navigator.platform || '') || /Windows/i.test(navigator.userAgent || '');
-            if (_isWin) _daBanner.style.display = 'flex';
+        if (_daBanner) {
+            _daBanner.style.display = shouldShowDesktopAppBanner({
+                platform: navigator.platform || '',
+                userAgent: navigator.userAgent || '',
+                isElectron: isElectronEnv()
+            }) ? 'flex' : 'none';
         }
     }
 
