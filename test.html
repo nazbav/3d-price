@@ -4038,6 +4038,10 @@
     }
 
     function getCurrentLanguage() {
+        if (window.i18next) {
+            const runtimeLanguage = window.i18next.resolvedLanguage || window.i18next.language;
+            if (runtimeLanguage) return normalizeSupportedLanguage(runtimeLanguage);
+        }
         return normalizeSupportedLanguage(document.documentElement.lang || resolveActiveLanguage());
     }
 
@@ -4153,10 +4157,13 @@
     }
 
     function applyI18nToPage() {
+        const targetLanguage = window.i18next && window.i18next.isInitialized
+            ? normalizeSupportedLanguage(window.i18next.resolvedLanguage || window.i18next.language)
+            : resolveActiveLanguage();
         const originalTitle = document.documentElement.dataset.i18nOriginalTitle || document.title;
         document.documentElement.dataset.i18nOriginalTitle = originalTitle;
+        document.documentElement.lang = targetLanguage;
         document.title = translateUiText(originalTitle);
-        document.documentElement.lang = getCurrentLanguage();
         if (document.body) translateElementTree(document.body);
         syncLanguageOverrideControl();
         updateThemeToggleLabel();
