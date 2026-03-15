@@ -3662,6 +3662,10 @@
         'Импорт/Экспорт': 'Import/Export',
         'Мой Налог': 'My Tax',
         'О калькуляторе': 'About calculator',
+        'Мультиматериальная печать': 'Multi-material printing',
+        'Материалы модели': 'Model materials',
+        'Материалы модели:': 'Model materials:',
+        'Общий вес:': 'Total weight:',
         'Название компании:': 'Company name:',
         'Ссылка на чат (QR):': 'Chat link (QR):',
         'Банковские реквизиты (р/с):': 'Bank details:',
@@ -4008,6 +4012,8 @@
         ,'Часы': 'Hours'
         ,'Вес (г)': 'Weight (g)'
         ,'Материал': 'Material'
+        ,'Материалы не выбраны': 'No materials selected'
+        ,'режим принтера без мультиматериала': 'printer mode without multi-material support'
         ,'Сумма': 'Amount'
         ,'не в расчёте': 'not included'
         ,'Обновление формата данных': 'Data format update'
@@ -4084,6 +4090,7 @@
         ,'Средняя партия': 'Average batch'
         ,'моделей': 'models'
         ,'Моделей в заказе': 'Models per order'
+        ,'Ср. цена': 'Avg. price'
         ,'Диаграммы и тренды': 'Charts and trends'
         ,'Структура затрат': 'Cost structure'
         ,'Материалы по расходу': 'Materials by usage'
@@ -4177,6 +4184,7 @@
         ,'Затраты': 'Costs'
         ,'Прочее': 'Other'
         ,'Модель': 'Model'
+        ,'Стоимость': 'Cost'
         ,'Дата начала': 'Start date'
         ,'Печать сметы': 'Estimate printing'
         ,'Обед': 'Lunch'
@@ -9145,20 +9153,20 @@
             const fullLabel = normalizedEntries.length
                 ? normalizedEntries.map(entry => {
                     const material = findMaterialById(entry.materialId);
-                    const name = material ? material.name : (entry.sourceName || 'Материал');
-                    return `${name}${entry.weight > 0 ? ` (${safeFixed(entry.weight)} г)` : ''}`;
+                    const name = material ? material.name : (entry.sourceName || translateUiText('Материал'));
+                    return `${name}${entry.weight > 0 ? ` (${safeFixed(entry.weight)} ${translateUiText('г')})` : ''}`;
                 }).join(', ')
-                : 'Материалы не выбраны';
+                : translateUiText('Материалы не выбраны');
             const compactLabel = normalizedEntries.length
                 ? buildModelMaterialCompactLabel(normalizedEntries.map(entry => {
                     const material = findMaterialById(entry.materialId);
                     return {
                         ...entry,
-                        matName: material ? material.name : (entry.sourceName || 'Материал'),
-                        materialData: material ? { name: material.name } : { name: entry.sourceName || 'Материал' }
+                        matName: material ? material.name : (entry.sourceName || translateUiText('Материал')),
+                        materialData: material ? { name: material.name } : { name: entry.sourceName || translateUiText('Материал') }
                     };
                 }))
-                : 'Материалы не выбраны';
+                : translateUiText('Материалы не выбраны');
             summary.textContent = compactLabel;
             summary.title = fullLabel;
         }
@@ -9205,18 +9213,18 @@
             <div class="border rounded p-2" data-role="model-material-entry">
                 <div class="row g-2 align-items-end">
                     <div class="col-md-7">
-                        <label class="form-label mb-1">Материал ${index + 1}</label>
+                        <label class="form-label mb-1">${translateUiText('Материал')} ${index + 1}</label>
                         <select class="form-select form-select-sm" data-role="model-material-entry-select" data-source-tool="${escapeHtml(entry.sourceTool || '')}" data-source-name="${escapeHtml(entry.sourceName || '')}">
                             ${buildMaterialOptionsHtml(getAllMaterialsForPrinter(printerId, true), entry.materialId)}
                         </select>
-                        ${(entry.sourceTool || entry.sourceName) ? `<div class="form-text">G-code: ${(entry.sourceTool ? `${escapeHtml(entry.sourceTool)} · ` : '')}${escapeHtml(entry.sourceName || 'материал')}</div>` : ''}
+                        ${(entry.sourceTool || entry.sourceName) ? `<div class="form-text">G-code: ${(entry.sourceTool ? `${escapeHtml(entry.sourceTool)} · ` : '')}${escapeHtml(entry.sourceName || translateUiText('Материал').toLowerCase())}</div>` : ''}
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label mb-1">Вес (г)</label>
+                        <label class="form-label mb-1">${translateUiText('Вес (г)')}</label>
                         <input type="number" step="0.1" min="0" class="form-control form-control-sm" data-role="model-material-entry-weight" value="${entry.weight > 0 ? entry.weight : ''}" oninput="syncModelMaterialsModalTotal()">
                     </div>
                     <div class="col-md-2 d-grid">
-                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeModelMaterialsModalRow(this)">Удалить</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeModelMaterialsModalRow(this)">${translateUiText('Удалить')}</button>
                     </div>
                 </div>
             </div>
@@ -9269,10 +9277,10 @@
         currentModelMaterialsRow = row;
         const printerId = row.dataset.printerId;
         const title = document.querySelector('#modelMaterialsModal .modal-title');
-        if (title) title.textContent = `Материалы модели: ${row.querySelector('input[data-role="model-name"]')?.value || row.dataset.modelId || ''}`;
+        if (title) title.textContent = `${translateUiText('Материалы модели:')} ${row.querySelector('input[data-role="model-name"]')?.value || row.dataset.modelId || ''}`;
         const summary = document.getElementById('modelMaterialsModalSummary');
         if (summary) {
-            summary.textContent = `${printerNameById(printerId)}${!printerSupportsMultiMaterial(printerId) ? ' · режим принтера без мультиматериала' : ''}`;
+            summary.textContent = `${printerNameById(printerId)}${!printerSupportsMultiMaterial(printerId) ? ` · ${translateUiText('режим принтера без мультиматериала')}` : ''}`;
         }
         const addButton = document.getElementById('addModelMaterialEntryBtn');
         if (addButton) addButton.disabled = !printerSupportsMultiMaterial(printerId);
@@ -10709,11 +10717,11 @@
                         const qualityLabel = getModelQualityLabel(ln.status);
                         const safeNameRaw = escapeHtml(ln.name || '');
                         const rawId = ln.id ? escapeHtml(String(ln.id)) : '';
-                        const displayName = safeNameRaw && safeNameRaw !== rawId ? safeNameRaw : `Модель ${idx + 1}`;
+                        const displayName = safeNameRaw && safeNameRaw !== rawId ? safeNameRaw : `${translateUiText('Модель')} ${idx + 1}`;
                         const idBadge = rawId ? `#${idx + 1} · ${rawId}` : `#${idx + 1}`;
                         const safeMaterial = escapeHtml(ln.shortMatName || ln.matName || '—');
                         const safeMaterialTitle = escapeHtml(ln.fullMatName || ln.matName || '—');
-                        const excludedNote = ln.excludedFromTotals ? ' <span class="badge bg-secondary ms-1">Не в расчёте<\/span>' : '';
+                        const excludedNote = ln.excludedFromTotals ? ` <span class="badge bg-secondary ms-1">${translateUiText('не в расчёте')}<\/span>` : '';
                         const status = [statusLabel, qualityLabel].filter(Boolean).join(' · ') || '—';
                         const chipStats = [
                             {icon: '⏱', value: `${formatTimeForDisplay(ln.hours)} ${translateUiText('ч')}`},
@@ -10751,8 +10759,8 @@
                                         <div class="calc-printer-card-total">${formatMoney(ln.subTotalModel)}</div>
                                         <button class="btn btn-sm btn-outline-secondary"
                                             onclick='downloadThermoLabelHtml(${JSON.stringify(ln.name || "")}, ${JSON.stringify(d.printerName || "")}, ${JSON.stringify(ln.shortMatName || ln.matName || "")}, ${JSON.stringify(safeFixed(ln.hours))}, ${JSON.stringify(safeFixed(ln.realWeight))}, ${JSON.stringify(ln.thumbnail || "")})'
-                                            ${ln.excludedFromTotals ? 'disabled title="Модель исключена из расчёта"' : ''}>
-                                            Этикетка
+                                            ${ln.excludedFromTotals ? `disabled title="${translateUiText('Модель')} ${translateUiText('не в расчёте')}"` : ''}>
+                                            ${translateUiText('Этикетка')}
                                         </button>
                                     </div>
                                 </div>
@@ -13376,24 +13384,24 @@
             <div>
               <strong>${m.name}</strong>
               <div class="text-muted small">${m.type || '—'} | ${m.manufacturer || '—'}</div>
-              <div class="text-muted small">Расход: ${formatNumber(m.totalGrams / 1000, 3)} кг · ${getCurrencySymbol()}/кг: ${costPerKg > 0 ? `${formatCurrency(costPerKg)}/кг` : `${formatMoney(0)}/кг`}</div>
+              <div class="text-muted small">${translateUiText('Требуется:')} ${formatNumber(m.totalGrams / 1000, 3)} ${translateUiText('кг')} · ${getCurrencySymbol()}/${translateUiText('кг')}: ${costPerKg > 0 ? `${formatCurrency(costPerKg)}/${translateUiText('кг')}` : `${formatMoney(0)}/${translateUiText('кг')}`}</div>
             </div>
             <div class="text-end ms-2">
               <span class="${margin >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(margin)}</span>
-              <div class="small text-muted">Маржа</div>
+              <div class="small text-muted">${translateUiText('Маржа')}</div>
             </div>
           </div>
           <div class="progress mt-1" style="height: 4px;">
             <div class="progress-bar bg-info" style="width: ${Math.min(100, Math.max(0, share))}%"></div>
           </div>
-          <div class="summary-mini-label">Доля расхода: ${formatNumber(share, 1)}%</div>
+          <div class="summary-mini-label">${translateUiText('Доля расхода:')} ${formatNumber(share, 1)}%</div>
         </td>
         <td class="text-end">${formatCurrency(m.totalCost)}</td>
         <td class="text-end">${formatCurrency(m.totalRevenue || 0)}</td>
         <td class="text-end">${formatMoneyWithUnit(clientPricePerGram, '/г')}</td>
       </tr>
     `;
-            }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">Нет данных по материалам</td></tr>`;
+            }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">${translateUiText('Нет данных по материалам')}</td></tr>`;
             const downtimeHours = (totalDowntimeMinutes || 0) / 60;
             const coolingHours = (totalCoolingMinutes || 0) / 60;
             const prepHours = (totalPrepMinutes || 0) / 60;
@@ -13414,16 +13422,16 @@
           <div class="summary-cell-stack">
             <div>${p.name}</div>
             <div class="summary-mini-bar"><span style="width:${Math.min(100, Math.max(0, revenueShare))}%"></span></div>
-            <div class="summary-mini-label">Доля выручки: ${formatNumber(revenueShare, 1)}%</div>
+            <div class="summary-mini-label">${translateUiText('Доля выручки:')} ${formatNumber(revenueShare, 1)}%</div>
           </div>
         </td>
-        <td class="text-end">${formatNumber(p.hours, 1)} ч</td>
-        <td class="text-end">${formatNumber(prepHours, 2)} ч</td>
+        <td class="text-end">${formatNumber(p.hours, 1)} ${translateUiText('ч')}</td>
+        <td class="text-end">${formatNumber(prepHours, 2)} ${translateUiText('ч')}</td>
         <td class="text-end">${formatCurrency(p.revenue)}</td>
         <td class="text-end">${formatCurrency(expenses)}</td>
         <td class="text-end">${p.prints}</td>
       </tr>`;
-            }).join('') || `<tr><td colspan="6" class="text-center text-muted py-4">Нет данных по принтерам</td></tr>`;
+            }).join('') || `<tr><td colspan="6" class="text-center text-muted py-4">${translateUiText('Нет данных по принтерам')}</td></tr>`;
 
             const totalClientRevenue = Object.values(clientStats).reduce((sum, c) => sum + c.revenue, 0);
             const totalClientCost = Object.values(clientStats).reduce((sum, c) => sum + c.cost, 0);
@@ -13439,7 +13447,7 @@
           <div class="summary-cell-stack">
             <div>${c.name}</div>
             <div class="summary-mini-bar"><span style="width:${Math.min(100, Math.max(0, revenueShare))}%"></span></div>
-            <div class="summary-mini-label">Доля выручки: ${formatNumber(revenueShare, 1)}%</div>
+            <div class="summary-mini-label">${translateUiText('Доля выручки:')} ${formatNumber(revenueShare, 1)}%</div>
           </div>
         </td>
         <td class="text-end">${formatCurrency(c.revenue)}</td>
@@ -13447,7 +13455,7 @@
         <td class="text-end ${profit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(profit)}</td>
         <td class="text-end">${c.orders}</td>
       </tr>`;
-            }).join('') || `<tr><td colspan="5" class="text-center text-muted py-4">Нет данных по клиентам</td></tr>`;
+            }).join('') || `<tr><td colspan="5" class="text-center text-muted py-4">${translateUiText('Нет данных по клиентам')}</td></tr>`;
             const clientProfitBadgeClass = totalClientProfit >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
             const printerHoursTotal = formatNumber(ordersAnalysis.totalPrintHours, 1);
             const printerPrepTotal = formatNumber((ordersAnalysis.totalPrepMinutes || 0) / 60, 2);
@@ -13507,7 +13515,7 @@
                 color: COST_STRUCTURE_COLORS[index % COST_STRUCTURE_COLORS.length]
             }));
             const costDonut = buildDonutChart(costDonutSegments, {
-                centerLabel: 'Затраты',
+                centerLabel: translateUiText('Затраты'),
                 centerValue: formatCurrency(breakdownTotal),
                 valueFormatter: formatCurrency
             });
@@ -13530,13 +13538,13 @@
             }));
             if (materialRest > 0) {
                 materialSegments.push({
-                    label: 'Прочее',
+                    label: translateUiText('Прочее'),
                     value: materialRest,
                     color: COST_STRUCTURE_COLORS[(materialSegments.length + 2) % COST_STRUCTURE_COLORS.length]
                 });
             }
             const materialDonut = buildDonutChart(materialSegments, {
-                centerLabel: 'Материалы',
+                centerLabel: translateUiText('Материалы'),
                 centerValue: `${formatNumber((kpis.totalGrams || 0) / 1000, 2)} ${translateUiText('кг')}`,
                 valueFormatter: (value) => `${formatNumber(value / 1000, 2)} ${translateUiText('кг')}`
             });
@@ -13552,10 +13560,10 @@
 
             const downtimeIdleHours = Math.max(0, downtimeHours - coolingHours);
             const timeSegments = [
-                { label: 'Печать', value: totalPrintHours, color: '#2563eb' },
-                { label: 'Подготовка', value: prepHours, color: '#f97316' },
-                { label: 'Остывание', value: coolingHours, color: '#38bdf8' },
-                { label: 'Простой', value: downtimeIdleHours, color: '#94a3b8' }
+                { label: translateUiText('Печать'), value: totalPrintHours, color: '#2563eb' },
+                { label: translateUiText('Подготовка'), value: prepHours, color: '#f97316' },
+                { label: translateUiText('Остывание'), value: coolingHours, color: '#38bdf8' },
+                { label: translateUiText('Простой'), value: downtimeIdleHours, color: '#94a3b8' }
             ];
             const timeTrack = buildTimeTrack(timeSegments);
 
@@ -13581,11 +13589,11 @@
                 }
             });
             const statusItems = [
-                { key: 'new', label: 'Новые', color: '#93c5fd', value: statusCounts.new },
-                { key: 'inprogress', label: 'В работе', color: '#2563eb', value: statusCounts.inprogress },
-                { key: 'done', label: 'Готово', color: '#10b981', value: statusCounts.done },
-                { key: 'paid', label: 'Оплачено', color: '#22c55e', value: statusCounts.paid },
-                { key: 'canceled', label: 'Отменено', color: '#ef4444', value: statusCounts.canceled }
+                { key: 'new', label: translateUiText('Новые'), color: '#93c5fd', value: statusCounts.new },
+                { key: 'inprogress', label: translateUiText('В работе'), color: '#2563eb', value: statusCounts.inprogress },
+                { key: 'done', label: translateUiText('Готово'), color: '#10b981', value: statusCounts.done },
+                { key: 'paid', label: translateUiText('Оплачено'), color: '#22c55e', value: statusCounts.paid },
+                { key: 'canceled', label: translateUiText('Отменено'), color: '#ef4444', value: statusCounts.canceled }
             ];
             const statusBars = buildStatusBars(statusItems.filter(item => item.value > 0));
 
@@ -13601,20 +13609,20 @@
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <strong>${stat.name}</strong>
-              <div class="text-muted small">База: ${formatCurrency(stat.baseCost)}</div>
+              <div class="text-muted small">${translateUiText('База:')} ${formatCurrency(stat.baseCost)}</div>
             </div>
-            <span class="${paidOff ? 'text-success' : 'text-warning'}">${paidOff ? 'Окупился' : 'В работе'}</span>
+            <span class="${paidOff ? 'text-success' : 'text-warning'}">${paidOff ? translateUiText('Окупился') : translateUiText('В работе')}</span>
           </div>
           <div class="progress mt-2" style="height: 6px;">
             <div class="progress-bar ${paidOff ? 'bg-success' : 'bg-warning'}" style="width: ${Math.min(100, Math.max(0, progress))}%"></div>
           </div>
-          <div class="summary-mini-label">Заполнение: ${formatNumber(progress, 1)}%</div>
+          <div class="summary-mini-label">${translateUiText('Заполнение:')} ${formatNumber(progress, 1)}%</div>
         </td>
         <td class="text-end">${formatCurrency(stat.distributed)}</td>
         <td class="text-end">${formatCurrency(Math.max(0, stat.baseCost - stat.distributed))}</td>
         <td class="text-end">${stat.orders || 0}</td>
       </tr>`;
-            }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">Нет активных накладных расходов</td></tr>`;
+            }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">${translateUiText('Нет активных накладных расходов')}</td></tr>`;
 
             const topMaterials = Object.values(materialStats)
                 .sort((a, b) => (b.totalGrams || 0) - (a.totalGrams || 0))
@@ -13624,14 +13632,14 @@
                 return `
       <div class="calc-result-info">
         <span>${m.name}</span>
-        <strong>${formatNumber(m.totalGrams / 1000, 2)} кг</strong>
-        <small>Себест.: ${formatCurrency(m.totalCost || 0)} · Доля: ${formatNumber(share, 1)}%</small>
+        <strong>${formatNumber(m.totalGrams / 1000, 2)} ${translateUiText('кг')}</strong>
+        <small>${translateUiText('Себест.:')} ${formatCurrency(m.totalCost || 0)} · ${translateUiText('Доля расхода:')} ${formatNumber(share, 1)}%</small>
         <div class="progress mt-2" style="height:4px;">
           <div class="progress-bar bg-info" style="width:${Math.min(100, Math.max(0, share))}%"></div>
         </div>
       </div>
     `;
-            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет данных по материалам.</div>`;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет данных по материалам.')}</div>`;
 
             const topPrinters = Object.values(printerStats)
                 .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
@@ -13644,13 +13652,13 @@
       <div class="calc-result-info">
         <span>${p.name}</span>
         <strong>${formatCurrency(p.revenue || 0)}</strong>
-        <small>Прибыль: ${formatCurrency(profit)} · Часы: ${formatNumber(p.hours, 1)} · Модели: ${p.prints}</small>
+        <small>${translateUiText('Прибыль:')} ${formatCurrency(profit)} · ${translateUiText('Часы')}: ${formatNumber(p.hours, 1)} · ${translateUiText('Модели:')} ${p.prints}</small>
         <div class="progress mt-2" style="height:4px;">
           <div class="progress-bar bg-primary" style="width:${Math.min(100, Math.max(0, share))}%"></div>
         </div>
       </div>
     `;
-            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет данных по принтерам.</div>`;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет данных по принтерам.')}</div>`;
 
             const topClients = Object.values(clientStats)
                 .sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
@@ -13662,13 +13670,13 @@
       <div class="calc-result-info">
         <span>${c.name}</span>
         <strong>${formatCurrency(c.revenue)}</strong>
-        <small>Прибыль: ${formatCurrency(profit)} · Заказы: ${c.orders}</small>
+        <small>${translateUiText('Прибыль:')} ${formatCurrency(profit)} · ${translateUiText('Заказы')}: ${c.orders}</small>
         <div class="progress mt-2" style="height:4px;">
           <div class="progress-bar bg-success" style="width:${Math.min(100, Math.max(0, share))}%"></div>
         </div>
       </div>
     `;
-            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет данных по клиентам.</div>`;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет данных по клиентам.')}</div>`;
 
             const topAdditional = Object.values(additionalStats)
                 .sort((a, b) => (b.distributed || 0) - (a.distributed || 0))
@@ -13679,22 +13687,22 @@
       <div class="calc-result-info">
         <span>${stat.name}</span>
         <strong>${formatCurrency(stat.distributed)}</strong>
-        <small>Остаток: ${formatCurrency(Math.max(0, stat.baseCost - stat.distributed))} · База: ${formatCurrency(stat.baseCost)}</small>
+        <small>${translateUiText('Остаток')}: ${formatCurrency(Math.max(0, stat.baseCost - stat.distributed))} · ${translateUiText('База:')} ${formatCurrency(stat.baseCost)}</small>
         <div class="progress mt-2" style="height:4px;">
           <div class="progress-bar bg-warning" style="width:${Math.min(100, Math.max(0, progress))}%"></div>
         </div>
       </div>
     `;
-            }).join('') || `<div class="calc-empty-placeholder text-muted small">Нет накладных расходов.</div>`;
+            }).join('') || `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет накладных расходов.')}</div>`;
 
             const kpiCardItems = [
-                {title: 'Окупаемость', value: paybackAbs, desc: 'Прибыль минус капвложения', format: formatCurrency, valueClass: paybackAbs >= 0 ? 'text-success' : 'text-danger'},
-                {title: 'Прибыль/час', value: profitPerHour, unit: ` ${getCurrencySymbol()}/ч`, desc: 'Чистая прибыль на час', decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
-                {title: 'Себестоимость на кг', value: costPerKg, unit: ` ${getCurrencySymbol()}/кг`, desc: 'Все расходы / масса', decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
-                {title: 'Цена клиента', value: avgClientPricePerGram, unit: ` ${getCurrencySymbol()}/г`, desc: 'Средняя цена за грамм', decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
-                {title: 'Средний расход', value: avgMaterialPerOrder / 1000, unit: ' кг', desc: 'Материал / заказ', decimals: 2},
-                {title: 'Среднее время печати', value: avgPrintHoursPerOrder, unit: ' ч', desc: 'Часов печати / заказ', decimals: 1},
-                {title: 'Средняя партия', value: avgModelsPerOrder, unit: ' моделей', desc: 'Моделей в заказе', decimals: 1},
+                {title: translateUiText('Окупаемость'), value: paybackAbs, desc: translateUiText('Прибыль минус капвложения'), format: formatCurrency, valueClass: paybackAbs >= 0 ? 'text-success' : 'text-danger'},
+                {title: translateUiText('Прибыль/час'), value: profitPerHour, unit: ` ${getCurrencySymbol()}/${translateUiText('ч')}`, desc: translateUiText('Чистая прибыль на час'), decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
+                {title: translateUiText('Себестоимость на кг'), value: costPerKg, unit: ` ${getCurrencySymbol()}/${translateUiText('кг')}`, desc: translateUiText('Все расходы / масса'), decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
+                {title: translateUiText('Цена клиента'), value: avgClientPricePerGram, unit: ` ${getCurrencySymbol()}/${translateUiText('г')}`, desc: translateUiText('Средняя цена за грамм'), decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
+                {title: translateUiText('Средний расход'), value: avgMaterialPerOrder / 1000, unit: ` ${translateUiText('кг')}`, desc: translateUiText('Материал / заказ'), decimals: 2},
+                {title: translateUiText('Среднее время печати'), value: avgPrintHoursPerOrder, unit: ` ${translateUiText('ч')}`, desc: translateUiText('Часов печати / заказ'), decimals: 1},
+                {title: translateUiText('Средняя партия'), value: avgModelsPerOrder, unit: ` ${translateUiText('моделей')}`, desc: translateUiText('Моделей в заказе'), decimals: 1},
             ];
             const formatCardValue = (card) => {
                 if (typeof card.format === 'function') {
@@ -13716,46 +13724,46 @@
     <div class="calc-layout summary-layout">
       <div class="calc-main">
         <div class="calc-card">
-          <div class="calc-section-title"><i class="bi bi-bar-chart-line me-2"></i>Ключевые показатели</div>
+          <div class="calc-section-title"><i class="bi bi-bar-chart-line me-2"></i>${translateUiText('Ключевые показатели')}</div>
           <div class="calc-result-info-grid summary-kpi-grid">
             ${kpiCards}
           </div>
         </div>
 
         <div class="calc-card">
-          <div class="calc-section-title"><i class="bi bi-pie-chart me-2"></i>Диаграммы и тренды</div>
+          <div class="calc-section-title"><i class="bi bi-pie-chart me-2"></i>${translateUiText('Диаграммы и тренды')}</div>
           <div class="summary-charts-grid">
             <div class="summary-chart-card">
-              <div class="summary-chart-title">Структура затрат</div>
+              <div class="summary-chart-title">${translateUiText('Структура затрат')}</div>
               <div class="d-flex flex-column align-items-center gap-2">
                 ${costDonut}
                 ${costLegend}
               </div>
             </div>
             <div class="summary-chart-card">
-              <div class="summary-chart-title">Материалы по расходу</div>
+              <div class="summary-chart-title">${translateUiText('Материалы по расходу')}</div>
               <div class="d-flex flex-column align-items-center gap-2">
                 ${materialDonut}
                 ${materialLegend}
               </div>
             </div>
             <div class="summary-chart-card">
-              <div class="summary-chart-title">Выручка по периоду</div>
+              <div class="summary-chart-title">${translateUiText('Выручка по периоду')}</div>
               ${revenueSparkline}
               <div class="d-flex justify-content-between small text-muted mt-2">
-                <span>Итого: ${formatCurrency(revenueSum)}</span>
-                <span>Точек: ${revenueSeries.length}</span>
+                <span>${translateUiText('Итого:')} ${formatCurrency(revenueSum)}</span>
+                <span>${translateUiText('Точек:')} ${revenueSeries.length}</span>
               </div>
             </div>
             <div class="summary-chart-card">
-              <div class="summary-chart-title">Время производства</div>
+              <div class="summary-chart-title">${translateUiText('Время производства')}</div>
               ${timeTrack}
-              <div class="small text-muted mt-2">Всего: ${formatNumber(totalPrintHours + downtimeHours + prepHours, 1)} ${translateUiText('ч')}</div>
+              <div class="small text-muted mt-2">${translateUiText('Всего:')} ${formatNumber(totalPrintHours + downtimeHours + prepHours, 1)} ${translateUiText('ч')}</div>
             </div>
             <div class="summary-chart-card">
-              <div class="summary-chart-title">Статусы заказов</div>
+              <div class="summary-chart-title">${translateUiText('Статусы заказов')}</div>
               ${statusBars}
-              <div class="small text-muted mt-2">Всего: ${statusOrders.length}</div>
+              <div class="small text-muted mt-2">${translateUiText('Всего:')} ${statusOrders.length}</div>
             </div>
           </div>
         </div>
@@ -13763,7 +13771,7 @@
           <div class="row g-3">
           <div class="col-12">
             <div class="calc-card">
-              <div class="calc-section-title"><i class="bi bi-printer me-2"></i>Топ принтеров</div>
+              <div class="calc-section-title"><i class="bi bi-printer me-2"></i>${translateUiText('Топ принтеров')}</div>
               <div class="calc-result-info-grid summary-list-grid">
                 ${printersTopHtml}
               </div>
@@ -13771,7 +13779,7 @@
           </div>
           <div class="col-12">
             <div class="calc-card">
-              <div class="calc-section-title"><i class="bi bi-people me-2"></i>Топ клиентов</div>
+              <div class="calc-section-title"><i class="bi bi-people me-2"></i>${translateUiText('Топ клиентов')}</div>
               <div class="calc-result-info-grid summary-list-grid">
                 ${clientsTopHtml}
               </div>
@@ -13782,7 +13790,7 @@
         <div class="row g-3">
           <div class="col-lg-6">
             <div class="calc-card">
-              <div class="calc-section-title"><i class="bi bi-boxes me-2"></i>Топ материалов</div>
+              <div class="calc-section-title"><i class="bi bi-boxes me-2"></i>${translateUiText('Топ материалов')}</div>
               <div class="calc-result-info-grid summary-list-grid">
                 ${materialsTopHtml}
               </div>
@@ -13790,7 +13798,7 @@
           </div>
           <div class="col-lg-6">
             <div class="calc-card">
-              <div class="calc-section-title"><i class="bi bi-diagram-2"></i>Накладные расходы</div>
+              <div class="calc-section-title"><i class="bi bi-diagram-2"></i>${translateUiText('Накладные расходы')}</div>
               <div class="calc-result-info-grid summary-list-grid">
                 ${additionalTopHtml}
               </div>
@@ -13799,12 +13807,12 @@
         </div>
 
         <div class="calc-card">
-          <div class="calc-section-title"><i class="bi bi-list-check me-2"></i>Подробные таблицы</div>
+          <div class="calc-section-title"><i class="bi bi-list-check me-2"></i>${translateUiText('Подробные таблицы')}</div>
           <div class="accordion" id="summaryDetailsAccordion">
               <div class="accordion-item">
                 <h2 class="accordion-header" id="summaryPrintersHeading">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryPrintersCollapse" aria-expanded="false" aria-controls="summaryPrintersCollapse">
-                    Все принтеры
+                    ${translateUiText('Все принтеры')}
                   </button>
                 </h2>
                 <div id="summaryPrintersCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
@@ -13813,18 +13821,18 @@
                       <table class="table table-hover table-striped table-sm mb-0">
                         <thead class="">
                           <tr>
-                            <th>Принтер</th>
-                            <th class="text-end">Время</th>
-                            <th class="text-end">Подготовка</th>
-                            <th class="text-end">Выручка</th>
-                            <th class="text-end">Расходы</th>
-                            <th class="text-end">Кол-во моделей</th>
+                            <th>${translateUiText('Принтер')}</th>
+                            <th class="text-end">${translateUiText('Время')}</th>
+                            <th class="text-end">${translateUiText('Подготовка')}</th>
+                            <th class="text-end">${translateUiText('Выручка')}</th>
+                            <th class="text-end">${translateUiText('Расходы')}</th>
+                            <th class="text-end">${translateUiText('Кол-во моделей')}</th>
                           </tr>
                         </thead>
                         <tbody>${printerRows}</tbody>
                         <tfoot class="">
                           <tr>
-                            <th>Итого</th>
+                            <th>${translateUiText('Итого')}</th>
                             <th class="text-end">${formatNumber(ordersAnalysis.totalPrintHours, 1)} ${translateUiText('ч')}</th>
                             <th class="text-end">${formatNumber((ordersAnalysis.totalPrepMinutes || 0) / 60, 2)} ${translateUiText('ч')}</th>
                             <th class="text-end">${formatCurrency(totalPrinterRevenue)}</th>
@@ -13840,7 +13848,7 @@
               <div class="accordion-item">
                 <h2 class="accordion-header" id="summaryClientsHeading">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryClientsCollapse" aria-expanded="false" aria-controls="summaryClientsCollapse">
-                    Все клиенты
+                    ${translateUiText('Все клиенты')}
                   </button>
                 </h2>
                 <div id="summaryClientsCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
@@ -13849,17 +13857,17 @@
                       <table class="table table-hover table-striped table-sm mb-0">
                         <thead class="">
                           <tr>
-                            <th>Клиент</th>
-                            <th class="text-end">Выручка</th>
-                            <th class="text-end">Расходы</th>
-                            <th class="text-end">Прибыль</th>
-                            <th class="text-end">Заказы</th>
+                            <th>${translateUiText('Клиент')}</th>
+                            <th class="text-end">${translateUiText('Выручка')}</th>
+                            <th class="text-end">${translateUiText('Расходы')}</th>
+                            <th class="text-end">${translateUiText('Прибыль')}</th>
+                            <th class="text-end">${translateUiText('Заказы')}</th>
                           </tr>
                         </thead>
                         <tbody>${clientRows}</tbody>
                         <tfoot class="">
                           <tr>
-                            <th>Итого</th>
+                            <th>${translateUiText('Итого')}</th>
                             <th class="text-end">${formatCurrency(totalClientRevenue)}</th>
                             <th class="text-end">${formatCurrency(totalClientCost)}</th>
                             <th class="text-end">${formatCurrency(totalClientProfit)}</th>
@@ -13874,7 +13882,7 @@
               <div class="accordion-item">
                 <h2 class="accordion-header" id="summaryMaterialsHeading">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryMaterialsCollapse" aria-expanded="false" aria-controls="summaryMaterialsCollapse">
-                    Все материалы
+                    ${translateUiText('Все материалы')}
                   </button>
                 </h2>
                 <div id="summaryMaterialsCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
@@ -13883,16 +13891,16 @@
                       <table class="table table-hover table-striped table-sm mb-0">
                         <thead class="">
                           <tr>
-                            <th>Материал</th>
-                            <th class="text-end">Себестоимость</th>
-                            <th class="text-end">Выручка</th>
-                            <th class="text-end">Ср. цена (${getCurrencySymbol()}/г)</th>
+                            <th>${translateUiText('Материал')}</th>
+                            <th class="text-end">${translateUiText('Себестоимость')}</th>
+                            <th class="text-end">${translateUiText('Выручка')}</th>
+                            <th class="text-end">${translateUiText('Ср. цена')} (${getCurrencySymbol()}/${translateUiText('г')})</th>
                           </tr>
                         </thead>
                         <tbody>${materialRows}</tbody>
                         <tfoot class="">
                           <tr>
-                            <th>Итого: ${materialKgTotal} ${translateUiText('кг')}</th>
+                            <th>${translateUiText('Итого:')} ${materialKgTotal} ${translateUiText('кг')}</th>
                             <th class="text-end">${formatCurrency(kpis.totalMaterialCost)}</th>
                             <th class="text-end">${formatCurrency(totalMaterialRevenue)}</th>
                             <th class="text-end">${formatMoneyWithUnit(avgClientPricePerGram, '/г')}</th>
@@ -13906,7 +13914,7 @@
               <div class="accordion-item">
                 <h2 class="accordion-header" id="summaryAdditionalHeading">
                   <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#summaryAdditionalCollapse" aria-expanded="false" aria-controls="summaryAdditionalCollapse">
-                    Все накладные расходы
+                    ${translateUiText('Все накладные расходы')}
                   </button>
                 </h2>
                 <div id="summaryAdditionalCollapse" class="accordion-collapse collapse" data-bs-parent="#summaryDetailsAccordion">
@@ -13915,10 +13923,10 @@
                       <table class="table table-hover table-striped table-sm mb-0">
                         <thead>
                           <tr>
-                            <th>Статья</th>
-                            <th class="text-end">Распределено</th>
-                            <th class="text-end">Остаток</th>
-                            <th class="text-end">Заказы</th>
+                            <th>${translateUiText('Статья')}</th>
+                            <th class="text-end">${translateUiText('Распределено')}</th>
+                            <th class="text-end">${translateUiText('Остаток')}</th>
+                            <th class="text-end">${translateUiText('Заказы')}</th>
                           </tr>
                         </thead>
                         <tbody>${additionalRows}</tbody>
@@ -13932,60 +13940,60 @@
       </div>
       <aside class="calc-sidebar">
         <div class="calc-summary-card">
-          <div class="text-uppercase small opacity-75 mb-2">Выручка</div>
+          <div class="text-uppercase small opacity-75 mb-2">${translateUiText('Выручка')}</div>
           <h2>${formatCurrency(totalRevenue)}</h2>
           <div class="calc-summary-meta">
             <div>
-              <span>Чистая прибыль</span>
+              <span>${translateUiText('Чистая прибыль')}</span>
               <strong class="${netProfit >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(netProfit)}</strong>
             </div>
             <div>
-              <span>Маржа</span>
+              <span>${translateUiText('Маржа')}</span>
               <strong>${formatCurrency(grossProfit)}</strong>
               <small>${formatNumber(grossMargin, 1)}%</small>
             </div>
           </div>
-          <div class="mt-3 small text-muted">Заказов: ${completedOrdersCount} · Средний чек: ${formatCurrency(avgOrderRevenue)}</div>
+          <div class="mt-3 small text-muted">${translateUiText('Заказов:')} ${completedOrdersCount} · ${translateUiText('Средний чек:')} ${formatCurrency(avgOrderRevenue)}</div>
         </div>
 
         <div class="calc-sidebar-card">
-          <div class="calc-section-title mb-2">Капвложения</div>
+          <div class="calc-section-title mb-2">${translateUiText('Капвложения')}</div>
           <div class="calc-result-info-grid compact">
             <div class="calc-result-info">
-              <span>Принтеры</span>
+              <span>${translateUiText('Принтеры')}</span>
               <strong>${formatCurrency(capital.printersCost)}</strong>
               <small>${appData.printers.length} шт</small>
             </div>
             <div class="calc-result-info">
-              <span>Материалы</span>
+              <span>${translateUiText('Материалы')}</span>
               <strong>${formatCurrency(capital.materialsCost)}</strong>
               <small>${formatNumber(capital.materialsWeight, 2)} ${translateUiText('кг')}</small>
             </div>
             <div class="calc-result-info">
-              <span>Накладные</span>
+              <span>${translateUiText('Накладные')}</span>
               <strong>${formatCurrency(capital.additionalCost)}</strong>
-              <small>Вложений</small>
+              <small>${translateUiText('Вложений')}</small>
             </div>
           </div>
         </div>
 
         <div class="calc-sidebar-card">
-          <div class="calc-section-title mb-2">Качество</div>
+          <div class="calc-section-title mb-2">${translateUiText('Качество')}</div>
           <div class="calc-result-info-grid compact">
             <div class="calc-result-info">
-              <span>Выход годных</span>
+              <span>${translateUiText('Выход годных')}</span>
               <strong>${formatNumber(yieldRate, 1)}%</strong>
-              <small>Без брака</small>
+              <small>${translateUiText('Без брака')}</small>
             </div>
             <div class="calc-result-info">
-              <span>Брак (кг)</span>
+              <span>${translateUiText('Брак (кг)')}</span>
               <strong>${formatNumber(totalRejectGrams / 1000, 3)} ${translateUiText('кг')}</strong>
-              <small>Масса брака</small>
+              <small>${translateUiText('Масса брака')}</small>
             </div>
             <div class="calc-result-info">
-              <span>Брак (ч)</span>
+              <span>${translateUiText('Брак (ч)')}</span>
               <strong>${formatNumber(totalRejectHours, 2)} ${translateUiText('ч')}</strong>
-              <small>Время брака</small>
+              <small>${translateUiText('Время брака')}</small>
             </div>
           </div>
         </div>
