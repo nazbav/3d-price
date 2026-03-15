@@ -3559,6 +3559,28 @@
         'RUB', 'USD', 'EUR', 'GBP', 'JPY', 'CNY', 'INR', 'KRW', 'TRY', 'CHF',
         'CAD', 'AUD', 'NZD', 'SGD', 'HKD', 'AED', 'SEK', 'NOK', 'DKK', 'PLN'
     ];
+    const CURRENCY_RULES = {
+        RUB: { roundingSteps: [10, 100] },
+        USD: { roundingSteps: [0.1, 1] },
+        EUR: { roundingSteps: [0.1, 1] },
+        GBP: { roundingSteps: [0.1, 1] },
+        JPY: { roundingSteps: [10, 100] },
+        CNY: { roundingSteps: [1, 10] },
+        INR: { roundingSteps: [1, 10] },
+        KRW: { roundingSteps: [100, 1000] },
+        TRY: { roundingSteps: [1, 10] },
+        CHF: { roundingSteps: [0.1, 1] },
+        CAD: { roundingSteps: [0.1, 1] },
+        AUD: { roundingSteps: [0.1, 1] },
+        NZD: { roundingSteps: [0.1, 1] },
+        SGD: { roundingSteps: [0.1, 1] },
+        HKD: { roundingSteps: [1, 10] },
+        AED: { roundingSteps: [1, 10] },
+        SEK: { roundingSteps: [1, 10] },
+        NOK: { roundingSteps: [1, 10] },
+        DKK: { roundingSteps: [1, 10] },
+        PLN: { roundingSteps: [1, 10] }
+    };
     const I18N_LOCALE_MAP = {
         ru: 'ru-RU',
         en: 'en-US'
@@ -3624,8 +3646,6 @@
         'Налог (%):': 'Tax (%):',
         'Округление итоговой стоимости:': 'Final cost rounding:',
         'Без округления': 'No rounding',
-        'До 10 ₽ (вверх)': 'Up to 10 RUB (up)',
-        'До 100 ₽ (вверх)': 'Up to 100 RUB (up)',
         'Доплата за округление добавляется как дополнительная наценка.': 'The rounding surcharge is added as an extra markup.',
         'Расчётные опции:': 'Calculation options:',
         'Учитывать амортизацию и обслуживание': 'Include amortization and maintenance',
@@ -4098,6 +4118,79 @@
         };
     }
 
+    function getCurrencyFractionDigits(code = getCurrencyOverride()) {
+        try {
+            return new Intl.NumberFormat(getCurrentLocale(), {
+                style: 'currency',
+                currency: normalizeSupportedCurrency(code)
+            }).resolvedOptions().maximumFractionDigits;
+        } catch (e) {
+            return 2;
+        }
+    }
+
+    function getCurrencyRules(code = getCurrencyOverride()) {
+        const normalized = normalizeSupportedCurrency(code);
+        const fractionDigits = getCurrencyFractionDigits(normalized);
+        const fallbackSteps = fractionDigits === 0 ? [10, 100] : [0.1, 1];
+        return {
+            code: normalized,
+            fractionDigits,
+            roundingSteps: (CURRENCY_RULES[normalized] && CURRENCY_RULES[normalized].roundingSteps) || fallbackSteps
+        };
+    }
+
+    function formatMoney(value, options = {}) {
+        const code = normalizeSupportedCurrency(options.currency || getCurrencyOverride());
+        const currencyDigits = getCurrencyFractionDigits(code);
+        const decimals = options.decimals !== undefined ? options.decimals : currencyDigits;
+        return new Intl.NumberFormat(getCurrentLocale(), {
+            style: 'currency',
+            currency: code,
+            currencyDisplay: options.currencyDisplay || 'narrowSymbol',
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        }).format(Number(value) || 0);
+    }
+
+    function formatMoneyAmount(value, options = {}) {
+        const code = normalizeSupportedCurrency(options.currency || getCurrencyOverride());
+        const currencyDigits = getCurrencyFractionDigits(code);
+        const decimals = options.decimals !== undefined ? options.decimals : currencyDigits;
+        return new Intl.NumberFormat(getCurrentLocale(), {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        }).format(Number(value) || 0);
+    }
+
+    function formatMoneyWithUnit(value, unit, options = {}) {
+        return `${formatMoneyAmount(value, options)} ${getCurrencySymbol(options.currency || getCurrencyOverride())}${unit}`;
+    }
+
+    function formatRoundingStepLabel(step) {
+        return `${formatMoneyAmount(step)} ${getCurrencySymbol()}`;
+    }
+
+    function updateRoundingModeOptions() {
+        const select = document.getElementById('calcRoundingMode');
+        if (!select) return;
+        const noneOption = select.querySelector('option[value="none"]');
+        const lowerOption = select.querySelector('option[value="round10"]');
+        const upperOption = select.querySelector('option[value="round100"]');
+        const [lowerStep, upperStep] = getCurrencyRules().roundingSteps;
+        if (noneOption) noneOption.textContent = translateUiText('Без округления');
+        if (lowerOption) {
+            lowerOption.textContent = getCurrentLanguage() === 'en'
+                ? `Round up to ${formatRoundingStepLabel(lowerStep)}`
+                : `До ${formatRoundingStepLabel(lowerStep)} (вверх)`;
+        }
+        if (upperOption) {
+            upperOption.textContent = getCurrentLanguage() === 'en'
+                ? `Round up to ${formatRoundingStepLabel(upperStep)}`
+                : `До ${formatRoundingStepLabel(upperStep)} (вверх)`;
+        }
+    }
+
     function localizeCurrencyText(text) {
         const source = String(text ?? '');
         if (!source) return source;
@@ -4244,6 +4337,7 @@
         if (document.body) translateElementTree(document.body);
         syncLanguageOverrideControl();
         syncCurrencyOverrideControl();
+        updateRoundingModeOptions();
         updateThemeToggleLabel();
     }
 
@@ -4342,6 +4436,10 @@
         if (runtimeAppData && runtimeAppData.calcSettings) {
             runtimeAppData.calcSettings.currencyOverride = next;
         }
+        const finalCostInput = document.getElementById('calcFinalCost');
+        const shippingInput = document.getElementById('calcShipping');
+        if (finalCostInput) finalCostInput.step = getCurrencyFractionDigits(next) === 0 ? '1' : '0.01';
+        if (shippingInput) shippingInput.step = getCurrencyFractionDigits(next) === 0 ? '1' : '0.01';
         refreshLocalizedUi();
     }
 
@@ -5716,10 +5814,13 @@
         document.getElementById("calcCostKwh").value = appData.calcSettings.costKwh || "";
         document.getElementById("calcTaxPercent").value = appData.calcSettings.taxPercent || "";
         document.getElementById("calcRoundingMode").value = appData.calcSettings.roundingMode || "none";
+        updateRoundingModeOptions();
         const languageOverrideEl = document.getElementById("uiLanguageOverride");
         if (languageOverrideEl) languageOverrideEl.value = appData.calcSettings.languageOverride || "auto";
         const currencyOverrideEl = document.getElementById("uiCurrencyOverride");
         if (currencyOverrideEl) currencyOverrideEl.value = normalizeSupportedCurrency(appData.calcSettings.currencyOverride);
+        document.getElementById("calcFinalCost").step = getCurrencyFractionDigits() === 0 ? "1" : "0.01";
+        document.getElementById("calcShipping").step = getCurrencyFractionDigits() === 0 ? "1" : "0.01";
         document.getElementById("calcShipping").value = appData.calcSettings.shipping || "";
         ensureCalcStartDate();
         const deadlineInput = document.getElementById("calcDeadlineDate");
@@ -8783,7 +8884,7 @@
                         <div class="label">${item.label}</div>
                         <div class="meta">${percent.toFixed(1)}%</div>
                     </div>
-                    <strong>${safeFixed(item.value)} ₽</strong>
+                    <strong>${formatMoney(item.value)}</strong>
                 </div>
             `);
         });
@@ -8811,10 +8912,10 @@
         const cards = items.map(item => {
             const rawName = item && item.description ? item.description : '—';
             const name = escapeHtml(rawName);
-            const base = typeof item.baseCost === 'number' ? `${safeFixed(item.baseCost)} ₽` : '—';
+            const base = typeof item.baseCost === 'number' ? formatMoney(item.baseCost) : '—';
             const payback = item && item.hoursToRecoup ? item.hoursToRecoup : '—';
             const distributedRaw = item && typeof item[totalKey] === 'number' ? item[totalKey] : 0;
-            const distributed = `${safeFixed(distributedRaw)} ₽`;
+            const distributed = formatMoney(distributedRaw);
             return `
                 <div class="calc-overhead-card">
                     <div class="calc-overhead-card-top">
@@ -8838,30 +8939,29 @@
             const el = document.getElementById(id);
             if (el) el.textContent = text;
         };
-        const formatMoney = (val, {signed = false, precision = 2} = {}) => {
+        const formatSummaryMoney = (val, {signed = false, precision} = {}) => {
             if (typeof val !== 'number' || isNaN(val)) {
-                return signed ? '— ₽' : '— ₽';
+                return '—';
             }
-            const absolute = safeFixed(Math.abs(val), precision);
-            if (!signed) {
-                return `${safeFixed(val, precision)} ₽`;
-            }
-            if (val === 0) return `${absolute} ₽`;
+            const digits = precision !== undefined ? precision : getCurrencyFractionDigits();
+            const absolute = formatMoney(Math.abs(val), { decimals: digits });
+            if (!signed) return formatMoney(val, { decimals: digits });
+            if (val === 0) return absolute;
             const sign = val > 0 ? '+' : '-';
-            return `${sign}${absolute} ₽`;
+            return `${sign}${absolute}`;
         };
 
         setText('calcSummaryTotal', typeof details.total === 'number' ? safeFixed(details.total) : '—');
-        setText('calcSummaryCost', formatMoney(details.baseCost || 0));
-        setText('calcSummaryMargin', formatMoney(details.marginAmount || 0, {signed: true}));
+        setText('calcSummaryCost', formatSummaryMoney(details.baseCost || 0));
+        setText('calcSummaryMargin', formatSummaryMoney(details.marginAmount || 0, {signed: true}));
         setText('calcSummaryMarginPercent', typeof details.marginPercent === 'number'
             ? `${details.marginPercent.toFixed(1)}%`
             : '0%');
         setText('calcSummaryMarkup', `${safeFixed(details.markupPercent || 0, 1)}%`);
         setText('calcSummaryDiscount', `${safeFixed(details.discountPercent || 0, 1)}%`);
-        setText('calcSummaryServices', formatMoney(details.servicesTotal || 0));
-        setText('calcSummaryShipping', formatMoney(details.shipping || 0));
-        setText('calcSummaryTax', formatMoney(details.taxAmount || 0));
+        setText('calcSummaryServices', formatSummaryMoney(details.servicesTotal || 0));
+        setText('calcSummaryShipping', formatSummaryMoney(details.shipping || 0));
+        setText('calcSummaryTax', formatSummaryMoney(details.taxAmount || 0));
         const parallelLabel = details.parallelMode === 'yes' ? 'Парал.' : 'Послед.';
         setText('calcSummaryParallel', parallelLabel);
         updateClientSummaryLabels(details.clientName || '');
@@ -8886,10 +8986,10 @@
 
 
         const pricePerGramLabel = (typeof details.pricePerGram === 'number' && !isNaN(details.pricePerGram))
-            ? `${safeFixed(details.pricePerGram)} ₽/г`
+            ? formatMoneyWithUnit(details.pricePerGram, '/г')
             : '—';
         const totalNoRoundedLabel = (typeof details.totalBeforeRounding === 'number' && !isNaN(details.totalBeforeRounding))
-            ? `${safeFixed(details.totalBeforeRounding)} ₽`
+            ? formatMoney(details.totalBeforeRounding)
             : '—';
 
         setText('calcPriceGramms', pricePerGramLabel);
@@ -8937,14 +9037,14 @@
 
     function resetCalculationInsights() {
         setTextContentIfExists('calcSummaryTotal', '—');
-        setTextContentIfExists('calcSummaryCost', '— ₽');
-        setTextContentIfExists('calcSummaryMargin', '— ₽');
+        setTextContentIfExists('calcSummaryCost', '—');
+        setTextContentIfExists('calcSummaryMargin', '—');
         setTextContentIfExists('calcSummaryMarginPercent', '0%');
         setTextContentIfExists('calcSummaryMarkup', '0%');
         setTextContentIfExists('calcSummaryDiscount', '0%');
-        setTextContentIfExists('calcSummaryServices', '0 ₽');
-        setTextContentIfExists('calcSummaryShipping', '0 ₽');
-        setTextContentIfExists('calcSummaryTax', '0 ₽');
+        setTextContentIfExists('calcSummaryServices', formatMoney(0));
+        setTextContentIfExists('calcSummaryShipping', formatMoney(0));
+        setTextContentIfExists('calcSummaryTax', formatMoney(0));
         setTextContentIfExists('calcSummaryStart', '—');
         setTextContentIfExists('calcSummaryDeadline', '—');
         setTextContentIfExists('calcSummaryFinish', '—');
@@ -9637,7 +9737,8 @@
         if (manualFinalCost > 0) {
             finalSum = manualFinalCost;
         } else if (roundingMode !== "none") {
-            const step = roundingMode === "round100" ? 100 : 10;
+            const [lowerStep, upperStep] = getCurrencyRules().roundingSteps;
+            const step = roundingMode === "round100" ? upperStep : lowerStep;
             const rounded = Math.ceil(finalSum / step) * step;
             const adjustment = rounded - finalSum;
             if (adjustment > 0.0001) {
@@ -9693,7 +9794,7 @@
         }
         const downtimeHintParts = [];
         if (downtimeParts.length) downtimeHintParts.push(downtimeParts.join(', '));
-        downtimeHintParts.push(`${safeFixed(downtimeCost)} ₽`);
+        downtimeHintParts.push(formatMoney(downtimeCost));
 
         htmlRes = ``;
 
@@ -9704,7 +9805,7 @@
                     <td>${safeFixed(s.cost)}</td>
                     <td>${safeFixed(s.qty)}</td>
                     <td>${getServiceModeLabel(s.mode)}</td>
-                    <td class="text-end">${safeFixed(s.total)} ₽</td>
+                    <td class="text-end">${formatMoney(s.total)}</td>
                 </tr>
             `).join('');
             htmlRes += `
@@ -9724,7 +9825,7 @@
                             <tbody>${serviceRows}</tbody>
                         </table>
                     </div>
-                    <div class="text-end fw-semibold mt-2">Всего: ${safeFixed(servicesTotal)} ₽</div>
+                    <div class="text-end fw-semibold mt-2">Всего: ${formatMoney(servicesTotal)}</div>
                 </div>
             `;
         }
@@ -9763,7 +9864,7 @@
         generateQRCodeCanvas(qrText, 120, function(qrCanvas){
             const qrDataUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : '';
             const roundingNote = roundingInfo.adjustment > 0
-                ? `+${safeFixed(roundingInfo.adjustment)} ₽ до ${roundingInfo.step} ₽`
+                ? `+${formatMoney(roundingInfo.adjustment)} до ${formatMoney(roundingInfo.step, { decimals: getCurrencyFractionDigits() })}`
                 : '';
             lastSummaryCardHtml = buildSummaryCardHtml({
                 company: appData.labelSettings.companyName,
@@ -9818,7 +9919,7 @@
                         label: 'Подготовка',
                         value: d.printerPrepMinutes ? `${formatTimeForDisplay((d.printerPrepMinutes || 0) / 60)} ч` : ''
                     },
-                    {label: 'Стоимость', value: `${safeFixed(d.subTotal)} ₽`},
+                    {label: 'Стоимость', value: formatMoney(d.subTotal)},
                     {label: 'Вес', value: `${safeFixed(printerWeight)} г`}
                 ]);
                 htmlRes += `<div class="calc-printer-card">`;
@@ -9840,10 +9941,10 @@
                         const chipStats = [
                             {icon: '⏱', value: `${formatTimeForDisplay(ln.hours)} ч`},
                             {icon: '⚖', value: `${safeFixed(ln.realWeight)} г`},
-                            {icon: '⚙', value: `${safeFixed(ln.costPrinterPart)} ₽`},
-                            {icon: '🧵', value: `${safeFixed(ln.costMaterial)} ₽`},
-                            {icon: '⚡', value: `${safeFixed(ln.costElectric)} ₽`},
-                            {icon: '🛠', value: `${safeFixed(ln.costMaintenance)} ₽`}
+                            {icon: '⚙', value: formatMoney(ln.costPrinterPart)},
+                            {icon: '🧵', value: formatMoney(ln.costMaterial)},
+                            {icon: '⚡', value: formatMoney(ln.costElectric)},
+                            {icon: '🛠', value: formatMoney(ln.costMaintenance)}
                         ];
                         const chipHtml = chipStats.map(stat => `<span class="calc-printer-chip">${stat.icon} ${stat.value}</span>`).join('');
                         const avatarLetter = escapeHtml((displayName || '?').charAt(0).toUpperCase());
@@ -9870,7 +9971,7 @@
                                         </div>
                                     </div>
                                     <div class="calc-printer-card-actions">
-                                        <div class="calc-printer-card-total">${safeFixed(ln.subTotalModel)} ₽</div>
+                                        <div class="calc-printer-card-total">${formatMoney(ln.subTotalModel)}</div>
                                         <button class="btn btn-sm btn-outline-secondary"
                                             onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${safeFixed(ln.hours)}', '${safeFixed(ln.realWeight)}', '${ln.thumbnail || ''}')"
                                             ${ln.excludedFromTotals ? 'disabled title="Модель исключена из расчёта"' : ''}>
@@ -9894,7 +9995,7 @@
                         sumPrinterAdditional += ad.costDistributed;
                     });
                     htmlRes += buildOverheadCards(d.additionalDetails, {totalLabel: 'Распределено (₽)'});
-                    htmlRes += `<div class="text-muted small mt-2">Накладные по принтеру: ${safeFixed(sumPrinterAdditional)} ₽<\/div>`;
+                    htmlRes += `<div class="text-muted small mt-2">Накладные по принтеру: ${formatMoney(sumPrinterAdditional)}<\/div>`;
                 }
                 htmlRes += `<\/div>`;
             });
@@ -10068,7 +10169,7 @@
 
         if (globalAdditionalDetails.length > 0) {
             const overheadCards = buildOverheadCards(globalAdditionalDetails, {totalLabel: 'В заказе (₽)'});
-            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">Накладные расходы<\/div>${overheadCards}<div class="calc-overhead-total">Всего: ${safeFixed(sumGlobalAdd)} ₽<\/div><\/div>`;
+            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">Накладные расходы<\/div>${overheadCards}<div class="calc-overhead-total">Всего: ${formatMoney(sumGlobalAdd)}<\/div><\/div>`;
         }
 
         const calcResultEmptyEl = document.getElementById("calcResultEmpty");
@@ -11048,9 +11149,9 @@
     <div class="info-item"><span class="label">${translateUiText('Общее время печати:')}<\/span><span class="value">${data.totalTime}<\/span></div>
 	<div class="info-item"><span class="label">${translateUiText('Общее время работы оператора:')}<\/span><span class="value">${data.totalTimeOperator}<\/span></div>
     <div class="info-item"><span class="label">${translateUiText('Суммарный вес:')}</span><span class="value">${data.totalWeight} ${translateUiText('г')}</span></div>
-    ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${s.total} ₽<\/span></div>`).join('') + `<div class="info-item"><span class="label">${translateUiText('Итого услуги:')}<\/span><span class="value">${data.servicesTotal} ₽<\/span></div>` : ''}
-    <div class="info-item"><span class="label">${translateUiText('Итого:')}<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
-    <div class="info-item"><span class="label">${translateUiText('Цена за 1 грамм:')}<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
+    ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${formatMoney(s.total)}<\/span></div>`).join('') + `<div class="info-item"><span class="label">${translateUiText('Итого услуги:')}<\/span><span class="value">${formatMoney(data.servicesTotal)}<\/span></div>` : ''}
+    <div class="info-item"><span class="label">${translateUiText('Итого:')}<\/span><span class="value">${data.priceOld ? `<del>${formatMoney(data.priceOld)}<\/del> ${formatMoney(data.totalCost)} (-${data.discountPercent}% )` : `${formatMoney(data.totalCost)}`}<\/span></div>
+    <div class="info-item"><span class="label">${translateUiText('Цена за 1 грамм:')}<\/span><span class="value">${formatMoneyWithUnit(data.pricePerGram, '/г')}<\/span></div>
     ${data.paymentInfo ? `<div class="info-item"><span class="label">${translateUiText('Оплата:')}<\/span><span class="value">${data.paymentInfo}<\/span></div>` : ''}
     ${data.finDate ? `<div class="info-item"><span class="label">${translateUiText('Дата завершения:')}<\/span><span class="value">${data.finDate}<\/span></div>` : ''}
   <\/div>
@@ -11589,10 +11690,10 @@
   <h1>${translateUiText('Подробный расчёт')}<\/h1>
   <p>${translateUiText('Название:')} ${d.calcName || translateUiText('(Без названия)')}, ${translateUiText('Клиент:')} ${d.clientName || translateUiText('(Не указан)')}, ${translateUiText('Статус:')} ${getOrderStatusLabel(d.orderStatus)}<\/p>
   <p>${translateUiText('Срочность:')} ${d.urgencyProfileTitle || '—'}${d.profileMarkupPercent ? ` (+${d.profileMarkupPercent}% )` : ''}${d.userMarkupPercent ? `, ${translateUiText('ручная')} ${d.userMarkupPercent}%` : ''}<\/p>
-  <p>${translateUiText('Итог:')} <strong>${safeFixed(d.total)} ₽<\/strong>${d.priceBeforeDiscount ? ` (${translateUiText('скидка')} ${d.discountPercent}% ${translateUiText('от')} ${safeFixed(d.priceBeforeDiscount)} ₽)` : ''}<\/p>
-  <p>${translateUiText('Оператор ч.:')} ${formatTimeForDisplay(d.totalHours)} ${translateUiText('ч')}, ${translateUiText('Стоимость работы оператора:')} ${safeFixed(d.totalOperatorCost)} ₽, ${translateUiText('Налог (%):')} ${d.taxPercent}%, ${translateUiText('Упаковка/Доставка:')} ${d.shipping}₽, ${translateUiText('Этикетки:')} ${safeFixed(d.totalLabelsCost || 0)} ₽, ${translateUiText('Эл.:')} ${d.costKwh}₽/кВт⋅ч<\/p>
+  <p>${translateUiText('Итог:')} <strong>${formatMoney(d.total)}<\/strong>${d.priceBeforeDiscount ? ` (${translateUiText('скидка')} ${d.discountPercent}% ${translateUiText('от')} ${formatMoney(d.priceBeforeDiscount)})` : ''}<\/p>
+  <p>${translateUiText('Оператор ч.:')} ${formatTimeForDisplay(d.totalHours)} ${translateUiText('ч')}, ${translateUiText('Стоимость работы оператора:')} ${formatMoney(d.totalOperatorCost)}, ${translateUiText('Налог (%):')} ${d.taxPercent}%, ${translateUiText('Упаковка/Доставка:')} ${formatMoney(d.shipping)}, ${translateUiText('Этикетки:')} ${formatMoney(d.totalLabelsCost || 0)}, ${translateUiText('Эл.:')} ${formatMoneyWithUnit(d.costKwh, '/кВт⋅ч')}<\/p>
   <p>${translateUiText('Параллельная печать:')} ${translateUiText(String(d.parallelMode || ''))}, ${translateUiText('Наценка')} ${d.markupPercent || 0}%<\/p>
-  <p>${translateUiText('Подитог:')} ${safeFixed(d.total - d.globalAdditional.taxAmount)} ₽, ${translateUiText('Общий налог:')} ${safeFixed(d.globalAdditional.taxAmount)} ₽<\/p>
+  <p>${translateUiText('Подитог:')} ${formatMoney(d.total - d.globalAdditional.taxAmount)}, ${translateUiText('Общий налог:')} ${formatMoney(d.globalAdditional.taxAmount)}<\/p>
   <hr/>
 `;
         d.detailsByPrinter.forEach(pr => {
@@ -12482,7 +12583,7 @@
             <div>
               <strong>${m.name}</strong>
               <div class="text-muted small">${m.type || '—'} | ${m.manufacturer || '—'}</div>
-              <div class="text-muted small">Расход: ${formatNumber(m.totalGrams / 1000, 3)} кг · ₽/кг: ${costPerKg > 0 ? `${formatCurrency(costPerKg)}/кг` : '0.00 ₽/кг'}</div>
+              <div class="text-muted small">Расход: ${formatNumber(m.totalGrams / 1000, 3)} кг · ${getCurrencySymbol()}/кг: ${costPerKg > 0 ? `${formatCurrency(costPerKg)}/кг` : `${formatMoney(0)}/кг`}</div>
             </div>
             <div class="text-end ms-2">
               <span class="${margin >= 0 ? 'text-success' : 'text-danger'}">${formatCurrency(margin)}</span>
@@ -12496,7 +12597,7 @@
         </td>
         <td class="text-end">${formatCurrency(m.totalCost)}</td>
         <td class="text-end">${formatCurrency(m.totalRevenue || 0)}</td>
-        <td class="text-end">${formatNumber(clientPricePerGram, 2)} ₽/г</td>
+        <td class="text-end">${formatMoneyWithUnit(clientPricePerGram, '/г')}</td>
       </tr>
     `;
             }).join('') || `<tr><td colspan="4" class="text-center text-muted py-4">Нет данных по материалам</td></tr>`;
@@ -12795,9 +12896,9 @@
 
             const kpiCardItems = [
                 {title: 'Окупаемость', value: paybackAbs, desc: 'Прибыль минус капвложения', format: formatCurrency, valueClass: paybackAbs >= 0 ? 'text-success' : 'text-danger'},
-                {title: 'Прибыль/час', value: profitPerHour, unit: ' ₽/ч', desc: 'Чистая прибыль на час', decimals: 0},
-                {title: 'Себестоимость на кг', value: costPerKg, unit: ' ₽/кг', desc: 'Все расходы / масса', decimals: 0},
-                {title: 'Цена клиента', value: avgClientPricePerGram, unit: ' ₽/г', desc: 'Средняя цена за грамм', decimals: 2},
+                {title: 'Прибыль/час', value: profitPerHour, unit: ` ${getCurrencySymbol()}/ч`, desc: 'Чистая прибыль на час', decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
+                {title: 'Себестоимость на кг', value: costPerKg, unit: ` ${getCurrencySymbol()}/кг`, desc: 'Все расходы / масса', decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
+                {title: 'Цена клиента', value: avgClientPricePerGram, unit: ` ${getCurrencySymbol()}/г`, desc: 'Средняя цена за грамм', decimals: getCurrencyFractionDigits() === 0 ? 0 : 2},
                 {title: 'Средний расход', value: avgMaterialPerOrder / 1000, unit: ' кг', desc: 'Материал / заказ', decimals: 2},
                 {title: 'Среднее время печати', value: avgPrintHoursPerOrder, unit: ' ч', desc: 'Часов печати / заказ', decimals: 1},
                 {title: 'Средняя партия', value: avgModelsPerOrder, unit: ' моделей', desc: 'Моделей в заказе', decimals: 1},
@@ -12992,7 +13093,7 @@
                             <th>Материал</th>
                             <th class="text-end">Себестоимость</th>
                             <th class="text-end">Выручка</th>
-                            <th class="text-end">Ср. цена (₽/г)</th>
+                            <th class="text-end">Ср. цена (${getCurrencySymbol()}/г)</th>
                           </tr>
                         </thead>
                         <tbody>${materialRows}</tbody>
@@ -13001,7 +13102,7 @@
                             <th>Итого: ${materialKgTotal} кг</th>
                             <th class="text-end">${formatCurrency(kpis.totalMaterialCost)}</th>
                             <th class="text-end">${formatCurrency(totalMaterialRevenue)}</th>
-                            <th class="text-end">${formatNumber(avgClientPricePerGram, 2)} ₽/г</th>
+                            <th class="text-end">${formatMoneyWithUnit(avgClientPricePerGram, '/г')}</th>
                           </tr>
                         </tfoot>
                       </table>
