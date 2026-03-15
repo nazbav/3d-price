@@ -8,6 +8,8 @@
     <link href="electronapp/build/png/32x32.png" rel="icon" sizes="32x32" type="image/png"/>
     <link href="vendor/css/bootstrap-5.3.2.min.css" rel="stylesheet"/>
     <link href="vendor/css/bootstrap-icons-1.11.0.css" rel="stylesheet"/>
+    <script src="vendor/js/i18next-25.6.3.min.js"></script>
+    <script src="vendor/js/i18nextBrowserLanguageDetector-8.2.0.min.js"></script>
     <script src="vendor/js/qrcode-1.0.0.min.js"></script>
     <style>
         :root {
@@ -2536,6 +2538,15 @@
                         </div>
                         <div class="tab-pane fade" id="calcSet" role="tabpanel">
                             <h3>Калькуляция</h3>
+                            <div class="mb-3">
+                                <label class="form-label" for="uiLanguageOverride">Язык интерфейса:</label>
+                                <select class="form-select" id="uiLanguageOverride">
+                                    <option value="auto">Авто (по языку браузера)</option>
+                                    <option value="ru">Русский</option>
+                                    <option value="en">English</option>
+                                </select>
+                                <div class="form-text">Можно оставить автоопределение или принудительно выбрать язык интерфейса.</div>
+                            </div>
                             <div class="mb-3 form-check">
                                 <input class="form-check-input" id="printLabelsCheckbox" type="checkbox"/>
                                 <label class="form-check-label" for="printLabelsCheckbox">Печатать этикетки</label>
@@ -3536,11 +3547,713 @@
         console.log('Instrumented functions:', newKeys);
     }
     const THEME_STORAGE_KEY = "themePreference";
+    const I18N_OVERRIDE_STORAGE_KEY = "ui_language_override";
+    const I18N_SUPPORTED_LANGUAGES = ['ru', 'en'];
+    const I18N_LOCALE_MAP = {
+        ru: 'ru-RU',
+        en: 'en-US'
+    };
+    const I18N_EN_TRANSLATIONS = {
+        'Калькулятор 3D-печати (TEST)': '3D Printing Cost Calculator (TEST)',
+        'Настройки': 'Settings',
+        'Темная тема': 'Dark theme',
+        'Светлая тема': 'Light theme',
+        'Принтеры': 'Printers',
+        'История': 'History',
+        'Общие материалы': 'Global materials',
+        'Накладные расходы': 'Overheads',
+        'Статистика': 'Analytics',
+        'Список принтеров': 'Printer list',
+        'Добавить принтер': 'Add printer',
+        'Массовое удаление': 'Bulk delete',
+        'Массовое изменение': 'Bulk edit',
+        'Профили принтеров': 'Printer profiles',
+        'Поиск...': 'Search...',
+        'Название': 'Name',
+        'Действия': 'Actions',
+        'Клиенты': 'Clients',
+        'Добавить клиента': 'Add client',
+        'Имя': 'Name',
+        'Телефон': 'Phone',
+        'Ссылки': 'Links',
+        'Брендинг': 'Branding',
+        'Калькуляция': 'Calculation',
+        'Импорт/Экспорт': 'Import/Export',
+        'Мой Налог': 'My Tax',
+        'О калькуляторе': 'About calculator',
+        'Название компании:': 'Company name:',
+        'Ссылка на чат (QR):': 'Chat link (QR):',
+        'Банковские реквизиты (р/с):': 'Bank details:',
+        'Логотип (PNG до 48×48):': 'Logo (PNG up to 48×48):',
+        'Используется в карточках моделей и смете.': 'Used in model cards and in the estimate.',
+        'Удалить': 'Delete',
+        'Профили срочности и графиков:': 'Urgency and schedule profiles:',
+        'Добавить профиль': 'Add profile',
+        'Название профиля': 'Profile name',
+        'Наценка профиля (%)': 'Profile markup (%)',
+        'Описание': 'Description',
+        'Рабочий график по дням недели:': 'Working schedule by weekday:',
+        'Автозаполнение дня': 'Autofill day',
+        'Оставьте строки пустыми, если день нерабочий. Перерывы добавляйте по необходимости.': 'Leave rows empty if the day is off. Add breaks as needed.',
+        'Используйте кнопку автозаполнения, чтобы быстро задать шаблон (6/8/12 часовые смены, обед и спецперерывы). Изменения вступят в силу после сохранения.': 'Use autofill to quickly apply a template (6/8/12-hour shifts, lunch and extra breaks). Changes take effect after saving.',
+        'Сохранить': 'Save',
+        'Язык интерфейса:': 'Interface language:',
+        'Авто (по языку браузера)': 'Auto (browser language)',
+        'Можно оставить автоопределение или принудительно выбрать язык интерфейса.': 'You can keep auto detection or force a specific interface language.',
+        'Печатать этикетки': 'Print labels',
+        'Стоимость 1 этикетки (₽):': 'Cost of 1 label (RUB):',
+        'Учитывать печать сметы': 'Include estimate printing',
+        'Стоимость печати сметы (₽):': 'Estimate printing cost (RUB):',
+        'Ставка оператора (₽/ч):': 'Operator rate (RUB/h):',
+        'Учесть ставку оператора для бракованных моделей': 'Include operator rate for rejected models',
+        'Стоимость минуты простоя (₽/мин):': 'Downtime cost per minute (RUB/min):',
+        'Стоимость часа подготовки (₽/ч):': 'Preparation cost per hour (RUB/h):',
+        'Цена 1 кВт⋅ч (₽):': 'Electricity price per 1 kWh (RUB):',
+        'Налог (%):': 'Tax (%):',
+        'Округление итоговой стоимости:': 'Final cost rounding:',
+        'Без округления': 'No rounding',
+        'До 10 ₽ (вверх)': 'Up to 10 RUB (up)',
+        'До 100 ₽ (вверх)': 'Up to 100 RUB (up)',
+        'Доплата за округление добавляется как дополнительная наценка.': 'The rounding surcharge is added as an extra markup.',
+        'Расчётные опции:': 'Calculation options:',
+        'Учитывать амортизацию и обслуживание': 'Include amortization and maintenance',
+        'Учитывать брак в стоимости': 'Include rejects in cost',
+        'Учитывать накладные расходы': 'Include overheads',
+        'Не учитывать остывание для брака': 'Ignore cooling for rejected parts',
+        'Облачный экспорт (SupaBase, шифрование 5 минут)': 'Cloud export (Supabase, 5-minute encryption)',
+        'Настройки': 'Settings',
+        'Ссылка + QR': 'Link + QR',
+        'Загрузить': 'Load',
+        'Квитанции': 'Receipts',
+        'Закрыть': 'Close',
+        'Ссылки на сформированные чеки «Мой Налог» для текущего расчёта.': 'Links to generated "My Tax" receipts for the current calculation.',
+        'Отправить чек в налоговую': 'Send receipt to tax service',
+        'Отменить крайний чек': 'Cancel latest receipt',
+        'Расчёт стоимости заказа': 'Order cost calculation',
+        'Этикетка': 'Label',
+        'Смета': 'Estimate',
+        'Логотип': 'Logo',
+        'QR-код': 'QR code',
+        'Код заказа:': 'Order code:',
+        'Название заказа:': 'Order name:',
+        'Клиент:': 'Client:',
+        'Статус:': 'Status:',
+        'Срочность:': 'Urgency:',
+        'Общее время печати:': 'Total print time:',
+        'Общее время работы оператора:': 'Total operator work time:',
+        'Суммарный вес:': 'Total weight:',
+        'Итого услуги:': 'Services total:',
+        'Итого:': 'Total:',
+        'Цена за 1 грамм:': 'Price per gram:',
+        'Оплата:': 'Payment:',
+        'Дата завершения:': 'Completion date:',
+        'ручная': 'manual',
+        'г': 'g',
+        'Статус': 'Status',
+        'Новый расчёт': 'New calculation',
+        'Параметры расчёта': 'Calculation parameters',
+        'Все ключевые поля собраны в две колонки, чтобы базовые настройки всегда были под рукой.': 'All key fields are grouped into two columns so the basic settings stay within reach.',
+        'Основные данные': 'Basic data',
+        'Название расчёта': 'Calculation name',
+        'Например: Заказ 123': 'Example: Order 123',
+        'Клиент (ФИО/компания)': 'Client (full name/company)',
+        'Иванов Иван': 'John Doe',
+        'Enter — добавить клиента, ↓↑ — выбрать из истории.': 'Enter to add a client, ↓↑ to select from history.',
+        'Дополнительные услуги': 'Additional services',
+        'Стоимость за ед.': 'Unit cost',
+        'Кол-во': 'Qty',
+        'Тип': 'Type',
+        'Добавить услугу': 'Add service',
+        'Принтеры и модели': 'Printers and models',
+        'Расширенный отчёт': 'Detailed report',
+        'Пока нет данных — запустите расчёт.': 'No data yet. Run the calculation.',
+        'Итого к оплате': 'Total payable',
+        'Себестоимость': 'Cost price',
+        'Маржа': 'Margin',
+        'Рассчитать всё': 'Calculate all',
+        'Скачать смету': 'Download estimate',
+        'Чеки': 'Receipts',
+        'Параметры заказа': 'Order parameters',
+        'Наценка': 'Markup',
+        'Скидка': 'Discount',
+        'Услуги': 'Services',
+        'Доставка': 'Shipping',
+        'Налоги': 'Taxes',
+        'Режим печати': 'Print mode',
+        'Стоимость 1г': 'Cost per 1 g',
+        'Итого до округления': 'Total before rounding',
+        'Время печати': 'Print time',
+        'Подготовка': 'Preparation',
+        'Простой': 'Downtime',
+        'Всего оператор': 'Operator total',
+        'Старт': 'Start',
+        'Дедлайн': 'Deadline',
+        'Финиш': 'Finish',
+        'Структура расходов': 'Cost structure',
+        'Нет данных': 'No data',
+        'Диаграмма': 'Chart',
+        'Материал не найден.': 'Material not found.',
+        'Нет данных.': 'No data.',
+        'Нет данных расчёта.': 'No calculation data.',
+        'Сохранено': 'Saved',
+        'Введите телефон': 'Enter phone number',
+        'Нужен телефон и код': 'Phone number and code are required',
+        'Чек отправлен.': 'Receipt sent.',
+        'Запрос отправлен в Мой Налог': 'Request sent to My Tax',
+        'Не удалось подключиться к сервису Мой Налог': 'Could not connect to My Tax service',
+        'Нет чека для отмены.': 'There is no receipt to cancel.',
+        'Не указана причина отмены чека.\nЧек не будет отменён.': 'No cancellation reason specified.\nThe receipt will not be cancelled.',
+        'Чек отменён.': 'Receipt cancelled.',
+        'Ошибка отмены чека': 'Receipt cancellation error',
+        '✅ Данные сохранены в облако.': '✅ Data saved to cloud.',
+        '✅ Настройки загружены.': '✅ Settings loaded.',
+        '✅ История сохранена в облако.': '✅ History saved to cloud.',
+        '✅ История загружена.': '✅ History loaded.',
+        'Ошибка расшифровки.': 'Decryption error.',
+        'Ошибка расшифровки истории.': 'History decryption error.',
+        'Данные устарели и были удалены': 'Data expired and was deleted',
+        'Нет такого элемента в истории': 'No such item in history',
+        'Сохранённые ответы модалок импорта очищены.': 'Saved import modal answers were cleared.',
+        'Должен быть хотя бы один профиль.': 'There must be at least one profile.',
+        'Укажите длительность смены.': 'Specify shift duration.',
+        'Укажите корректное время начала.': 'Specify a valid start time.',
+        'Укажите время обеда.': 'Specify lunch time.',
+        'Обед не может начинаться раньше смены.': 'Lunch cannot start before the shift.',
+        'Обед должен попадать в рабочее время.': 'Lunch must fall within working hours.',
+        'Смена выходит за пределы одних суток. Отрегулируйте параметры.': 'The shift crosses a day boundary. Adjust the parameters.',
+        'Выберите хотя бы один день недели.': 'Select at least one weekday.',
+        'График заполнен. Не забудьте сохранить настройки.': 'Schedule filled in. Do not forget to save settings.',
+        'Не удалось определить цель. Перетащите файл в блок принтера или выберите его при подсказке.': 'Could not determine the target. Drag the file to a printer block or choose it when prompted.',
+        'Нет доступных материалов. Добавьте материалы во вкладке "Материалы".': 'No materials available. Add materials in the "Materials" tab.',
+        'Нельзя удалить принтер: он используется в истории заказов.': 'Cannot delete printer: it is used in order history.',
+        'Загрузите логотип в формате PNG.': 'Upload a logo in PNG format.',
+        'Не удалось обработать логотип. Попробуйте другой файл.': 'Could not process the logo. Try another file.',
+        'Нет профилей Orca. Добавьте их в менеджере.': 'No Orca profiles. Add them in the manager.',
+        'История импортирована.': 'History imported.',
+        'Ссылка синхронизации требует HTTP(S) источника. Укажите «Источник интерфейса» и пересоберите офлайн.': 'The sync link requires an HTTP(S) source. Set "Interface source" and rebuild offline.',
+        'Никогда': 'Never',
+        'Включить интеграцию с Spoolman': 'Enable Spoolman integration',
+        'URL сервера Spoolman:': 'Spoolman server URL:',
+        'Автоматически обновлять использование материалов': 'Automatically update material usage',
+        'Последняя синхронизация:': 'Last sync:',
+        'Синхронизация с Spoolman': 'Sync with Spoolman'
+        ,'Новый': 'New'
+        ,'Новая': 'New'
+        ,'Печать': 'Printing'
+        ,'Готова': 'Ready'
+        ,'Готово': 'Ready'
+        ,'Завершён': 'Completed'
+        ,'Оплачен': 'Paid'
+        ,'Оплачено': 'Paid'
+        ,'Отменён': 'Canceled'
+        ,'Отменена': 'Canceled'
+        ,'В работе': 'In progress'
+        ,'Брак': 'Reject'
+        ,'Подготовка': 'Preparation'
+        ,'Остывание': 'Cooling'
+        ,'Подготовить принтер и материал': 'Prepare the printer and material'
+        ,'Контролировать печать и готовиться к выгрузке': 'Monitor printing and prepare for unload'
+        ,'Снять модель, освободить стол': 'Remove the model and clear the build plate'
+        ,'Нет материалов. Заполните таблицу «Общие материалы».': 'No materials. Fill in the "Global materials" table.'
+        ,'Открыть': 'Open'
+        ,'Подробный расчёт': 'Detailed calculation'
+        ,'Название:': 'Name:'
+        ,'Итог:': 'Total:'
+        ,'Оператор ч.:': 'Operator hrs:'
+        ,'Стоимость работы оператора:': 'Operator labor cost:'
+        ,'Упаковка/Доставка:': 'Packaging/Shipping:'
+        ,'Этикетки:': 'Labels:'
+        ,'Эл.:': 'Power:'
+        ,'Параллельная печать:': 'Parallel printing:'
+        ,'Подитог:': 'Subtotal:'
+        ,'Общий налог:': 'Total tax:'
+        ,'Принтер:': 'Printer:'
+        ,'Время:': 'Time:'
+        ,'Иконка': 'Icon'
+        ,'Проверка подключения...': 'Testing connection...'
+        ,'Удалено ': 'Deleted '
+        ,' дубликатов. Обновите страницу для применения изменений.': ' duplicates. Refresh the page to apply changes.'
+        ,'Дубликатов не найдено.': 'No duplicates found.'
+        ,'Ошибка очистки дубликатов: ': 'Duplicate cleanup error: '
+        ,'Настройки сохранены': 'Settings saved'
+        ,'Необходимо указать URL': 'URL is required'
+        ,'Поиск и удаление дубликатов...': 'Searching and deleting duplicates...'
+        ,'Не найдены принтеры': 'Printers not found'
+        ,'Импорт настроек выполнен.': 'Settings import completed.'
+        ,'SMS отправлено': 'SMS sent'
+        ,'Код подтвержден': 'Code verified'
+        ,'Удалить выбранные элементы?': 'Delete selected items?'
+        ,'Удалить принтер?': 'Delete printer?'
+        ,'Удалить материал?': 'Delete material?'
+        ,'Перерыв': 'Break'
+        ,'Не удалось применить шаблон.': 'Could not apply template.'
+        ,'Не удалось сформировать рабочие промежутки.': 'Could not build working intervals.'
+        ,'Нет данных для миграции.': 'No data for migration.'
+        ,'ГГГГ-ММ-ДД': 'YYYY-MM-DD'
+        ,'ч:м': 'h:m'
+        ,'скидка': 'discount'
+        ,'от': 'from'
+        ,'ч': 'h'
+        ,'мин': 'min'
+        ,'Часы': 'Hours'
+        ,'Вес (г)': 'Weight (g)'
+        ,'Материал': 'Material'
+        ,'Сумма': 'Amount'
+        ,'не в расчёте': 'not included'
+        ,'Обновление формата данных': 'Data format update'
+        ,'Сейчас мы переведём ваши сохранённые расчёты на новый формат. Для безопасности сначала скачайте резервную копию.': 'We will now migrate your saved calculations to the new format. For safety, download a backup first.'
+        ,'Скачать резервную копию': 'Download backup copy'
+        ,'Шаг 1: сохраните текущие данные.': 'Step 1: save the current data.'
+        ,'Обновить данные': 'Update data'
+        ,'Калькулятор': 'Calculator'
+        ,'Профили': 'Profiles'
+        ,'Стоимость (₽)': 'Cost (RUB)'
+        ,'Часы окуп.': 'Payback hrs'
+        ,'Мощн. (Вт)': 'Power (W)'
+        ,'Обсл. (₽/ч)': 'Maint. (RUB/h)'
+        ,'Ред.': 'Edit'
+        ,'Копировать': 'Copy'
+        ,'Удл.': 'Delete'
+        ,'Добавить материал': 'Add material'
+        ,'Профили Orca': 'Orca profiles'
+        ,'Стоим./кг': 'Cost/kg'
+        ,'Остаток (гр)': 'Balance (g)'
+        ,'Начальный вес (кг)': 'Initial weight (kg)'
+        ,'Время остыв. (мин)': 'Cooling time (min)'
+        ,'Подготовка (мин)': 'Preparation (min)'
+        ,'Производитель': 'Manufacturer'
+        ,'Дата произв.': 'Production date'
+        ,'Добавить расход': 'Add expense'
+        ,'Стоим. (₽)': 'Cost (RUB)'
+        ,'Вкл. в расчёт?': 'Include in calculation?'
+        ,'Нет совпадений. Нажмите Enter, чтобы добавить клиента.': 'No matches. Press Enter to add the client.'
+        ,'Статус заказа': 'Order status'
+        ,'Финансовые параметры': 'Financial parameters'
+        ,'Наценка (%)': 'Markup (%)'
+        ,'Скидка (%)': 'Discount (%)'
+        ,'Финальная цена (₽)': 'Final price (RUB)'
+        ,'Часы подготовки (ч:м)': 'Preparation hours (h:m)'
+        ,'Сроки и логистика': 'Timeline and logistics'
+        ,'Принтеры работают параллельно?': 'Do printers work in parallel?'
+        ,'Срочность заказа': 'Order urgency'
+        ,'Упаковка/Доставка (₽)': 'Packaging/Shipping (RUB)'
+        ,'Дата и время начала': 'Start date and time'
+        ,'Дата окончания': 'End date'
+        ,'Если указано, профиль срочности подбирается автоматически.': 'If set, the urgency profile is selected automatically.'
+        ,'Вкл.': 'On'
+        ,'Добавьте услуги при необходимости': 'Add services if needed'
+        ,'Принтер:': 'Printer:'
+        ,'Мощность:': 'Power:'
+        ,'Обсл:': 'Maint.:'
+        ,'Часы окупаемости:': 'Payback hours:'
+        ,'Имя модели': 'Model name'
+        ,'Часы печати': 'Print hours'
+        ,'Label': 'Label'
+        ,'Добавьте модель или перетащите файл .gcode в данную область': 'Add a model or drag a .gcode file into this area'
+        ,'Добавить модель': 'Add model'
+        ,'Весь период': 'Entire period'
+        ,'Неделя': 'Week'
+        ,'Месяц': 'Month'
+        ,'Год': 'Year'
+        ,'Ручной': 'Custom'
+        ,'Применить': 'Apply'
+        ,'Ключевые показатели': 'Key metrics'
+        ,'Окупаемость': 'Payback'
+        ,'Прибыль минус капвложения': 'Profit minus capital costs'
+        ,'Прибыль/час': 'Profit/hour'
+        ,'Чистая прибыль на час': 'Net profit per hour'
+        ,'Себестоимость на кг': 'Cost price per kg'
+        ,'Все расходы / масса': 'All expenses / mass'
+        ,'Цена клиента': 'Client price'
+        ,'Средняя цена за грамм': 'Average price per gram'
+        ,'Средний расход': 'Average usage'
+        ,'Материал / заказ': 'Material / order'
+        ,'Среднее время печати': 'Average print time'
+        ,'Часов печати / заказ': 'Print hours / order'
+        ,'Средняя партия': 'Average batch'
+        ,'моделей': 'models'
+        ,'Моделей в заказе': 'Models per order'
+        ,'Диаграммы и тренды': 'Charts and trends'
+        ,'Структура затрат': 'Cost structure'
+        ,'Материалы по расходу': 'Materials by usage'
+        ,'Выручка по периоду': 'Revenue by period'
+        ,'Точек:': 'Points:'
+        ,'Время производства': 'Production time'
+        ,'Статусы заказов': 'Order statuses'
+        ,'Топ принтеров': 'Top printers'
+        ,'Прибыль:': 'Profit:'
+        ,'Модели:': 'Models:'
+        ,'Топ клиентов': 'Top clients'
+        ,'Нет данных по клиентам.': 'No client data.'
+        ,'Топ материалов': 'Top materials'
+        ,'Нет данных по материалам.': 'No material data.'
+        ,'Нет накладных расходов.': 'No overhead expenses.'
+        ,'Подробные таблицы': 'Detailed tables'
+        ,'Все принтеры': 'All printers'
+        ,'Принтер': 'Printer'
+        ,'Выручка': 'Revenue'
+        ,'Расходы': 'Expenses'
+        ,'Время': 'Time'
+        ,'Кол-во моделей': 'Model count'
+        ,'Доля выручки:': 'Revenue share:'
+        ,'Итого': 'Total'
+        ,'Все клиенты': 'All clients'
+        ,'Все материалы': 'All materials'
+        ,'Все накладные расходы': 'All overhead expenses'
+        ,'Статья': 'Item'
+        ,'Распределено': 'Distributed'
+        ,'Остаток': 'Remaining'
+        ,'Заказы': 'Orders'
+        ,'Нет активных накладных расходов': 'No active overhead expenses'
+        ,'Чистая прибыль': 'Net profit'
+        ,'Заказов:': 'Orders:'
+        ,'Средний чек:': 'Average order:'
+        ,'Капвложения': 'Capital costs'
+        ,'Вложений': 'investments'
+        ,'Качество': 'Quality'
+        ,'Выход годных': 'Yield'
+        ,'Без брака': 'No rejects'
+        ,'Брак (кг)': 'Rejects (kg)'
+        ,'Масса брака': 'Reject mass'
+        ,'Брак (ч)': 'Rejects (h)'
+        ,'Время брака': 'Reject time'
+        ,'История расчетов': 'Calculation history'
+        ,'Код': 'Code'
+        ,'Дата': 'Date'
+        ,'Calculation name': 'Calculation name'
+        ,'Итог (₽)': 'Total (RUB)'
+        ,'Чек': 'Receipt'
+        ,'Клиент': 'Client'
+        ,'Подробнее': 'Details'
+        ,'Фильтр': 'Filter'
+        ,'Всего заказов:': 'Total orders:'
+        ,'сумма:': 'sum:'
+        ,'часы печати:': 'print hours:'
+        ,'Стандарт': 'Standard'
+        ,'Быстрый': 'Fast'
+        ,'Срочный': 'Rush'
+        ,'Пн': 'Mon'
+        ,'Вт': 'Tue'
+        ,'Ср': 'Wed'
+        ,'Чт': 'Thu'
+        ,'Пт': 'Fri'
+        ,'Сб': 'Sat'
+        ,'Вс': 'Sun'
+        ,'Начало': 'Start'
+        ,'Конец': 'End'
+        ,'Всего:': 'Total:'
+        ,'Сначала скачайте резервную копию.': 'Download a backup copy first.'
+        ,'Не удалось сохранить резервную копию:': 'Could not save backup copy:'
+        ,'Не удалось обновить данные:': 'Could not update data:'
+        ,'Резервная копия сохранена у вас. Попробуйте позже или импортируйте файл вручную.': 'A backup was saved locally. Try again later or import the file manually.'
+        ,'График не задан.': 'Schedule is not configured.'
+        ,'Текущий профиль:': 'Current profile:'
+        ,'к цене': 'to price'
+        ,'без доп.наценки': 'without extra markup'
+        ,'Компания': 'Company'
+        ,'Обычные сроки, пятидневка': 'Regular lead time, five-day week'
+        ,'Ускоренный режим, сокращённый обед': 'Accelerated mode, shorter lunch break'
+        ,'Максимальный приоритет и расширенный график': 'Maximum priority and extended schedule'
+    };
+    const I18N_REGEX_TRANSLATIONS = [
+        { pattern: /^Не найден принтер (.+)$/u, replace: (_, tail) => `Printer not found ${tail}` },
+        { pattern: /^Не найден принтер для профиля: (.+)$/u, replace: (_, tail) => `Printer for profile not found: ${tail}` },
+        { pattern: /^Ошибка: (.+)$/u, replace: (_, tail) => `Error: ${tail}` },
+        { pattern: /^Ошибка отправки: (.+)$/u, replace: (_, tail) => `Send error: ${tail}` },
+        { pattern: /^Ошибка сохранения: (.+)$/u, replace: (_, tail) => `Save error: ${tail}` },
+        { pattern: /^Ошибка загрузки: (.+)$/u, replace: (_, tail) => `Load error: ${tail}` },
+        { pattern: /^Ошибка сохранения истории: (.+)$/u, replace: (_, tail) => `History save error: ${tail}` },
+        { pattern: /^Ошибка загрузки истории: (.+)$/u, replace: (_, tail) => `History load error: ${tail}` },
+        { pattern: /^Заполните обязательные поля:\n- (.+)$/u, replace: (_, tail) => `Fill in the required fields:\n- ${tail}` },
+        { pattern: /^Исправьте график:\n(.+)$/us, replace: (_, tail) => `Fix the schedule:\n${tail}` },
+        { pattern: /^Синхронизировано (\d+) катушек из Spoolman \((\d+) новых, (\d+) обновлено\)$/u, replace: (_, total, created, updated) => `Synced ${total} spools from Spoolman (${created} new, ${updated} updated)` },
+        { pattern: /^Не удалось удалить принтеры, которые уже есть в истории заказов:\n(.+)$/us, replace: (_, tail) => `Could not delete printers that already exist in order history:\n${tail}` },
+        { pattern: /^(.+) начинается раньше смены\.$/u, replace: (_, tail) => `${translateUiText(tail)} starts before the shift.` },
+        { pattern: /^Не удалось обновить данные: (.+)\. Резервная копия сохранена у вас\. Попробуйте позже или импортируйте файл вручную\.$/u, replace: (_, tail) => `Could not update data: ${tail}. A backup was saved locally. Try again later or import the file manually.` },
+        { pattern: /^Не удалось сохранить резервную копию: (.+)$/u, replace: (_, tail) => `Could not save backup: ${tail}` },
+        { pattern: /^Удалено (\d+) дубликатов\. Обновите страницу для применения изменений\.$/u, replace: (_, count) => `Deleted ${count} duplicates. Refresh the page to apply changes.` },
+        { pattern: /^Ошибка очистки дубликатов: (.+)$/u, replace: (_, tail) => `Duplicate cleanup error: ${tail}` },
+        { pattern: /^Принтер: (.+)$/u, replace: (_, tail) => `Printer: ${tail}` },
+        { pattern: /^Мощность: ([0-9.]+)Вт, Обсл: ([0-9.]+)₽\/ч, Часы окупаемости: (.+)\.$/u, replace: (_, power, maint, payback) => `Power: ${power}W, Maint.: ${maint} RUB/h, Payback hours: ${payback}.` },
+        { pattern: /^Мощность: ([^,]+), Обсл: ([^,]+), Часы окупаемости: (.+)\.$/u, replace: (_, power, maint, payback) => `Power: ${power}, Maint.: ${maint}, Payback hours: ${payback}.` },
+        { pattern: /^Итого: (.+)$/u, replace: (_, tail) => `Total: ${tail}` },
+        { pattern: /^Точек: (.+)$/u, replace: (_, tail) => `Points: ${tail}` },
+        { pattern: /^Всего: (.+)$/u, replace: (_, tail) => `Total: ${tail}` },
+        { pattern: /^Прибыль: (.+) · Часы: (.+) · Модели: (.+)$/u, replace: (_, profit, hours, models) => `Profit: ${profit} · Hours: ${hours} · Models: ${models}` },
+        { pattern: /^Заказов: (.+) · Средний чек: (.+)$/u, replace: (_, count, avg) => `Orders: ${count} · Average order: ${avg}` },
+        { pattern: /^Всего заказов: (.+), сумма: (.+), часы печати: (.+)$/u, replace: (_, total, sum, hours) => `Total orders: ${total}, sum: ${sum}, print hours: ${hours}` },
+        { pattern: /^(.+) кг$/u, replace: (_, value) => `${value} kg` },
+        { pattern: /^(.+) ч$/u, replace: (_, value) => `${value} h` },
+        { pattern: /^(.+) моделей$/u, replace: (_, value) => `${value} models` },
+        { pattern: /^(.+) ₽\/ч$/u, replace: (_, value) => `${value} RUB/h` },
+        { pattern: /^(.+) ₽\/кг$/u, replace: (_, value) => `${value} RUB/kg` },
+        { pattern: /^(.+) ₽\/г$/u, replace: (_, value) => `${value} RUB/g` }
+    ];
+    const BUILTIN_URGENCY_PROFILE_DEFAULTS = {
+        standard: {
+            title: 'Стандарт',
+            description: 'Обычные сроки, пятидневка'
+        },
+        fast: {
+            title: 'Быстрый',
+            description: 'Ускоренный режим, сокращённый обед'
+        },
+        rush: {
+            title: 'Срочный',
+            description: 'Максимальный приоритет и расширенный график'
+        }
+    };
+    let i18nDomObserver = null;
+
+    function normalizeSupportedLanguage(lang) {
+        const normalized = String(lang || '').toLowerCase().split('-')[0];
+        return I18N_SUPPORTED_LANGUAGES.includes(normalized) ? normalized : 'ru';
+    }
+
+    function getBrowserLanguage() {
+        if (window.i18nextBrowserLanguageDetector) {
+            try {
+                const detector = new window.i18nextBrowserLanguageDetector();
+                const detected = detector.detect();
+                const raw = Array.isArray(detected) ? detected[0] : detected;
+                return normalizeSupportedLanguage(raw);
+            } catch (e) {
+                console.warn('i18n.detect.browser.failed', e);
+            }
+        }
+        return normalizeSupportedLanguage(navigator.language || navigator.userLanguage || 'ru');
+    }
+
+    function getLanguageOverride() {
+        const runtimeAppData = window.appData;
+        const fromAppData = runtimeAppData && runtimeAppData.calcSettings ? runtimeAppData.calcSettings.languageOverride : '';
+        if (['auto', 'ru', 'en'].includes(fromAppData)) return fromAppData;
+        const fromStorage = localStorage.getItem(I18N_OVERRIDE_STORAGE_KEY);
+        return ['auto', 'ru', 'en'].includes(fromStorage) ? fromStorage : 'auto';
+    }
+
+    function resolveActiveLanguage() {
+        const override = getLanguageOverride();
+        return override === 'auto' ? getBrowserLanguage() : normalizeSupportedLanguage(override);
+    }
+
+    function getCurrentLanguage() {
+        return normalizeSupportedLanguage(document.documentElement.lang || resolveActiveLanguage());
+    }
+
+    function getCurrentLocale() {
+        return I18N_LOCALE_MAP[getCurrentLanguage()] || I18N_LOCALE_MAP.ru;
+    }
+
+    function translateDynamicString(text) {
+        for (const rule of I18N_REGEX_TRANSLATIONS) {
+            if (rule.pattern.test(text)) {
+                return text.replace(rule.pattern, rule.replace);
+            }
+        }
+        return text;
+    }
+
+    function translateUiText(text) {
+        const source = String(text ?? '');
+        if (!source || getCurrentLanguage() === 'ru') return source;
+        const leading = source.match(/^\s*/u)?.[0] || '';
+        const trailing = source.match(/\s*$/u)?.[0] || '';
+        const normalized = source.replace(/^\s+|\s+$/gu, '').replace(/\s+/gu, ' ');
+        if (!normalized) return source;
+        let translated = normalized;
+        if (window.i18next && window.i18next.isInitialized) {
+            translated = window.i18next.t(normalized, { defaultValue: normalized });
+        }
+        if (translated === normalized) {
+            translated = translateDynamicString(normalized);
+        }
+        return `${leading}${translated}${trailing}`;
+    }
+
+    function getLocalizedProfileTitle(profile) {
+        if (!profile) return '';
+        const defaults = BUILTIN_URGENCY_PROFILE_DEFAULTS[profile.id];
+        if (!defaults) return profile.title || '';
+        if (!profile.title || profile.title === defaults.title || profile.title === translateUiText(defaults.title)) {
+            return translateUiText(defaults.title);
+        }
+        return profile.title;
+    }
+
+    function getLocalizedProfileDescription(profile) {
+        if (!profile) return '';
+        const defaults = BUILTIN_URGENCY_PROFILE_DEFAULTS[profile.id];
+        if (!defaults) return profile.description || '';
+        if (!profile.description || profile.description === defaults.description || profile.description === translateUiText(defaults.description)) {
+            return translateUiText(defaults.description);
+        }
+        return profile.description;
+    }
+
+    function translateElementAttributes(element) {
+        ['placeholder', 'title', 'aria-label', 'alt', 'data-bs-original-title'].forEach(attr => {
+            if (!element.hasAttribute || !element.hasAttribute(attr)) return;
+            const originalAttr = `data-i18n-original-${attr.replace(/[^a-z0-9_-]/gi, '_')}`;
+            if (!element.hasAttribute(originalAttr)) {
+                element.setAttribute(originalAttr, element.getAttribute(attr));
+            }
+            const translated = translateUiText(element.getAttribute(originalAttr));
+            if (element.getAttribute(attr) !== translated) {
+                element.setAttribute(attr, translated);
+            }
+        });
+    }
+
+    function translateTextNode(node) {
+        if (!node || !node.parentElement) return;
+        const parentTag = node.parentElement.tagName;
+        if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'TEXTAREA') return;
+        if (!node.__i18nOriginalText) {
+            node.__i18nOriginalText = node.nodeValue;
+        }
+        node.nodeValue = translateUiText(node.__i18nOriginalText);
+    }
+
+    function translateElementTree(root) {
+        if (!root) return;
+        if (root.nodeType === Node.TEXT_NODE) {
+            translateTextNode(root);
+            return;
+        }
+        if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return;
+        if (root.nodeType === Node.ELEMENT_NODE) {
+            translateElementAttributes(root);
+        }
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        let currentNode = walker.nextNode();
+        while (currentNode) {
+            translateTextNode(currentNode);
+            currentNode = walker.nextNode();
+        }
+        if (root.querySelectorAll) {
+            root.querySelectorAll('*').forEach(el => translateElementAttributes(el));
+        }
+    }
+
+    function syncLanguageOverrideControl() {
+        const select = document.getElementById('uiLanguageOverride');
+        if (select) {
+            select.value = getLanguageOverride();
+        }
+    }
+
+    function updateThemeToggleLabel() {
+        const btn = document.getElementById("themeToggle");
+        if (!btn) return;
+        const theme = document.documentElement.getAttribute("data-bs-theme");
+        btn.innerText = theme === "dark"
+            ? `☀️ ${translateUiText('Светлая тема')}`
+            : `🌙 ${translateUiText('Темная тема')}`;
+    }
+
+    function applyI18nToPage() {
+        const originalTitle = document.documentElement.dataset.i18nOriginalTitle || document.title;
+        document.documentElement.dataset.i18nOriginalTitle = originalTitle;
+        document.title = translateUiText(originalTitle);
+        document.documentElement.lang = getCurrentLanguage();
+        if (document.body) translateElementTree(document.body);
+        syncLanguageOverrideControl();
+        updateThemeToggleLabel();
+    }
+
+    function refreshLocalizedUi() {
+        [
+            'renderPrintersTable',
+            'renderGlobalMaterialsTable',
+            'renderGlobalAdditionalTable',
+            'renderClientsTable',
+            'renderCustomServicesTable',
+            'renderHistoryTable',
+            'renderSummary',
+            'populateSpoolmanUIFromConfig'
+        ].forEach(fnName => {
+            if (typeof window[fnName] === 'function') {
+                try {
+                    window[fnName]();
+                } catch (e) {
+                    console.warn(`i18n.refresh.${fnName}.failed`, e);
+                }
+            }
+        });
+        applyI18nToPage();
+    }
+
+    function observeI18nDomChanges() {
+        if (i18nDomObserver || !document.body) return;
+        i18nDomObserver = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                mutation.addedNodes.forEach(node => translateElementTree(node));
+            });
+        });
+        i18nDomObserver.observe(document.body, {
+            subtree: true,
+            childList: true
+        });
+    }
+
+    async function initI18n() {
+        if (!window.i18next) return;
+        if (!window.i18next.isInitialized) {
+            const instance = window.i18nextBrowserLanguageDetector
+                ? window.i18next.use(window.i18nextBrowserLanguageDetector)
+                : window.i18next;
+            await instance.init({
+                lng: resolveActiveLanguage(),
+                fallbackLng: 'ru',
+                supportedLngs: I18N_SUPPORTED_LANGUAGES,
+                load: 'languageOnly',
+                resources: {
+                    en: { translation: I18N_EN_TRANSLATIONS },
+                    ru: { translation: {} }
+                },
+                keySeparator: false,
+                nsSeparator: false,
+                interpolation: { escapeValue: false },
+                detection: {
+                    order: ['navigator', 'htmlTag'],
+                    caches: []
+                }
+            });
+        } else {
+            await window.i18next.changeLanguage(resolveActiveLanguage());
+        }
+        applyI18nToPage();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                observeI18nDomChanges();
+                applyI18nToPage();
+            }, { once: true });
+        } else {
+            observeI18nDomChanges();
+        }
+    }
+
+    function setLanguageOverride(value) {
+        const next = ['auto', 'ru', 'en'].includes(value) ? value : 'auto';
+        localStorage.setItem(I18N_OVERRIDE_STORAGE_KEY, next);
+        const runtimeAppData = window.appData;
+        if (runtimeAppData && runtimeAppData.calcSettings) {
+            runtimeAppData.calcSettings.languageOverride = next;
+        }
+        if (window.i18next && window.i18next.isInitialized) {
+            window.i18next.changeLanguage(resolveActiveLanguage()).then(() => {
+                refreshLocalizedUi();
+            });
+        } else {
+            applyI18nToPage();
+        }
+    }
+
     function setTheme(theme) {
         document.documentElement.setAttribute("data-bs-theme", theme);
         localStorage.setItem(THEME_STORAGE_KEY, theme);
-        const btn = document.getElementById("themeToggle");
-        btn.innerText = theme==="dark" ? "☀️ Светлая тема" : "🌙 Темная тема";
+        updateThemeToggleLabel();
     }
     document.getElementById("themeToggle").addEventListener("click",()=>{
         const th = document.documentElement.getAttribute("data-bs-theme");
@@ -3548,6 +4261,7 @@
     });
     const savedTheme = localStorage.getItem(THEME_STORAGE_KEY)||"light";
     setTheme(savedTheme);
+    initI18n();
 
     function getNextId(type) {
         if (!appData.counters) appData.counters = {};
@@ -4231,7 +4945,7 @@
             const tr=document.createElement('tr');
             tr.dataset.index=i;
             tr.innerHTML=`<td><input type="checkbox" class="form-check-input"></td>`+
-                `<td>${new Date(h.timestamp||0).toLocaleString()}</td>`+
+                `<td>${new Date(h.timestamp||0).toLocaleString(getCurrentLocale())}</td>`+
                 `<td>${h.id||''}</td>`+
                 `<td>${h.calcName||''}</td>`+
                 `<td>${h.clientName||''}</td>`+
@@ -4422,6 +5136,7 @@
             ignoreCoolingRejects: false,
             includeEstimatePrint: false,
             estimatePrintCost: 0,
+            languageOverride: 'auto',
             customServices: [],
             currentUrgencyId: 'standard'
         },
@@ -4528,6 +5243,9 @@
                 ? obj.labelSettings.urgencyProfiles[0].id
                 : 'standard';
             obj.calcSettings.currentUrgencyId = firstProfile;
+        }
+        if (!['auto', 'ru', 'en'].includes(obj.calcSettings.languageOverride)) {
+            obj.calcSettings.languageOverride = 'auto';
         }
         if (!Array.isArray(obj.calcSettings.customServices)) obj.calcSettings.customServices = [];
         if (!obj.migrationInfo) obj.migrationInfo = {};
@@ -4902,6 +5620,8 @@
         document.getElementById("calcCostKwh").value = appData.calcSettings.costKwh || "";
         document.getElementById("calcTaxPercent").value = appData.calcSettings.taxPercent || "";
         document.getElementById("calcRoundingMode").value = appData.calcSettings.roundingMode || "none";
+        const languageOverrideEl = document.getElementById("uiLanguageOverride");
+        if (languageOverrideEl) languageOverrideEl.value = appData.calcSettings.languageOverride || "auto";
         document.getElementById("calcShipping").value = appData.calcSettings.shipping || "";
         ensureCalcStartDate();
         const deadlineInput = document.getElementById("calcDeadlineDate");
@@ -5041,7 +5761,7 @@
             const option = document.createElement('option');
             option.value = profile.id;
             const suffix = profile.markupPercent ? ` (+${profile.markupPercent}% )` : '';
-            option.textContent = `${profile.title}${suffix}`;
+            option.textContent = `${getLocalizedProfileTitle(profile)}${suffix}`;
             select.appendChild(option);
         });
         if (!getEditingProfileById(currentUrgencyProfileId) && urgencyProfilesDraft.length) {
@@ -5066,9 +5786,9 @@
             updateUrgencyScheduleHint(null);
             return;
         }
-        if (nameInput) nameInput.value = profile.title || '';
+        if (nameInput) nameInput.value = getLocalizedProfileTitle(profile);
         if (markupInput) markupInput.value = profile.markupPercent || 0;
-        if (descInput) descInput.value = profile.description || '';
+        if (descInput) descInput.value = getLocalizedProfileDescription(profile);
         updateUrgencyScheduleHint(profile);
     }
 
@@ -5116,11 +5836,11 @@
         }
         const summary = buildScheduleSummary(normalizeScheduleMap(profile.schedule || {}));
         if (!summary.length) {
-            hint.textContent = 'График не задан.';
+            hint.textContent = translateUiText('График не задан.');
             return;
         }
         const parts = summary.map(item => `${item.dayLabel}: ${item.windowLabel}`);
-        hint.textContent = `Текущий профиль: ${profile.title || ''}. ${parts.join('; ')}`;
+        hint.textContent = `${translateUiText('Текущий профиль:')} ${getLocalizedProfileTitle(profile)}. ${parts.join('; ')}`;
     }
 
     function addUrgencyProfile() {
@@ -5204,16 +5924,22 @@
             tableWrapper.className = "table-responsive";
             const table = document.createElement("table");
             table.className = "table table-sm align-middle mb-0";
-            table.innerHTML = `
-        <thead>
-          <tr>
-            <th style="width:5%">#</th>
-            <th>Начало</th>
-            <th>Конец</th>
-          </tr>
-        </thead>
-        <tbody></tbody>`;
-            const tbody = table.querySelector("tbody");
+            const thead = document.createElement("thead");
+            const headerRow = document.createElement("tr");
+            const indexTh = document.createElement("th");
+            indexTh.style.width = "5%";
+            indexTh.textContent = "#";
+            const startTh = document.createElement("th");
+            startTh.textContent = "Начало";
+            const endTh = document.createElement("th");
+            endTh.textContent = "Конец";
+            headerRow.appendChild(indexTh);
+            headerRow.appendChild(startTh);
+            headerRow.appendChild(endTh);
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            const tbody = document.createElement("tbody");
+            table.appendChild(tbody);
             for (let i = 0; i < OPERATOR_PERIOD_ROWS; i++) {
                 const tr = document.createElement("tr");
                 const tdIndex = document.createElement("td");
@@ -5974,7 +6700,7 @@
         rows.sort((a,b)=>{
             const va=a.children[col].innerText;
             const vb=b.children[col].innerText;
-            return asc?va.localeCompare(vb,'ru',{numeric:true}):vb.localeCompare(va,'ru',{numeric:true});
+            return asc?va.localeCompare(vb,getCurrentLanguage(),{numeric:true}):vb.localeCompare(va,getCurrentLanguage(),{numeric:true});
         });
         const tbody=tb.querySelector('tbody');
         rows.forEach(r=>tbody.appendChild(r));
@@ -6975,9 +7701,9 @@
         canceled: 'Отменена'
     };
 
-    const getOrderStatusLabel = (status) => ORDER_STATUS_LABELS[status] || status || '—';
-    const getModelStatusLabel = (status) => MODEL_STATUS_LABELS[status] || status || '—';
-    const getModelQualityLabel = (status) => status === 'reject' ? 'Брак' : '';
+    const getOrderStatusLabel = (status) => translateUiText(ORDER_STATUS_LABELS[status] || status || '—');
+    const getModelStatusLabel = (status) => translateUiText(MODEL_STATUS_LABELS[status] || status || '—');
+    const getModelQualityLabel = (status) => status === 'reject' ? translateUiText('Брак') : '';
 
     const TIMELINE_STAGE_LABELS = {
         prep: 'Подготовка',
@@ -6992,9 +7718,9 @@
     const minutesToDuration = (minutes) => {
         const hrs = Math.floor(minutes / 60);
         const mins = Math.round(minutes % 60);
-        if (hrs > 0 && mins > 0) return `${hrs} ч ${mins} мин`;
-        if (hrs > 0) return `${hrs} ч`;
-        return `${mins} мин`;
+        if (hrs > 0 && mins > 0) return `${hrs} ${translateUiText('ч')} ${mins} ${translateUiText('мин')}`;
+        if (hrs > 0) return `${hrs} ${translateUiText('ч')}`;
+        return `${mins} ${translateUiText('мин')}`;
     };
     const minutesToTimeString = (minutes) => {
         if (Number.isNaN(minutes)) return '';
@@ -7009,13 +7735,13 @@
         if (Number.isNaN(hours) || Number.isNaN(minutes)) return NaN;
         return hours * 60 + minutes;
     };
-    const formatTimelineTime = (date) => date.toLocaleString('ru-RU', {
+    const formatTimelineTime = (date) => date.toLocaleString(getCurrentLocale(), {
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
         month: '2-digit'
     });
-    const formatTimeOnly = (date) => date.toLocaleTimeString('ru-RU', {
+    const formatTimeOnly = (date) => date.toLocaleTimeString(getCurrentLocale(), {
         hour: '2-digit',
         minute: '2-digit'
     });
@@ -7551,7 +8277,7 @@
             const option = document.createElement('option');
             option.value = profile.id;
             const markupText = profile.markupPercent ? ` (+${profile.markupPercent}% )` : '';
-            option.textContent = `${profile.title}${markupText}`;
+            option.textContent = `${getLocalizedProfileTitle(profile)}${markupText}`;
             select.appendChild(option);
         });
         let currentId = appData.calcSettings.currentUrgencyId;
@@ -7569,14 +8295,16 @@
             const profile = profiles.find(p => String(p.id) === String(select.value));
             let text = '';
             if (profile) {
-                const markupText = profile.markupPercent ? ` +${profile.markupPercent}% к цене` : ' без доп.наценки';
-                const desc = profile.description ? ` — ${profile.description}` : '';
+                const localizedTitle = getLocalizedProfileTitle(profile);
+                const localizedDescription = getLocalizedProfileDescription(profile);
+                const markupText = profile.markupPercent ? ` +${profile.markupPercent}% ${translateUiText('к цене')}` : ` ${translateUiText('без доп.наценки')}`;
+                const desc = localizedDescription ? ` — ${localizedDescription}` : '';
                 const manualMarkup = appData.calcSettings.markupPercent || 0;
-                const manualText = manualMarkup ? `, ручная +${manualMarkup}%` : '';
-                text = `${profile.title}${markupText}${manualText}${desc}`;
+                const manualText = manualMarkup ? `, ${translateUiText('ручная')} +${manualMarkup}%` : '';
+                text = `${localizedTitle}${markupText}${manualText}${desc}`;
             }
             if (summary) summary.textContent = text;
-            updateUrgencySummaryLabels(text || (profile ? profile.title : '—'));
+            updateUrgencySummaryLabels(text || (profile ? getLocalizedProfileTitle(profile) : '—'));
             appData.calcSettings.currentUrgencyId = select.value;
         };
         select.onchange = updateSummary;
@@ -7913,7 +8641,7 @@
         try {
             const date = value instanceof Date ? value : new Date(value);
             if (isNaN(date.getTime())) return typeof value === 'string' ? value : '—';
-            return date.toLocaleString('ru-RU', {
+            return date.toLocaleString(getCurrentLocale(), {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
@@ -8184,6 +8912,7 @@
     function showToast(message, options = {}) {
         const container = document.getElementById('globalToastContainer');
         if (!container) return;
+        const localizedMessage = translateUiText(message);
         const toast = document.createElement('div');
         const type = options.type || 'dark';
         const delay = Number.isFinite(options.delay) ? options.delay : 10000;
@@ -8194,7 +8923,7 @@
         toast.setAttribute('aria-atomic', 'true');
         toast.innerHTML = `
         <div class="d-flex align-items-center">
-            <div class="toast-body">${formatToastMessage(message)}</div>
+            <div class="toast-body">${formatToastMessage(localizedMessage)}</div>
             ${actionHtml}
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
                     aria-label="Close"><\/button>
@@ -8288,13 +9017,24 @@
     function guessToastTypeFromMessage(message) {
         const text = String(message || '').toLowerCase();
         if (!text) return 'success';
-        if (text.includes('ошиб') || text.includes('не удалось') || text.includes('нельзя') || text.includes('не найден')) {
+        if (
+            text.includes('ошиб') || text.includes('error') ||
+            text.includes('не удалось') || text.includes('could not') ||
+            text.includes('нельзя') || text.includes('cannot') ||
+            text.includes('не найден') || text.includes('not found')
+        ) {
             return 'error';
         }
-        if (text.includes('укажите') || text.includes('введите') || text.includes('исправьте') || text.includes('должен') || text.includes('нужен')) {
+        if (
+            text.includes('укажите') || text.includes('specify') ||
+            text.includes('введите') || text.includes('enter ') ||
+            text.includes('исправьте') || text.includes('fix ') ||
+            text.includes('должен') || text.includes('must ') ||
+            text.includes('нужен') || text.includes('required')
+        ) {
             return 'warning';
         }
-        if (text.includes('нет ') || text.includes('не ')) return 'warning';
+        if (text.includes('нет ') || text.includes('не ') || text.includes('no ') || text.includes('not ')) return 'warning';
         return 'success';
     }
 
@@ -9077,7 +9817,7 @@
                 const dayKey = dayDate.getTime();
                 let group = timelineGroups.find(g => g.key === dayKey);
                 if (!group) {
-                    const dayLabel = dayDate.toLocaleDateString('ru-RU', {
+                    const dayLabel = dayDate.toLocaleDateString(getCurrentLocale(), {
                         weekday: 'long',
                         day: '2-digit',
                         month: '2-digit',
@@ -9361,7 +10101,7 @@
 
         updateReceiptsUi();
 
-        const dtStr = new Date().toLocaleString("ru-RU");
+        const dtStr = new Date().toLocaleString(getCurrentLocale());
         const newEntry = {
             id: orderId,
             timestamp: Date.now(),
@@ -9656,7 +10396,7 @@
         try{
             const maxDate = getTimelineEndDate(events);
             if (maxDate) {
-                return maxDate.toLocaleString('ru-RU', {
+                return maxDate.toLocaleString(getCurrentLocale(), {
                     day: '2-digit',
                     month: '2-digit',
                     year: 'numeric',
@@ -9667,7 +10407,7 @@
             if (fallbackStart) {
                 const d = new Date(fallbackStart);
                 if (!Number.isNaN(d.getTime())) {
-                    return d.toLocaleDateString('ru-RU');
+                    return d.toLocaleDateString(getCurrentLocale());
                 }
             }
         } catch (e) {
@@ -9906,10 +10646,12 @@
         appData.calcSettings.includeEstimatePrint = document.getElementById("printEstimateCheckbox").checked;
         appData.calcSettings.estimatePrintCost = parseFloat(document.getElementById("estimatePrintCostInput").value) || 0;
         appData.calcSettings.roundingMode = document.getElementById("calcRoundingMode").value || "none";
+        appData.calcSettings.languageOverride = document.getElementById("uiLanguageOverride").value || "auto";
         appData.calcSettings.includeAmortization = document.getElementById("settingsIncludeAmortization").checked;
         appData.calcSettings.includeRejects = document.getElementById("settingsIncludeRejects").checked;
         appData.calcSettings.includeOverheads = document.getElementById("settingsIncludeOverheads").checked;
         appData.calcSettings.ignoreCoolingRejects = document.getElementById("settingsIgnoreCoolingRejects").checked;
+        setLanguageOverride(appData.calcSettings.languageOverride);
         saveToLocalStorage();
         showToastAuto("Сохранено");
     }
@@ -10036,11 +10778,11 @@
             const qrDataUrl = qrCanvas ? qrCanvas.toDataURL("image/png") : "";
             const htmlContent = `
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="${getCurrentLanguage()}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=58mm, initial-scale=1">
-  <title>Этикетка<\/title>
+  <title>${translateUiText('Этикетка')}<\/title>
   <style>
     body { width: 58mm; height: 40mm; margin: 0; padding: 0; font-family: sans-serif; }
     #labelContainer {
@@ -10085,11 +10827,11 @@
     <div>${printerName}<\/div>
     <div>${materialName}<\/div>
     <div>${formatTimeForDisplay(hours)}<\/div>
-    <div>${weight} г<\/div>
-    <div>${new Date().toLocaleDateString("ru-RU")}<\/div>
+    <div>${weight} ${translateUiText('г')}<\/div>
+    <div>${new Date().toLocaleDateString(getCurrentLocale())}<\/div>
   <\/div>
   ${fallbackThumb ? `<img class="thumb" src="data:image/png;base64,${fallbackThumb}">` : ''}
-  <img class="qr-code" src="${qrDataUrl}" alt="QR-код">
+  <img class="qr-code" src="${qrDataUrl}" alt="${translateUiText('QR-код')}">
   <\/div>
   <\/body>
 <\/html>
@@ -10121,11 +10863,11 @@
         // Формируем HTML для этикетки (30x20 мм)
         const htmlContent = `
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="${getCurrentLanguage()}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=30mm, initial-scale=1">
-  <title>Этикетка<\/title>
+  <title>${translateUiText('Этикетка')}<\/title>
   <style>
     body { width: 30mm; height: 20mm; margin: 0; padding: 0; font-family: sans-serif; font-size: 8pt; }
     #labelContainer {
@@ -10161,11 +10903,11 @@
 
     function buildSummaryCardHtml(data){
         return `<!DOCTYPE html>
-<html lang="ru">
+<html lang="${getCurrentLanguage()}">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Смета</title>
+  <title>${translateUiText('Смета')}</title>
   <link href="vendor/css/bootstrap-5.3.2.min.css" rel="stylesheet"/>
   <style>
     body{background:var(--bs-body-bg,#ffffff);color:var(--bs-body-color,#212529);font-family:'Segoe UI',Tahoma,sans-serif;padding:2rem;background-image:radial-gradient(circle at 20% 20%,var(--bs-primary-bg-subtle,#cfe2ff),transparent 60%),radial-gradient(circle at 80% 0,var(--bs-success-bg-subtle,#d1e7dd),transparent 60%);}
@@ -10194,23 +10936,23 @@
 <div class="order-summary-card">
   <div class="order-info">
     <div class="brand-title-row">
-      ${data.logo ? `<img src="${data.logo}" alt="Логотип">` : ''}
+      ${data.logo ? `<img src="${data.logo}" alt="${translateUiText('Логотип')}">` : ''}
       <h2>${data.company}</h2>
     </div>
     <div class="qr"><img src="${data.qr}" alt="QR"></div>
-    <div class="info-item"><span class="label">Код заказа:<\/span><span class="value">${data.orderId}<\/span></div>
-    <div class="info-item"><span class="label">Название заказа:<\/span><span class="value">${data.orderName}<\/span></div>
-    <div class="info-item"><span class="label">Клиент:<\/span><span class="value">${data.client}<\/span></div>
-    <div class="info-item"><span class="label">Статус:<\/span><span class="value">${data.status}<\/span></div>
-    ${data.urgencyTitle ? `<div class="info-item"><span class="label">Срочность:<\/span><span class="value">${data.urgencyTitle}${data.urgencyProfileMarkup ? ` (+${data.urgencyProfileMarkup}% )` : ''}${data.urgencyUserMarkup ? `, ручная ${data.urgencyUserMarkup}%` : ''}<\/span></div>` : ''}
-    <div class="info-item"><span class="label">Общее время печати:<\/span><span class="value">${data.totalTime}<\/span></div>
-	<div class="info-item"><span class="label">Общее время работы оператора:<\/span><span class="value">${data.totalTimeOperator}<\/span></div>
-    <div class="info-item"><span class="label">Суммарный вес:</span><span class="value">${data.totalWeight} г</span></div>
-    ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${s.total} ₽<\/span></div>`).join('') + `<div class="info-item"><span class="label">Итого услуги:<\/span><span class="value">${data.servicesTotal} ₽<\/span></div>` : ''}
-    <div class="info-item"><span class="label">Итого:<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
-    <div class="info-item"><span class="label">Цена за 1 грамм:<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
-    ${data.paymentInfo ? `<div class="info-item"><span class="label">Оплата:<\/span><span class="value">${data.paymentInfo}<\/span></div>` : ''}
-    ${data.finDate ? `<div class="info-item"><span class="label">Дата завершения:<\/span><span class="value">${data.finDate}<\/span></div>` : ''}
+    <div class="info-item"><span class="label">${translateUiText('Код заказа:')}<\/span><span class="value">${data.orderId}<\/span></div>
+    <div class="info-item"><span class="label">${translateUiText('Название заказа:')}<\/span><span class="value">${data.orderName}<\/span></div>
+    <div class="info-item"><span class="label">${translateUiText('Клиент:')}<\/span><span class="value">${data.client}<\/span></div>
+    <div class="info-item"><span class="label">${translateUiText('Статус:')}<\/span><span class="value">${data.status}<\/span></div>
+    ${data.urgencyTitle ? `<div class="info-item"><span class="label">${translateUiText('Срочность:')}<\/span><span class="value">${data.urgencyTitle}${data.urgencyProfileMarkup ? ` (+${data.urgencyProfileMarkup}% )` : ''}${data.urgencyUserMarkup ? `, ${translateUiText('ручная')} ${data.urgencyUserMarkup}%` : ''}<\/span></div>` : ''}
+    <div class="info-item"><span class="label">${translateUiText('Общее время печати:')}<\/span><span class="value">${data.totalTime}<\/span></div>
+	<div class="info-item"><span class="label">${translateUiText('Общее время работы оператора:')}<\/span><span class="value">${data.totalTimeOperator}<\/span></div>
+    <div class="info-item"><span class="label">${translateUiText('Суммарный вес:')}</span><span class="value">${data.totalWeight} ${translateUiText('г')}</span></div>
+    ${data.services && data.services.length ? data.services.map(s => `<div class="info-item"><span class="label">${s.name}:<\/span><span class="value">${s.total} ₽<\/span></div>`).join('') + `<div class="info-item"><span class="label">${translateUiText('Итого услуги:')}<\/span><span class="value">${data.servicesTotal} ₽<\/span></div>` : ''}
+    <div class="info-item"><span class="label">${translateUiText('Итого:')}<\/span><span class="value">${data.priceOld ? `<del>${data.priceOld} ₽<\/del> ${data.totalCost} ₽ (-${data.discountPercent}% )` : `${data.totalCost} ₽`}<\/span></div>
+    <div class="info-item"><span class="label">${translateUiText('Цена за 1 грамм:')}<\/span><span class="value">${data.pricePerGram} ₽<\/span></div>
+    ${data.paymentInfo ? `<div class="info-item"><span class="label">${translateUiText('Оплата:')}<\/span><span class="value">${data.paymentInfo}<\/span></div>` : ''}
+    ${data.finDate ? `<div class="info-item"><span class="label">${translateUiText('Дата завершения:')}<\/span><span class="value">${data.finDate}<\/span></div>` : ''}
   <\/div>
   <div class="models">
     <div class="models-grid">${data.modelsHtml}<\/div>
@@ -10732,10 +11474,10 @@
     }
     function generateMaxDetailedCalcHtml(d) {
         let s = `<!DOCTYPE html>
-<html lang="ru">
+<html lang="${getCurrentLanguage()}">
 <head>
   <meta charset="UTF-8"/>
-  <title>Подробный расчёт<\/title>
+  <title>${translateUiText('Подробный расчёт')}<\/title>
   <style>
     body { font-family: sans-serif; margin:20px; }
     .printer-block { margin:10px 0; padding:5px; border:1px dashed #999; }
@@ -10744,35 +11486,35 @@
   <\/style>
 <\/head>
 <body>
-  <h1>Подробный расчёт<\/h1>
-  <p>Название: ${d.calcName || "(Без названия)"}, Клиент: ${d.clientName || "(Не указан)"}, Статус: ${getOrderStatusLabel(d.orderStatus)}<\/p>
-  <p>Срочность: ${d.urgencyProfileTitle || '—'}${d.profileMarkupPercent ? ` (+${d.profileMarkupPercent}% )` : ''}${d.userMarkupPercent ? `, ручная ${d.userMarkupPercent}%` : ''}<\/p>
-  <p>Итог: <strong>${safeFixed(d.total)} ₽<\/strong>${d.priceBeforeDiscount ? ` (скидка ${d.discountPercent}% от ${safeFixed(d.priceBeforeDiscount)} ₽)` : ''}<\/p>
-  <p>Оператор ч.: ${formatTimeForDisplay(d.totalHours)} ч, Стоимость работы оператора: ${safeFixed(d.totalOperatorCost)} ₽, Налог: ${d.taxPercent}%, Упаковка/Доставка: ${d.shipping}₽, Этикетки: ${safeFixed(d.totalLabelsCost || 0)} ₽, Эл.: ${d.costKwh}₽/кВт⋅ч<\/p>
-  <p>Параллельная печать: ${d.parallelMode}, Наценка: ${d.markupPercent || 0}%<\/p>
-  <p>Подитог: ${safeFixed(d.total - d.globalAdditional.taxAmount)} ₽, Общий налог: ${safeFixed(d.globalAdditional.taxAmount)} ₽<\/p>
+  <h1>${translateUiText('Подробный расчёт')}<\/h1>
+  <p>${translateUiText('Название:')} ${d.calcName || translateUiText('(Без названия)')}, ${translateUiText('Клиент:')} ${d.clientName || translateUiText('(Не указан)')}, ${translateUiText('Статус:')} ${getOrderStatusLabel(d.orderStatus)}<\/p>
+  <p>${translateUiText('Срочность:')} ${d.urgencyProfileTitle || '—'}${d.profileMarkupPercent ? ` (+${d.profileMarkupPercent}% )` : ''}${d.userMarkupPercent ? `, ${translateUiText('ручная')} ${d.userMarkupPercent}%` : ''}<\/p>
+  <p>${translateUiText('Итог:')} <strong>${safeFixed(d.total)} ₽<\/strong>${d.priceBeforeDiscount ? ` (${translateUiText('скидка')} ${d.discountPercent}% ${translateUiText('от')} ${safeFixed(d.priceBeforeDiscount)} ₽)` : ''}<\/p>
+  <p>${translateUiText('Оператор ч.:')} ${formatTimeForDisplay(d.totalHours)} ${translateUiText('ч')}, ${translateUiText('Стоимость работы оператора:')} ${safeFixed(d.totalOperatorCost)} ₽, ${translateUiText('Налог (%):')} ${d.taxPercent}%, ${translateUiText('Упаковка/Доставка:')} ${d.shipping}₽, ${translateUiText('Этикетки:')} ${safeFixed(d.totalLabelsCost || 0)} ₽, ${translateUiText('Эл.:')} ${d.costKwh}₽/кВт⋅ч<\/p>
+  <p>${translateUiText('Параллельная печать:')} ${translateUiText(String(d.parallelMode || ''))}, ${translateUiText('Наценка')} ${d.markupPercent || 0}%<\/p>
+  <p>${translateUiText('Подитог:')} ${safeFixed(d.total - d.globalAdditional.taxAmount)} ₽, ${translateUiText('Общий налог:')} ${safeFixed(d.globalAdditional.taxAmount)} ₽<\/p>
   <hr/>
 `;
         d.detailsByPrinter.forEach(pr => {
             s += `<div class="printer-block">
-      <strong>Принтер: ${pr.printerName} (ID: ${pr.printerId})<\/strong><br/>
-      Время: ${formatTimeForDisplay(pr.printerTime)} ч<br/>
+      <strong>${translateUiText('Принтер:')} ${pr.printerName} (ID: ${pr.printerId})<\/strong><br/>
+      ${translateUiText('Время:')} ${formatTimeForDisplay(pr.printerTime)} ${translateUiText('ч')}<br/>
     `;
             if(pr.linesDetail && pr.linesDetail.length>0){
                 s += `<table style="margin-top:5px;">
         <thead><tr>
-          <th>Модель<\/th>
-          <th>Иконка<\/th>
-          <th>Статус<\/th>
-          <th>Часы<\/th>
-          <th>Вес (г)<\/th>
-          <th>Материал<\/th>
-          <th>Сумма<\/th>
+          <th>${translateUiText('Модель')}<\/th>
+          <th>${translateUiText('Иконка')}<\/th>
+          <th>${translateUiText('Статус')}<\/th>
+          <th>${translateUiText('Часы')}<\/th>
+          <th>${translateUiText('Вес (г)')}<\/th>
+          <th>${translateUiText('Материал')}<\/th>
+          <th>${translateUiText('Сумма')}<\/th>
         <\/tr><\/thead>
         <tbody>`;
                 pr.linesDetail.forEach(ln => {
                     s += `<tr>
-          <td>${ln.name} (${ln.id || ''})${ln.excludedFromTotals ? ' <span style="color:#999;">(не в расчёте)<\/span>' : ''}<\/td>
+          <td>${ln.name} (${ln.id || ''})${ln.excludedFromTotals ? ` <span style="color:#999;">(${translateUiText('не в расчёте')})<\/span>` : ''}<\/td>
           <td>${ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" style="height:40px;"/>` : (getBrandLogoDataUrl() ? `<img src="${getBrandLogoDataUrl()}" style="height:40px;"/>` : '')}<\/td>
           <td>${getModelStatusLabel(ln.status)}${getModelQualityLabel(ln.status) ? ` — ${getModelQualityLabel(ln.status)}` : ''}<\/td>
           <td>${safeFixed(ln.hours)}<\/td>
@@ -10913,7 +11655,7 @@
 
     function renderSummary() {
 // Вспомогательные функции форматирования
-        const formatCurrency = (value) => new Intl.NumberFormat('ru-RU', {
+        const formatCurrency = (value) => new Intl.NumberFormat(getCurrentLocale(), {
             style: 'currency',
             currency: 'RUB',
             minimumFractionDigits: 2,
@@ -10921,13 +11663,13 @@
         }).format(value);
 
         const formatNumber = (value, decimals = 2) =>
-            new Intl.NumberFormat('ru-RU', {
+            new Intl.NumberFormat(getCurrentLocale(), {
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals
             }).format(value);
 
         const formatCompact = (value, decimals = 1) =>
-            new Intl.NumberFormat('ru-RU', {
+            new Intl.NumberFormat(getCurrentLocale(), {
                 notation: 'compact',
                 compactDisplay: 'short',
                 maximumFractionDigits: decimals
@@ -11088,8 +11830,8 @@
 
             const bucketType = days > 120 ? 'month' : (days > 45 ? 'week' : 'day');
             const buckets = [];
-            const formatDay = (date) => date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
-            const formatMonth = (date) => date.toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' });
+            const formatDay = (date) => date.toLocaleDateString(getCurrentLocale(), { day: '2-digit', month: '2-digit' });
+            const formatMonth = (date) => date.toLocaleDateString(getCurrentLocale(), { month: 'short', year: '2-digit' });
 
             let cursor = new Date(start);
             while (cursor < endSafe) {
@@ -12392,7 +13134,6 @@
 
 </script>
 <script src="vendor/js/supabase-2.min.js"></script>
-<script src="vendor/js/qrcode-1.0.0.min.js"></script>
 <script>
     const SUPABASE_URL = "https://kvvxfytrlgihewmsvwkj.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2dnhmeXRybGdpaGV3bXN2d2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU5NDExMzIsImV4cCI6MjA2MTUxNzEzMn0.bvXmrh3XZivLVyg4irGo82pLAhlrSapzmxcDKLEAjLo";
@@ -12772,6 +13513,15 @@
                 });
             }
         });
+        const languageOverrideEl = document.getElementById('uiLanguageOverride');
+        if (languageOverrideEl) {
+            languageOverrideEl.addEventListener('change', () => {
+                if (!appData.calcSettings) appData.calcSettings = {};
+                appData.calcSettings.languageOverride = languageOverrideEl.value || 'auto';
+                setLanguageOverride(appData.calcSettings.languageOverride);
+                saveToLocalStorage();
+            });
+        }
         const requestSmsBtn = document.getElementById('requestSmsBtn');
         if (requestSmsBtn) requestSmsBtn.addEventListener('click', requestMyNalogSms);
         const confirmSmsBtn = document.getElementById('confirmSmsBtn');
@@ -12838,8 +13588,8 @@
         if (cbAuto) cbAuto.checked = !!cfg.autoSync;
         if (lastSync) {
             lastSync.textContent = cfg.lastSync
-                ? new Date(cfg.lastSync).toLocaleString()
-                : "Никогда";
+                ? new Date(cfg.lastSync).toLocaleString(getCurrentLocale())
+                : translateUiText("Никогда");
         }
     }
 
@@ -13382,7 +14132,7 @@ curl -vk -X OPTIONS https://127.0.0.1/api/v1/info \
 
         statusEl.className = `alert alert-${type}`;
         statusEl.style.display = 'block';
-        statusEl.textContent = message;
+        statusEl.textContent = translateUiText(message);
 
         if (type === 'success' || type === 'info') {
             setTimeout(() => {
