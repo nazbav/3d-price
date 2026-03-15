@@ -1,19 +1,19 @@
 # Verification Runbook — 3d-price
 
 > **Date:** 2026-03-15  
-> **Scope:** Pre-release verification checklist for `test.html` (browser) and Electron builds.
+> **Scope:** Pre-release verification checklist for `index.html` (browser) and Electron builds.
 
 ---
 
 ## 1. JS Syntax Check
 
-Extract all inline `<script>` blocks from `test.html` and validate them with Node.js:
+Extract all inline `<script>` blocks from `index.html` and validate them with Node.js:
 
 ```powershell
 cd L:\3d-price
 node -e "
 const fs = require('fs');
-const src = fs.readFileSync('test.html', 'utf8');
+const src = fs.readFileSync('index.html', 'utf8');
 const re = /<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/gi;
 let m, i = 0;
 while ((m = re.exec(src)) !== null) {
@@ -31,7 +31,7 @@ console.log('Total script blocks checked: ' + i);
 
 ## 2. Calculation Invariants Check
 
-Open `test.html` in a browser, open DevTools Console (`F12`), and run the invariant suite
+Open `index.html` in a browser, open DevTools Console (`F12`), and run the invariant suite
 described in [`docs/superpowers/specs/2026-03-15-multimaterial-design.md`](./2026-03-15-multimaterial-design.md).
 
 Key invariants to verify manually or via console:
@@ -49,7 +49,7 @@ Run against the local file URL so no server is required:
 
 ```powershell
 cd L:\3d-price
-$env:TEST_BASE_URL="file:///L:/3d-price/test.html"
+$env:TEST_BASE_URL="file:///L:/3d-price/index.html"
 python -m pytest testing/tests
 python testing/run_migration_tests.py
 ```
@@ -60,7 +60,7 @@ python testing/run_migration_tests.py
 
 ## 4. Manual Smoke Checklist (Browser)
 
-Open `test.html` in a modern browser (Chrome / Edge recommended). Run each step in order.
+Open `index.html` in a modern browser (Chrome / Edge recommended). Run each step in order.
 
 1. **Fresh load (no data)** — open in a clean profile or after clearing `localStorage`. Confirm the calculator loads with empty fields and default currency/language.
 2. **Single material calculation** — enter filament type, weight, price, print time, markup. Confirm the estimate total updates correctly and the breakdown is visible.

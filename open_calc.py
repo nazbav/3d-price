@@ -129,6 +129,6 @@ params = {
 if thumbnail_data:
     params['model_thumbnail[]'] = thumbnail_data
 
-url = 'https://nazbav.github.io/3d-price/test.html?' + urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
+url = 'https://nazbav.github.io/3d-price/index.html?' + urllib.parse.urlencode(params, quote_via=urllib.parse.quote)
 print('Opening:', url)
 webbrowser.open(url)

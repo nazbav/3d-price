@@ -1,7 +1,7 @@
 # Production Readiness Checklist — 3d-price
 
 > Date: 2026-03-15  
-> Primary target file: `test.html`  
+> Primary target file: `index.html`  
 > Related plans: `docs/superpowers/plans/2026-03-15-production-readiness.md`
 
 ---
@@ -94,7 +94,7 @@
 - [ ] Shared path (e.g. for Electron backup or file access) resolves correctly on Windows
 - [ ] Electron backup writes/reads files without permission errors
 - [ ] Packaging with `npm run make` (or `dist:win`) produces a working installer/executable
-- [ ] Packaged app opens `test.html` correctly and all features function
+- [ ] Packaged app opens `index.html` correctly and all features function
 
 ---
 

@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Bring `test.html` and the shared Electron-facing flow to a defensible production-ready state for day-to-day real use, with verified import, calculation, persistence, reporting, and localization behavior.
+**Goal:** Bring `index.html` and the shared Electron-facing flow to a defensible production-ready state for day-to-day real use, with verified import, calculation, persistence, reporting, and localization behavior.
 
-**Architecture:** Keep the current single-file architecture centered on `test.html`, but treat production-readiness as a hardening pass rather than a redesign. Work in focused slices: define release gates, close runtime/i18n/layout defects, verify core calculation and import paths on real data, then validate the shared browser/Electron behavior against a fixed regression checklist.
+**Architecture:** Keep the current single-file architecture centered on `index.html`, but treat production-readiness as a hardening pass rather than a redesign. Work in focused slices: define release gates, close runtime/i18n/layout defects, verify core calculation and import paths on real data, then validate the shared browser/Electron behavior against a fixed regression checklist.
 
-**Tech Stack:** Vanilla HTML/CSS/JS in `test.html`, browser `localStorage`, browser `indexedDB`, shared Electron wrapper in `electronapp/`, shell verification, real sample G-code files from `g-codes/`.
+**Tech Stack:** Vanilla HTML/CSS/JS in `index.html`, browser `localStorage`, browser `indexedDB`, shared Electron wrapper in `electronapp/`, shell verification, real sample G-code files from `g-codes/`.
 
 ---
 
@@ -80,7 +80,7 @@ List the exact G-code files and sample model/material/printer setups that will b
 ### Task 3: Finish runtime localization coverage
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 
 - [ ] **Step 1: Audit remaining dynamic text paths**
 
@@ -122,7 +122,7 @@ Run a targeted runtime smoke pass for:
 ### Task 4: Close remaining layout/overflow regressions
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 
 - [ ] **Step 1: Audit long-text surfaces**
 
@@ -154,7 +154,7 @@ Use the long sample G-code filename and long material names to confirm the UI no
 ### Task 5: Lock down calculation invariants
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 - Create: `docs/superpowers/specs/2026-03-15-calculation-invariants.md`
 
 - [ ] **Step 1: Define invariants**
@@ -168,7 +168,7 @@ Document and verify invariants such as:
 
 - [ ] **Step 2: Add shell-verifiable checks**
 
-Create small JS verification snippets or debug helpers that can be run from the shell against `test.html` logic to confirm invariant behavior.
+Create small JS verification snippets or debug helpers that can be run from the shell against `index.html` logic to confirm invariant behavior.
 
 - [ ] **Step 3: Re-run after each production hardening slice**
 
@@ -177,7 +177,7 @@ Treat these invariants as mandatory regression checks before any release claim.
 ### Task 6: Verify history and persistence behavior
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 
 - [ ] **Step 1: Audit all history read/write paths**
 
@@ -213,7 +213,7 @@ without data drift.
 ### Task 7: Validate all G-code entry points
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 - Check: `g-codes/`
 
 - [ ] **Step 1: Enumerate the import entry points**
@@ -245,7 +245,7 @@ Ensure nothing silently collapses to the first material.
 ### Task 8: Validate import naming and metadata rules
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 
 - [ ] **Step 1: Recheck model-name normalization rules**
 
@@ -277,10 +277,10 @@ Make sure hardening work did not break:
 ### Task 9: Audit Electron-sensitive assumptions
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 - Modify: `electronapp/README.md`
 
-- [ ] **Step 1: Identify browser-only assumptions used by `test.html`**
+- [ ] **Step 1: Identify browser-only assumptions used by `index.html`**
 
 Review use of:
 - `indexedDB`
@@ -306,7 +306,7 @@ Document the exact expectations and any known release caveats for Electron share
 
 **Files:**
 - Check: `electronapp/`
-- Check: `test.html`
+- Check: `index.html`
 
 - [ ] **Step 1: Start Electron in dev mode**
 
@@ -363,7 +363,7 @@ Make it obvious that “production-ready” requires evidence, not just subjecti
 ### Task 12: Perform final production-readiness pass
 
 **Files:**
-- Modify: `test.html`
+- Modify: `index.html`
 - Modify: `README.md`
 - Modify: `README_RU.md`
 - Modify: `electronapp/README.md`
@@ -387,7 +387,7 @@ Write a short release note with:
 
 Example sequence:
 ```bash
-git add test.html README.md README_RU.md electronapp/README.md docs/superpowers/specs/2026-03-15-production-readiness-checklist.md docs/superpowers/specs/2026-03-15-regression-scenarios.md docs/superpowers/specs/2026-03-15-calculation-invariants.md docs/superpowers/specs/2026-03-15-verification-runbook.md docs/superpowers/plans/2026-03-15-production-readiness.md
+git add index.html README.md README_RU.md electronapp/README.md docs/superpowers/specs/2026-03-15-production-readiness-checklist.md docs/superpowers/specs/2026-03-15-regression-scenarios.md docs/superpowers/specs/2026-03-15-calculation-invariants.md docs/superpowers/specs/2026-03-15-verification-runbook.md docs/superpowers/plans/2026-03-15-production-readiness.md
 git commit -m "Довести проект до production-ready"
 powershell.exe -NoProfile -Command "Set-Location 'L:\3d-price'; git push origin master"
 ```
@@ -397,7 +397,7 @@ powershell.exe -NoProfile -Command "Set-Location 'L:\3d-price'; git push origin 
 ## Notes for execution
 
 - Do not redesign the app into modules during this pass. Production hardening first, refactor later.
-- Treat `test.html` as the source of truth; avoid changing unrelated legacy pages.
+- Treat `index.html` as the source of truth; avoid changing unrelated legacy pages.
 - Do not weaken the current requirement that calculation history stays on `indexedDB`.
 - Use real G-code files from `g-codes/` for import verification.
 - If a bug cannot be reproduced with a documented scenario, do not “fix by assumption”.

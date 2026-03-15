@@ -1,7 +1,7 @@
 # Calculation Invariants — 3d-price Calculator
 
 **Date:** 2026-03-15  
-**Source:** `test.html` (primary calculation logic, approximately lines 9144–10600)  
+**Source:** `index.html` (primary calculation logic, approximately lines 9144–10600)  
 **Purpose:** Enumerate all invariants that must hold after every code change. Each invariant is accompanied by a browser-console JS snippet for manual or automated verification.
 
 ---
@@ -504,7 +504,7 @@ flag set.
 
 ## How to Run Console Checks
 
-1. Open `test.html` in a browser.
+1. Open `index.html` in a browser.
 2. Configure a realistic calculation (add printers, materials, models).
 3. Click **Рассчитать** to trigger the calculation.
 4. Open DevTools → Console.

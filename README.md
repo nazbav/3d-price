@@ -2,16 +2,16 @@
 
 [Русская версия](./README_RU.md)
 
-Browser-first calculator for estimating 3D printing jobs. The active application lives in [test.html](./test.html); legacy `index*.html` pages remain in the repository but are not the primary UI anymore.
+Browser-first calculator for estimating 3D printing jobs. The active application lives in [index.html](./index.html); legacy `index*.html` pages remain in the repository but are not the primary UI anymore.
 
 ## Current Scope
 
-- Single-file app in `test.html` with Bootstrap-based UI and inline JavaScript.
+- Single-file app in `index.html` with Bootstrap-based UI and inline JavaScript.
 - Local-first data model stored in browser `localStorage`.
 - Optional Electron wrapper in [`electronapp/`](./electronapp/) for desktop usage, backup tooling, and remote/offline delivery.
 - Legacy pages (`index1.html`, `index2.html`, `index3.html`) are historical snapshots, not the main development target.
 
-## What `test.html` Does
+## What `index.html` Does
 
 - Maintains printers, materials, clients, global overheads, and calculation history.
 - Calculates print cost using material, electricity, depreciation, maintenance, operator time, downtime, preparation, shipping, markup, discount, tax, and optional label/estimate printing costs.
@@ -32,7 +32,7 @@ Browser-first calculator for estimating 3D printing jobs. The active application
 
 ## Main UI Sections
 
-`test.html` currently exposes these top-level sections:
+`index.html` currently exposes these top-level sections:
 
 - `Calculate`
 - `History`
@@ -54,7 +54,7 @@ git clone https://github.com/nazbav/3d-price.git
 cd 3d-price
 ```
 
-Open `test.html` in a modern browser.
+Open `index.html` in a modern browser.
 
 Typical workflow:
 
@@ -104,7 +104,7 @@ Sample files used during development may exist in `g-codes/`, but they are not r
 
 ## Development Notes
 
-- Primary file to edit: [`test.html`](./test.html)
+- Primary file to edit: [`index.html`](./index.html)
 - Avoid treating legacy `index*.html` pages as the source of truth for new work.
 - Root `test_offline.html` is no longer part of the active root workflow.
 - For UI and JavaScript troubleshooting, prefer `lightpanda` smoke/debug runs over the old outdated UI tests.
@@ -113,7 +113,7 @@ Sample files used during development may exist in `g-codes/`, but they are not r
 
 Useful local checks:
 
-- open `test.html` in browser
+- open `index.html` in browser
 - run targeted syntax checks for inline scripts
 - use `lightpanda` for UI/JS regression hunting when environment allows it
 - run Electron manually if changes may affect desktop behavior
@@ -128,7 +128,7 @@ Full pre-release verification procedure (JS syntax check, migration tests, manua
 
 ## Repository Map
 
-- [`test.html`](./test.html): active calculator UI
+- [`index.html`](./index.html): active calculator UI
 - [`electronapp/`](./electronapp/): desktop wrapper
 - [`g-codes/`](./g-codes/): example/import G-code files when present
 - [`docs/`](./docs/): project notes and supporting documentation

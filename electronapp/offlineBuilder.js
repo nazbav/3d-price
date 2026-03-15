@@ -6,7 +6,7 @@ const { URL, fileURLToPath } = require('node:url');
 const https = require('node:https');
 const http = require('node:http');
 
-const DEFAULT_SOURCE_URL = 'https://c.n4v.ru/test.html';
+const DEFAULT_SOURCE_URL = 'https://c.n4v.ru/index.html';
 
 function sha1(s) {
   return crypto.createHash('sha1').update(s).digest('hex');

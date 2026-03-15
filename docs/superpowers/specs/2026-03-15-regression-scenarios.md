@@ -23,7 +23,7 @@ From `g-codes/` directory (as of 2026-03-15):
 
 **Steps:**
 1. Clear all `localStorage` and wipe IndexedDB (DevTools → Application → Clear storage).
-2. Open `test.html`.
+2. Open `index.html`.
 3. Observe: no console errors, no broken UI elements.
 4. Verify all sections (Calculate, History, Clients, Printers, Materials, Additional Costs, Settings, Summary) are navigable.
 
@@ -198,7 +198,7 @@ From `g-codes/` directory (as of 2026-03-15):
 **Goal:** Confirm no visible Russian strings leak into the English UI.
 
 **Steps:**
-1. Open `test.html`.
+1. Open `index.html`.
 2. If a language switcher exists, select English (or confirm English is default).
 3. Navigate through all sections: Calculate, History, Clients, Printers, Materials, Additional Costs, Settings, Summary.
 4. Open each major modal: multimaterial editor, estimate card, label preview, G-code import prompt, cloud sync, Spoolman, printer edit, material edit, client edit.

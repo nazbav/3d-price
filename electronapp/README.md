@@ -1,9 +1,9 @@
-﻿# GCodeCalc Electron — Remote UI + офлайн сборка CDN
+# GCodeCalc Electron — Remote UI + офлайн сборка CDN
 
 ## URL сайта (онлайн)
 
 ```
-https://c.n4v.ru/test.html
+https://c.n4v.ru/index.html
 ```
 
 Можно переопределить через переменную окружения: `GCODECALC_REMOTE_URL=...`
@@ -71,7 +71,7 @@ npm run dist:mac    # macOS DMG
 
 ---
 
-## Electron Compatibility Notes (test.html)
+## Electron Compatibility Notes (index.html)
 
 ### Environment Detection
 
@@ -129,7 +129,7 @@ In Electron the protocol is `file:`, so the function falls through to meta.json 
 
 | Area | Detail |
 |---|---|
-| `window.open` | No calls found in `test.html`; nalog receipt links use `target="_blank"` which the main process redirects to the system browser via `will-navigate` / `new-window` handlers. |
-| `window.print` | No calls found in `test.html`. If added in the future, Electron supports `webContents.print()` natively. |
+| `window.open` | No calls found in `index.html`; nalog receipt links use `target="_blank"` which the main process redirects to the system browser via `will-navigate` / `new-window` handlers. |
+| `window.print` | No calls found in `index.html`. If added in the future, Electron supports `webContents.print()` natively. |
 | Sync over `file:` | Cloud sync (`resolveSyncBaseUrl`) is disabled when running from a local `file:` URL without a server — falls back to no-op gracefully. |
 | Offline CDN assets | Bootstrap, icons, and other CDN resources must be bundled via the "Создать офлайн версию" button before going offline. |

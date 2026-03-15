@@ -47,8 +47,8 @@
 - fixed material profile lookup when importing models via link; handles numeric IDs
 - added ability to upload model thumbnails via icon in table; PNG resized to 140x110 and stored as base64
 - fixed printer detail calculations which broke due to added thumbnail column
-- added drag-and-drop support for gcode files in test.html to autofill model data
-- added button to download a combined label for all models at once in test.html
+- added drag-and-drop support for gcode files in index.html to autofill model data
+- added button to download a combined label for all models at once in index.html
 - added option to download a stylish summary card with order info and model tiles
 - summary card now shows total plastic weight and final cost; model cards use 'Требуется' for hours
 - fixed ReferenceError in onCalculateAll when generating summary card
