@@ -16,10 +16,10 @@ function extractFunctionSource(fileContent, functionName, nextFunctionName) {
     return fileContent.slice(start, end).trim();
 }
 
-test('buildModelMaterialEntryPreviewHtml renders selected material color in modal', () => {
+test('buildModelMaterialEntryLabelHtml renders selected material color in modal label', () => {
     const indexPath = path.join(__dirname, '..', 'index.html');
     const indexContent = fs.readFileSync(indexPath, 'utf8');
-    const fnSource = extractFunctionSource(indexContent, 'buildModelMaterialEntryPreviewHtml', 'renderModelMaterialsModalRows');
+    const fnSource = extractFunctionSource(indexContent, 'buildModelMaterialEntryLabelHtml', 'renderModelMaterialsModalRows');
 
     const context = {
         escapeHtml(value) {
@@ -41,9 +41,10 @@ test('buildModelMaterialEntryPreviewHtml renders selected material color in moda
     };
 
     vm.createContext(context);
-    vm.runInContext(`${fnSource}; this.buildModelMaterialEntryPreviewHtml = buildModelMaterialEntryPreviewHtml;`, context);
+    vm.runInContext(`${fnSource}; this.buildModelMaterialEntryLabelHtml = buildModelMaterialEntryLabelHtml;`, context);
 
-    const html = context.buildModelMaterialEntryPreviewHtml('42');
+    const html = context.buildModelMaterialEntryLabelHtml('42', 0);
     assert.match(html, /PETG Black/);
     assert.match(html, /background:\s*#123456/i);
+    assert.doesNotMatch(html, /Материал 1/);
 });
