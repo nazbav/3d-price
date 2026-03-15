@@ -2938,10 +2938,36 @@
                     <label class="form-label">Обсл. (₽/ч)</label>
                     <input class="form-control" id="printerMaintInput" type="number"/>
                 </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" id="printerMultiMaterialInput" type="checkbox"/>
+                    <label class="form-check-label" for="printerMultiMaterialInput">Мультиматериальная печать</label>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Отмена</button>
                 <button class="btn btn-primary" id="savePrinterBtn" type="button">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modelMaterialsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Материалы модели</h5>
+                <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+            </div>
+            <div class="modal-body">
+                <div class="small text-muted mb-3" id="modelMaterialsModalSummary"></div>
+                <div class="vstack gap-2" id="modelMaterialsModalEntries"></div>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <button class="btn btn-outline-primary btn-sm" id="addModelMaterialEntryBtn" type="button">Добавить материал</button>
+                    <div class="fw-semibold">Общий вес: <span id="modelMaterialsModalTotalWeight">0</span> г</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Отмена</button>
+                <button class="btn btn-primary" id="saveModelMaterialsBtn" type="button">Сохранить</button>
             </div>
         </div>
     </div>
@@ -3446,6 +3472,7 @@
 
 
             appData.printers.forEach(pr=>{
+                if(typeof pr.multiMaterialEnabled !== 'boolean') pr.multiMaterialEnabled = false;
                 if(!Array.isArray(pr.profileIds)) pr.profileIds = [];
                 pr.profileIds = pr.profileIds.map(pid=>{
                     const s=_s(pid).trim();
@@ -4685,6 +4712,7 @@
 
         // Перенос материалов и расходов из принтеров
         obj.printers.forEach(pr=>{
+            if(typeof pr.multiMaterialEnabled !== 'boolean') pr.multiMaterialEnabled = false;
             if(Array.isArray(pr.materials)){
                 pr.materials.forEach(m=>{
                     if(!obj.materials.some(g=>g.id===m.id)){
@@ -4862,7 +4890,10 @@
         });
         obj.additionalGlobal.forEach(a=>{ if(!a.printers) a.printers=[]; });
         if(!Array.isArray(obj.printerProfiles)) obj.printerProfiles=[];
-        obj.printers.forEach(p=>{ if(!Array.isArray(p.profileIds)) p.profileIds=[]; });
+        obj.printers.forEach(p=>{
+            if(!Array.isArray(p.profileIds)) p.profileIds=[];
+            if(typeof p.multiMaterialEnabled !== 'boolean') p.multiMaterialEnabled = false;
+        });
 
         // Удаляем временные принтеры без использования
         const used = new Set();
@@ -5474,6 +5505,7 @@
                 hoursToRecoup: 500,
                 power: 350,
                 maintCostHour: 5,
+                multiMaterialEnabled: false,
                 profileIds: []
             }
         ],
@@ -5559,6 +5591,11 @@
         if (!Array.isArray(obj.additionalGlobal)) obj.additionalGlobal = [];
         if (!Array.isArray(obj.clients)) obj.clients = [];
         if (!Array.isArray(obj.calcHistory)) obj.calcHistory = [];
+        obj.printers.forEach(printer => {
+            if (typeof printer.multiMaterialEnabled !== 'boolean') {
+                printer.multiMaterialEnabled = false;
+            }
+        });
         obj.materials.forEach(m => {
             if (!m.printers) m.printers = [];
             if (!allowedMassModes.includes(m.massInputMode)) {
@@ -6584,11 +6621,40 @@
     async function parseGcodeText(text) {
         const lines = text.split(/\r?\n/);
         let code = '', timeStr = '', weight = '', printer = 'Unknown', matProfile = '', thumb = '';
+        let currentTool = '';
+        let extrusionRelative = true;
         let plateNameFound = false;
         let plateName = '';
         let afterExecStart = false, afterExecEnd = false, inConfig = false, inThumb = false;
         let thumbnailFound = false;
         let linesAfterExecStart = 0;
+        let perMaterialWeights = [];
+        let filamentDensity = [];
+        let filamentDiameter = [];
+        const toolMaterials = {};
+        const extrusionByTool = {};
+        const lastAbsoluteEByTool = {};
+
+        const parseNumberList = (rawValue) => String(rawValue || '')
+            .split(',')
+            .map(item => parseFloat(item.trim()))
+            .filter(value => Number.isFinite(value) && value > 0);
+
+        const getToolSortValue = (toolKey) => {
+            const parsed = parseInt(String(toolKey || '').replace(/[^\d]/g, ''), 10);
+            return Number.isFinite(parsed) ? parsed : 9999;
+        };
+
+        const extrusionLengthToWeight = (lengthMm, toolIndex) => {
+            const diameter = filamentDiameter[toolIndex];
+            const density = filamentDensity[toolIndex];
+            if (!Number.isFinite(lengthMm) || lengthMm <= 0 || !Number.isFinite(diameter) || !Number.isFinite(density)) {
+                return 0;
+            }
+            const radius = diameter / 2;
+            const volumeMm3 = Math.PI * radius * radius * lengthMm;
+            return (volumeMm3 / 1000) * density;
+        };
 
         for (let raw of lines) {
             const line = raw.trim();
@@ -6670,19 +6736,186 @@
                 }
             }
 
+            const toolChangeMatch = line.match(/^;\s*MANUAL_TOOL_CHANGE\s+(T\d+)/i);
+            if (toolChangeMatch) {
+                currentTool = toolChangeMatch[1].toUpperCase();
+                continue;
+            }
+            const materialMatch = line.match(/^;\s*right_extruder_material\s*:\s*(.+)$/i);
+            if (materialMatch && currentTool) {
+                toolMaterials[currentTool] = materialMatch[1].trim();
+                continue;
+            }
+
             if (line.startsWith('; estimated printing time') && line.includes('=')) {
                 timeStr = line.split('=')[1].trim();
             }
+            else if (line.startsWith('; filament_density:')) {
+                filamentDensity = parseNumberList(line.split(':')[1]);
+            }
+            else if (line.startsWith('; filament_diameter:')) {
+                filamentDiameter = parseNumberList(line.split(':')[1]);
+            }
+            else if (line.startsWith('; filament used [g]') && line.includes('=')) {
+                perMaterialWeights = line.split('=')[1]
+                    .split(',')
+                    .map(item => parseFloat(item.trim()))
+                    .filter(val => Number.isFinite(val) && val > 0);
+            }
             else if (line.startsWith('; total filament used [g]') && line.includes('=')) {
                 weight = line.split('=')[1].trim();
+            }
+
+            if (/^M82\b/i.test(line)) {
+                extrusionRelative = false;
+                continue;
+            }
+            if (/^M83\b/i.test(line)) {
+                extrusionRelative = true;
+                continue;
+            }
+            if (/^G92\b/i.test(line) && /\bE-?\d*\.?\d+\b/i.test(line)) {
+                const eMatch = line.match(/\bE(-?\d*\.?\d+)\b/i);
+                const eValue = eMatch ? parseFloat(eMatch[1]) : NaN;
+                if (Number.isFinite(eValue)) {
+                    const toolKey = currentTool || 'T0';
+                    lastAbsoluteEByTool[toolKey] = eValue;
+                }
+                continue;
+            }
+            const directToolChangeMatch = line.match(/^T(\d+)\b/i);
+            if (directToolChangeMatch) {
+                currentTool = `T${directToolChangeMatch[1]}`;
+                continue;
+            }
+            if ((line.startsWith('G0') || line.startsWith('G1')) && /\bE-?\d*\.?\d+\b/i.test(line)) {
+                const eMatch = line.match(/\bE(-?\d*\.?\d+)\b/i);
+                if (!eMatch) continue;
+                const eValue = parseFloat(eMatch[1]);
+                if (!Number.isFinite(eValue)) continue;
+                const toolKey = currentTool || 'T0';
+                let delta = eValue;
+                if (!extrusionRelative) {
+                    const prev = lastAbsoluteEByTool[toolKey] || 0;
+                    delta = eValue - prev;
+                    lastAbsoluteEByTool[toolKey] = eValue;
+                }
+                if (delta > 0) {
+                    extrusionByTool[toolKey] = (extrusionByTool[toolKey] || 0) + delta;
+                }
             }
         }
 
         if (!code) code = getNextId('gcodeModels');
 
         const modelName = plateNameFound ? plateName : code;
+        if (!perMaterialWeights.length && Object.keys(extrusionByTool).length) {
+            perMaterialWeights = Object.keys(extrusionByTool)
+                .sort((a, b) => getToolSortValue(a) - getToolSortValue(b))
+                .map(toolKey => {
+                    const toolIndex = getToolSortValue(toolKey);
+                    return extrusionLengthToWeight(extrusionByTool[toolKey], toolIndex);
+                })
+                .filter(value => value > 0);
+        }
+        const toolKeys = Array.from(new Set([
+            ...Object.keys(toolMaterials),
+            ...Object.keys(extrusionByTool)
+        ])).sort((a, b) => getToolSortValue(a) - getToolSortValue(b));
+        const materialEntries = [];
+        if (perMaterialWeights.length) {
+            perMaterialWeights.forEach((entryWeight, idx) => {
+                const toolKey = toolKeys[idx] || `T${idx}`;
+                materialEntries.push({
+                    sourceTool: toolKey,
+                    sourceName: toolMaterials[toolKey] || '',
+                    weight: entryWeight
+                });
+            });
+        } else {
+            toolKeys.forEach(toolKey => {
+                materialEntries.push({
+                    sourceTool: toolKey,
+                    sourceName: toolMaterials[toolKey] || '',
+                    weight: 0
+                });
+            });
+        }
+        if ((!weight || parseFloat(weight) <= 0) && materialEntries.length) {
+            weight = String(sumMaterialEntriesWeight(materialEntries));
+        }
 
-        return { code, modelName, timeStr, weight, printer, matProfile, thumb };
+        return { code, modelName, timeStr, weight, printer, matProfile, thumb, materialEntries };
+    }
+
+    function matchMaterialIdFromParsedEntry(printerId, parsedEntry, fallbackProfile = '') {
+        const materials = getAllMaterialsForPrinter(printerId, true);
+        const safeProfile = String(fallbackProfile || '').trim().toLowerCase();
+        const safeName = String(parsedEntry && parsedEntry.sourceName || '').trim().toLowerCase();
+        if (safeProfile) {
+            const remembered = PromptMemory.getMaterial(safeProfile);
+            if (remembered) return remembered;
+        }
+        const candidates = materials.filter(material => {
+            const haystacks = [
+                material.name,
+                material.materialType,
+                material.manufacturer
+            ].map(value => String(value || '').toLowerCase());
+            return safeName && haystacks.some(value => value && (value.includes(safeName) || safeName.includes(value)));
+        });
+        if (candidates.length === 1) return String(candidates[0].id);
+        if (!safeName && materials.length === 1) return String(materials[0].id);
+        return '';
+    }
+
+    async function resolveMaterialEntriesForParsedGcode(printerId, parsed, fileName) {
+        const rawEntries = Array.isArray(parsed.materialEntries) && parsed.materialEntries.length
+            ? parsed.materialEntries
+            : [{ materialId: '', weight: parseFloat(parsed.weight) || 0, sourceTool: '', sourceName: parsed.matProfile || '' }];
+        if (rawEntries.length > 1 && !rawEntries.some(entry => (parseFloat(entry.weight) || 0) > 0)) {
+            rawEntries[0].weight = parseFloat(parsed.weight) || 0;
+        }
+        const resolvedEntries = [];
+        const missingEntries = [];
+        for (const rawEntry of rawEntries) {
+            const entry = normalizeMaterialEntry(rawEntry, parseFloat(parsed.weight) || 0) || {};
+            let materialId = matchMaterialIdFromParsedEntry(printerId, entry, parsed.matProfile);
+            if (!materialId && rawEntries.length === 1 && parsed.matProfile) {
+                materialId = await resolveMaterialIdByProfile(parsed.matProfile);
+            }
+            if (materialId) {
+                resolvedEntries.push({
+                    materialId,
+                    weight: entry.weight,
+                    sourceTool: entry.sourceTool || '',
+                    sourceName: entry.sourceName || ''
+                });
+            } else {
+                missingEntries.push(entry);
+            }
+        }
+        if (!missingEntries.length) return resolvedEntries;
+        const materialOptions = (appData.materials || []).map(m => ({
+            value: String(m.id),
+            label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
+        }));
+        if (!materialOptions.length) return [];
+        for (const entry of missingEntries) {
+            const profileLabel = [parsed.matProfile, entry.sourceTool, entry.sourceName].filter(Boolean).join(' / ');
+            const pick = await showMaterialSelectionForGcode(fileName, parsed.thumb, materialOptions, profileLabel);
+            if (!pick || !pick.materialId) return [];
+            resolvedEntries.push({
+                materialId: pick.materialId,
+                weight: entry.weight,
+                sourceTool: entry.sourceTool || '',
+                sourceName: entry.sourceName || ''
+            });
+            if (pick.remember && profileLabel.trim()) {
+                PromptMemory.setMaterial(profileLabel.trim(), pick.materialId);
+            }
+        }
+        return resolvedEntries;
     }
 
     async function addModelFromGcode(parsed){
@@ -6691,16 +6924,22 @@
             showToastAuto('Не найден принтер '+parsed.printer);
             return;
         }
-        const mid = await resolveMaterialIdByProfile(parsed.matProfile);
+        const materialEntries = await resolveMaterialEntriesForParsedGcode(pr.id, parsed, parsed.modelName || parsed.code || 'model.gcode');
+        if (!materialEntries.length) return;
+        if (materialEntries.length > 1 && !printerSupportsMultiMaterial(pr.id)) {
+            showToastAuto('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.');
+        }
         const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
         addModelRow(pr.id, {
             id: parsed.code,
-            name: parsed.modelName || parsed.code,
+            name: chooseImportedModelName(parsed, parsed.modelName || parsed.code || 'model.gcode'),
             thumbnail: normalizedThumb,
             status: 'new',
             hours: parseTimeFromLink(parsed.timeStr),
-            weight: parseFloat(parsed.weight) || 0,
-            materialId: mid
+            weight: sumMaterialEntriesWeight(materialEntries),
+            materialId: materialEntries[0] ? materialEntries[0].materialId : '',
+            materialEntries,
+            includeLabel: false
         });
     }
 
@@ -6822,32 +7061,12 @@
             for (const f of files) {
                 const txt = await f.text();
                 const parsed = await parseGcodeText(txt);
-                let mid = await resolveMaterialIdByProfile(parsed.matProfile);
-
                 const baseName = (f.name || '').replace(/\.gcode$/i, '').trim();
-                const modelName = baseName || f.name || parsed.code || parsed.modelName || 'Модель';
-
-                if (!mid) {
-                    const materialOptions = appData.materials.map(m => ({
-                        value: String(m.id),
-                        label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
-                    }));
-
-                    if (materialOptions.length > 0) {
-                        const result = await showMaterialSelectionForGcode(f.name, parsed.thumb, materialOptions);
-
-                        if (result && result.materialId) {
-                            mid = result.materialId;
-                            if (result.remember && (parsed.matProfile||'').trim()) {
-                                PromptMemory.setMaterial(parsed.matProfile.trim(), mid);
-                            }
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        showToastAuto('Нет доступных материалов. Добавьте материалы во вкладке "Материалы".');
-                        continue;
-                    }
+                const modelName = chooseImportedModelName(parsed, baseName || f.name || 'model.gcode');
+                const materialEntries = await resolveMaterialEntriesForParsedGcode(printerId, parsed, f.name);
+                if (!materialEntries.length) continue;
+                if (materialEntries.length > 1 && !printerSupportsMultiMaterial(printerId)) {
+                    showToastAuto('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.');
                 }
 
                 const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
@@ -6857,8 +7076,10 @@
                     thumbnail: normalizedThumb,
                     status: 'new',
                     hours: parseTimeFromLink(parsed.timeStr),
-                    weight: parseFloat(parsed.weight) || 0,
-                    materialId: mid
+                    weight: sumMaterialEntriesWeight(materialEntries),
+                    materialId: materialEntries[0] ? materialEntries[0].materialId : '',
+                    materialEntries,
+                    includeLabel: false
                 });
             }
         });
@@ -6983,45 +7204,29 @@
             showToastAuto('Не найден принтер для профиля: ' + (parsed.printer || 'Unknown'));
             return;
         }
-
-        let mid = await resolveMaterialIdByProfile(parsed.matProfile);
-
-        if(!mid){
-            const materialOptions = (appData.materials||[]).map(m => ({
-                value: String(m.id),
-                label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
-            }));
-
-            if(materialOptions.length === 0){
-                showToastAuto('Нет доступных материалов. Добавьте материалы во вкладке "Материалы".');
-                return;
-            }
-
-            const pick = await showMaterialSelectionForGcode(fn, parsed.thumb, materialOptions, parsed.matProfile);
-            if(!pick || !pick.materialId) return;
-
-            mid = pick.materialId;
-
-            if(pick.remember && (parsed.matProfile||'').trim()){
-                PromptMemory.setMaterial(parsed.matProfile.trim(), mid);
-            }
-        }
+        const materialEntries = await resolveMaterialEntriesForParsedGcode(pr.id, parsed, fn);
+        if (!materialEntries.length) return;
 
         const ok = await ensureTargetOrderForImport();
         if(!ok) return;
 
         const fileBaseName = (fn || '').replace(/\.gcode$/i,'').trim();
-        const modelName = fileBaseName || fn || parsed.code || parsed.modelName || 'Модель';
+        const modelName = chooseImportedModelName(parsed, fileBaseName || fn || 'model.gcode');
 
         const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
+        if (materialEntries.length > 1 && !printerSupportsMultiMaterial(pr.id)) {
+            showToastAuto('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.');
+        }
         addModelRow(pr.id, {
             id: parsed.code,
             name: modelName,
             thumbnail: normalizedThumb,
             status: 'new',
             hours: parseTimeFromLink(parsed.timeStr),
-            weight: parseFloat(parsed.weight) || 0,
-            materialId: mid
+            weight: sumMaterialEntriesWeight(materialEntries),
+            materialId: materialEntries[0] ? materialEntries[0].materialId : '',
+            materialEntries,
+            includeLabel: false
         });
     }
 
@@ -7272,6 +7477,7 @@
         const tbody = document.querySelector("#printersTable tbody");
         tbody.innerHTML = "";
         appData.printers.forEach(printer => {
+            if (typeof printer.multiMaterialEnabled !== 'boolean') printer.multiMaterialEnabled = false;
             const tr = document.createElement("tr");
             tr.innerHTML = `
       <td><input type="checkbox" id="chk_printers_${printer.id}" class="printers_chk"><\/td>
@@ -7302,6 +7508,7 @@
             hoursToRecoup: 1000,
             power: 0,
             maintCostHour: 0,
+            multiMaterialEnabled: false,
             profileIds: []
         };
         appData.printers.push(p);
@@ -7320,6 +7527,7 @@
         document.getElementById('printerHoursInput').value = p.hoursToRecoup;
         document.getElementById('printerPowerInput').value = p.power;
         document.getElementById('printerMaintInput').value = p.maintCostHour;
+        document.getElementById('printerMultiMaterialInput').checked = !!p.multiMaterialEnabled;
         new bootstrap.Modal(document.getElementById('printerModal')).show();
     }
     function savePrinterFromModal(){
@@ -7330,6 +7538,13 @@
         p.hoursToRecoup = parseFloat(document.getElementById('printerHoursInput').value) || 1000;
         p.power = parseFloat(document.getElementById('printerPowerInput').value) || 0;
         p.maintCostHour = parseFloat(document.getElementById('printerMaintInput').value) || 0;
+        p.multiMaterialEnabled = !!document.getElementById('printerMultiMaterialInput').checked;
+        const calcTable = document.getElementById(`calcModelsTable_${p.id}`);
+        if (calcTable) {
+            calcTable.querySelectorAll('tbody tr').forEach(row => {
+                syncModelRowMaterialMode(row, p.id);
+            });
+        }
         saveToLocalStorage();
         renderPrintersTable();
         renderCalcPrinters();
@@ -8492,10 +8707,22 @@
     };
 
     /* Функции калькуляции */
+    function shouldShowModelLabelColumn(){
+        return !!(appData && appData.labelSettings && appData.labelSettings.printLabels);
+    }
+
+    function updateCalcLabelColumnVisibility(){
+        const showLabelColumn = shouldShowModelLabelColumn();
+        document.querySelectorAll('[data-role="model-label-header"], [data-role="model-label-cell"]').forEach(el => {
+            el.style.display = showLabelColumn ? '' : 'none';
+        });
+    }
+
     function renderCalcPrinters(){
         const c = document.getElementById("calcPrintersContainer");
         if(!c) return;
         c.innerHTML = "";
+        const showLabelColumn = shouldShowModelLabelColumn();
         const printers = Array.isArray(appData.printers) ? appData.printers : [];
         if(printers.length === 0){
             const placeholder = document.createElement('div');
@@ -8525,7 +8752,7 @@
             <th>Часы печати<\/th>
             <th>Вес (г)<\/th>
             <th>Материал<\/th>
-            <th>Этикетка<\/th>
+            <th data-role="model-label-header" style="display:${showLabelColumn ? '' : 'none'}">Этикетка<\/th>
             <th>Действия<\/th>
           <\/tr>
         <\/thead>
@@ -8693,7 +8920,6 @@
         const table = document.getElementById(`calcModelsTable_${printerId}`);
         if(!table) return;
         const tbody = table.querySelector("tbody");
-        const idx = tbody.rows.length + 1;
         const statuses = [
             {val:"new", text:"Новая"},
             {val:"inprogress", text:"Печать"},
@@ -8705,12 +8931,10 @@
             `<option value="${s.val}" ${(modelData.status === s.val) ? "selected" : ""}>${s.text}<\/option>`
         ).join("");
         const mats = getAllMaterialsForPrinter(printerId, true);
-        const optsMat = mats.map(m => {
-            const spoolmanText = m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : '';
-            return `<option value="${m.id}" ${(modelData.materialId == m.id) ? "selected" : ""}>
-    ${m.name} (ID: ${m.id}${spoolmanText})
-  </option>`;
-        }).join("");
+        const materialEntries = normalizeModelMaterialEntries(modelData, modelData.weight || 0);
+        const firstMaterialId = materialEntries[0] ? materialEntries[0].materialId : modelData.materialId;
+        const useMaterialModal = printerSupportsMultiMaterial(printerId) || materialEntries.length > 1;
+        const optsMat = buildMaterialOptionsHtml(mats, firstMaterialId);
         // ВАЖНО: уникальные id моделей и DOM-элементов должны жить в одном неймспейсе.
         // Раньше тут ошибочно использовался счётчик clients, что приводило к коллизиям/дублям.
         const uniqueId = getNextId('models');
@@ -8720,7 +8944,8 @@
         const weightId = `modelWeight_${printerId}_${uniqueId}`;
         const materialId = `modelMaterial_${printerId}_${uniqueId}`;
         const labelId = `modelLabel_${printerId}_${uniqueId}`;
-        const includeLabel = modelData.includeLabel !== false;
+        const showLabelColumn = shouldShowModelLabelColumn();
+        const includeLabel = resolveInitialIncludeLabel(modelData);
         const tr = document.createElement('tr');
         let candidateId = (modelData && modelData.id !== undefined && modelData.id !== null)
             ? modelData.id
@@ -8728,6 +8953,8 @@
         let code = sanitizeModelId(candidateId, uniqueId);
         code = ensureUniqueModelId(code);
         tr.dataset.modelId = code;
+        tr.dataset.printerId = String(printerId);
+        tr.dataset.materialMode = useMaterialModal ? 'modal' : 'single';
         const companyLogoBase64 = getBrandLogoBase64();
         const placeholderThumbHtml = companyLogoBase64
             ? `<img id="thumb_${code}" src="data:image/png;base64,${companyLogoBase64}" style="height:40px;width:40px;object-fit:contain;border:1px solid #ccc;background:#fff;cursor:pointer" onclick="document.getElementById('thumbFile_${code}').click()"/>`
@@ -8749,22 +8976,28 @@
              id="${hoursId}" data-role="model-hours" placeholder="ч:м"
              value="${modelData.hours ? formatTimeForDisplay(modelData.hours) : ''}"
              onblur="this.value = formatTimeForDisplay(handleTimeInput({target: {value: this.value}}))" /><\/td>
-    <td><input type="number" step="0.1" class="form-control form-control-sm" id="${weightId}" data-role="model-weight" placeholder="г" value="${modelData.weight || ''}" /><\/td>
+    <td><input type="number" step="0.1" class="form-control form-control-sm" id="${weightId}" data-role="model-weight" placeholder="г" value="${(useMaterialModal ? sumMaterialEntriesWeight(materialEntries) : (modelData.weight || '')) || ''}" ${useMaterialModal ? 'readonly' : ''} /><\/td>
     <td>
-      <select class="form-select form-select-sm" id="${materialId}" data-role="model-material">
-        <option value="">-Материал-<\/option>
-        ${optsMat}
-      <\/select>
+      <div data-role="model-material-single-wrap" class="${useMaterialModal ? 'd-none' : ''}">
+        <select class="form-select form-select-sm" id="${materialId}" data-role="model-material">
+          ${optsMat}
+        <\/select>
+      </div>
+      <div data-role="model-material-entries-wrap" class="${useMaterialModal ? '' : 'd-none'}">
+        <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-1" data-role="edit-material-entries" onclick="openModelMaterialsModal(this)">Материалы</button>
+        <div class="small text-muted" data-role="model-material-summary"></div>
+      </div>
     <\/td>
-    <td>
+    <td data-role="model-label-cell" style="display:${showLabelColumn ? '' : 'none'}">
       <div class="form-check form-switch">
         <input class="form-check-input" type="checkbox" id="${labelId}" data-role="model-label" ${includeLabel ? 'checked' : ''}>
-        <label class="form-check-label small" for="${labelId}">Печатать<\/label>
       </div>
     <\/td>
     <td><button class="btn btn-sm btn-danger" onclick="removeModelRow(this)">Удл.<\/button><\/td>
   `;
         tbody.appendChild(tr);
+        syncModelRowMaterialMode(tr, printerId);
+        if (useMaterialModal) setRowMaterialEntries(tr, materialEntries);
         updatePrinterModelsEmptyState(printerId);
         if (initialThumb) {
             ensureThumbnailOpaque(initialThumb).then(processed => {
@@ -8794,6 +9027,355 @@
             if(!Array.isArray(m.printers) || m.printers.length===0) return true;
             return m.printers.some(pid => String(pid) === String(printerId));
         });
+    }
+
+    function getPrinterById(printerId) {
+        return appData.printers.find(pr => String(pr.id) === String(printerId)) || null;
+    }
+
+    function printerSupportsMultiMaterial(printerId) {
+        const printer = getPrinterById(printerId);
+        return !!(printer && printer.multiMaterialEnabled);
+    }
+
+    function buildMaterialOptionLabel(material) {
+        const spoolmanText = material.spoolmanSpoolId ? ` | SM: ${material.spoolmanSpoolId}` : '';
+        return `${material.name} (ID: ${material.id}${spoolmanText})`;
+    }
+
+    function buildMaterialOptionsHtml(materials, selectedId) {
+        return [
+            '<option value="">-Материал-</option>',
+            ...materials.map(m => `<option value="${m.id}" ${String(selectedId || '') === String(m.id) ? 'selected' : ''}>${buildMaterialOptionLabel(m)}</option>`)
+        ].join('');
+    }
+
+    function normalizeMaterialEntry(entry, fallbackWeight = 0) {
+        if (!entry || typeof entry !== 'object') return null;
+        const materialId = entry.materialId !== undefined && entry.materialId !== null ? String(entry.materialId).trim() : '';
+        const parsedWeight = parseFloat(entry.weight);
+        return {
+            materialId,
+            weight: Number.isFinite(parsedWeight) ? parsedWeight : (parseFloat(fallbackWeight) || 0),
+            sourceTool: entry.sourceTool !== undefined && entry.sourceTool !== null ? String(entry.sourceTool) : '',
+            sourceName: entry.sourceName !== undefined && entry.sourceName !== null ? String(entry.sourceName) : ''
+        };
+    }
+
+    function normalizeModelMaterialEntries(modelData = {}, fallbackWeight = 0) {
+        if (Array.isArray(modelData.materialEntries) && modelData.materialEntries.length) {
+            return modelData.materialEntries
+                .map(entry => normalizeMaterialEntry(entry, fallbackWeight))
+                .filter(entry => entry);
+        }
+        const singleEntry = normalizeMaterialEntry({
+            materialId: modelData.materialId || '',
+            weight: modelData.weight !== undefined ? modelData.weight : fallbackWeight,
+            sourceTool: modelData.sourceTool || '',
+            sourceName: modelData.sourceName || ''
+        }, fallbackWeight);
+        return singleEntry ? [singleEntry] : [];
+    }
+
+    function sumMaterialEntriesWeight(entries) {
+        return (entries || []).reduce((sum, entry) => sum + (parseFloat(entry && entry.weight) || 0), 0);
+    }
+
+    function hasModelDataContent(modelData = {}) {
+        if (!modelData || typeof modelData !== 'object') return false;
+        return Boolean(
+            modelData.id !== undefined ||
+            modelData.name ||
+            modelData.thumbnail ||
+            modelData.status ||
+            modelData.hours ||
+            modelData.weight ||
+            modelData.materialId ||
+            (Array.isArray(modelData.materialEntries) && modelData.materialEntries.length)
+        );
+    }
+
+    function resolveInitialIncludeLabel(modelData = {}) {
+        if (Object.prototype.hasOwnProperty.call(modelData, 'includeLabel')) {
+            return !!modelData.includeLabel;
+        }
+        return hasModelDataContent(modelData);
+    }
+
+    let currentModelMaterialsRow = null;
+
+    function collectMaterialEntriesFromRow(row) {
+        if (!row) return [];
+        if (row.dataset.materialMode === 'modal') {
+            try {
+                return JSON.parse(row.dataset.materialEntries || '[]')
+                    .map(entry => normalizeMaterialEntry(entry))
+                    .filter(entry => entry && (entry.materialId || entry.weight > 0 || entry.sourceName));
+            } catch (e) {
+                return [];
+            }
+        }
+        const materialSelect = row.querySelector('select[data-role="model-material"]');
+        const weightInput = row.querySelector('input[data-role="model-weight"]');
+        const entry = normalizeMaterialEntry({
+            materialId: materialSelect ? materialSelect.value : '',
+            weight: weightInput ? (parseFloat(weightInput.value) || 0) : 0
+        });
+        return entry && (entry.materialId || entry.weight > 0) ? [entry] : [];
+    }
+
+    function syncModelRowWeightFromEntries(row) {
+        if (!row) return 0;
+        const weightInput = row.querySelector('input[data-role="model-weight"]');
+        const totalWeight = sumMaterialEntriesWeight(collectMaterialEntriesFromRow(row));
+        if (weightInput) {
+            weightInput.value = totalWeight > 0 ? safeFixed(totalWeight, 2) : '';
+        }
+        return totalWeight;
+    }
+
+    function setRowMaterialEntries(row, entries) {
+        if (!row) return;
+        const normalizedEntries = (entries || [])
+            .map(entry => normalizeMaterialEntry(entry))
+            .filter(entry => entry && (entry.materialId || entry.weight > 0 || entry.sourceName));
+        row.dataset.materialEntries = JSON.stringify(normalizedEntries);
+        const summary = row.querySelector('[data-role="model-material-summary"]');
+        if (summary) {
+            const fullLabel = normalizedEntries.length
+                ? normalizedEntries.map(entry => {
+                    const material = findMaterialById(entry.materialId);
+                    const name = material ? material.name : (entry.sourceName || 'Материал');
+                    return `${name}${entry.weight > 0 ? ` (${safeFixed(entry.weight)} г)` : ''}`;
+                }).join(', ')
+                : 'Материалы не выбраны';
+            const compactLabel = normalizedEntries.length
+                ? buildModelMaterialCompactLabel(normalizedEntries.map(entry => {
+                    const material = findMaterialById(entry.materialId);
+                    return {
+                        ...entry,
+                        matName: material ? material.name : (entry.sourceName || 'Материал'),
+                        materialData: material ? { name: material.name } : { name: entry.sourceName || 'Материал' }
+                    };
+                }))
+                : 'Материалы не выбраны';
+            summary.textContent = compactLabel;
+            summary.title = fullLabel;
+        }
+        syncModelRowWeightFromEntries(row);
+    }
+
+    function syncModelRowMaterialMode(row, printerId) {
+        if (!row) return;
+        const existingEntries = collectMaterialEntriesFromRow(row);
+        const isMulti = printerSupportsMultiMaterial(printerId) || existingEntries.length > 1;
+        row.dataset.materialMode = isMulti ? 'modal' : 'single';
+        const singleWrap = row.querySelector('[data-role="model-material-single-wrap"]');
+        const entriesWrap = row.querySelector('[data-role="model-material-entries-wrap"]');
+        const weightInput = row.querySelector('input[data-role="model-weight"]');
+        const materialSelect = row.querySelector('select[data-role="model-material"]');
+        if (singleWrap) singleWrap.classList.toggle('d-none', isMulti);
+        if (entriesWrap) entriesWrap.classList.toggle('d-none', !isMulti);
+        if (weightInput) {
+            weightInput.readOnly = isMulti;
+            weightInput.classList.toggle('bg-light', isMulti);
+        }
+        if (isMulti) {
+            setRowMaterialEntries(row, existingEntries);
+        } else {
+            const firstEntry = existingEntries[0] || null;
+            if (materialSelect) {
+                materialSelect.value = firstEntry && firstEntry.materialId ? String(firstEntry.materialId) : '';
+            }
+            if (weightInput) {
+                weightInput.value = firstEntry && (parseFloat(firstEntry.weight) || 0) > 0
+                    ? safeFixed(firstEntry.weight, 2)
+                    : '';
+            }
+        }
+    }
+
+    function renderModelMaterialsModalRows(printerId, entries = []) {
+        const container = document.getElementById('modelMaterialsModalEntries');
+        if (!container) return;
+        const normalizedEntries = Array.isArray(entries) && entries.length
+            ? entries.map(entry => normalizeMaterialEntry(entry)).filter(entry => entry)
+            : [normalizeMaterialEntry({ materialId: '', weight: 0 }, 0)];
+        container.innerHTML = normalizedEntries.map((entry, index) => `
+            <div class="border rounded p-2" data-role="model-material-entry">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-7">
+                        <label class="form-label mb-1">Материал ${index + 1}</label>
+                        <select class="form-select form-select-sm" data-role="model-material-entry-select" data-source-tool="${escapeHtml(entry.sourceTool || '')}" data-source-name="${escapeHtml(entry.sourceName || '')}">
+                            ${buildMaterialOptionsHtml(getAllMaterialsForPrinter(printerId, true), entry.materialId)}
+                        </select>
+                        ${(entry.sourceTool || entry.sourceName) ? `<div class="form-text">G-code: ${(entry.sourceTool ? `${escapeHtml(entry.sourceTool)} · ` : '')}${escapeHtml(entry.sourceName || 'материал')}</div>` : ''}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Вес (г)</label>
+                        <input type="number" step="0.1" min="0" class="form-control form-control-sm" data-role="model-material-entry-weight" value="${entry.weight > 0 ? entry.weight : ''}" oninput="syncModelMaterialsModalTotal()">
+                    </div>
+                    <div class="col-md-2 d-grid">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeModelMaterialsModalRow(this)">Удалить</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        syncModelMaterialsModalTotal();
+    }
+
+    function collectModelMaterialsModalEntries() {
+        return Array.from(document.querySelectorAll('#modelMaterialsModalEntries [data-role="model-material-entry"]'))
+            .map(entryRow => {
+                const materialSelect = entryRow.querySelector('select[data-role="model-material-entry-select"]');
+                const weightInput = entryRow.querySelector('input[data-role="model-material-entry-weight"]');
+                return normalizeMaterialEntry({
+                    materialId: materialSelect ? materialSelect.value : '',
+                    weight: weightInput ? (parseFloat(weightInput.value) || 0) : 0,
+                    sourceTool: materialSelect ? materialSelect.dataset.sourceTool || '' : '',
+                    sourceName: materialSelect ? materialSelect.dataset.sourceName || '' : ''
+                });
+            })
+            .filter(entry => entry && (entry.materialId || entry.weight > 0 || entry.sourceName));
+    }
+
+    function syncModelMaterialsModalTotal() {
+        const total = sumMaterialEntriesWeight(collectModelMaterialsModalEntries());
+        const totalEl = document.getElementById('modelMaterialsModalTotalWeight');
+        if (totalEl) totalEl.textContent = safeFixed(total);
+    }
+
+    function addModelMaterialsModalRow() {
+        if (!currentModelMaterialsRow) return;
+        const printerId = currentModelMaterialsRow.dataset.printerId;
+        const entries = collectModelMaterialsModalEntries();
+        entries.push({ materialId: '', weight: 0 });
+        renderModelMaterialsModalRows(printerId, entries);
+    }
+
+    function removeModelMaterialsModalRow(button) {
+        const row = button ? button.closest('[data-role="model-material-entry"]') : null;
+        if (row) row.remove();
+        if (!document.querySelector('#modelMaterialsModalEntries [data-role="model-material-entry"]')) {
+            addModelMaterialsModalRow();
+            return;
+        }
+        syncModelMaterialsModalTotal();
+    }
+
+    function openModelMaterialsModal(button) {
+        const row = button ? button.closest('tr') : null;
+        if (!row) return;
+        currentModelMaterialsRow = row;
+        const printerId = row.dataset.printerId;
+        const title = document.querySelector('#modelMaterialsModal .modal-title');
+        if (title) title.textContent = `Материалы модели: ${row.querySelector('input[data-role="model-name"]')?.value || row.dataset.modelId || ''}`;
+        const summary = document.getElementById('modelMaterialsModalSummary');
+        if (summary) {
+            summary.textContent = `${printerNameById(printerId)}${!printerSupportsMultiMaterial(printerId) ? ' · режим принтера без мультиматериала' : ''}`;
+        }
+        const addButton = document.getElementById('addModelMaterialEntryBtn');
+        if (addButton) addButton.disabled = !printerSupportsMultiMaterial(printerId);
+        renderModelMaterialsModalRows(printerId, collectMaterialEntriesFromRow(row));
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modelMaterialsModal')).show();
+    }
+
+    function saveModelMaterialsFromModal() {
+        if (!currentModelMaterialsRow) return;
+        setRowMaterialEntries(currentModelMaterialsRow, collectModelMaterialsModalEntries());
+        bootstrap.Modal.getInstance(document.getElementById('modelMaterialsModal')).hide();
+    }
+
+    function getModelMaterialDetails(materialEntries) {
+        const details = [];
+        const materials = [];
+        (materialEntries || []).forEach(entry => {
+            if (!entry || !entry.materialId || (parseFloat(entry.weight) || 0) <= 0) return;
+            const material = findMaterialById(entry.materialId);
+            if (!material) return;
+            const weight = parseFloat(entry.weight) || 0;
+            const costPerGram = (parseFloat(material.costPerKg) || 0) / 1000;
+            const materialCost = weight * costPerGram;
+            const materialData = {
+                id: material.id,
+                declaredWeight: material.declaredWeight,
+                manufacturer: material.manufacturer,
+                productionDate: material.productionDate,
+                materialType: material.materialType || '',
+                name: material.name
+            };
+            details.push({
+                materialId: material.id,
+                matName: `${material.name} (ID: ${material.id})`,
+                weight,
+                costMaterial: materialCost,
+                sourceTool: entry.sourceTool || '',
+                sourceName: entry.sourceName || '',
+                materialData
+            });
+            materials.push(material);
+        });
+        return { details, materials };
+    }
+
+    function buildModelMaterialSummary(materialEntriesDetail) {
+        return (materialEntriesDetail || [])
+            .map(entry => `${entry.matName}${entry.weight ? ` ${safeFixed(entry.weight)}г` : ''}${entry.sourceTool ? ` [${entry.sourceTool}]` : ''}`)
+            .join(' + ');
+    }
+
+    function buildModelMaterialFullLabel(materialEntriesDetail) {
+        return (materialEntriesDetail || [])
+            .map(entry => {
+                const baseName = entry.materialData?.name || entry.matName || 'Материал';
+                return `${baseName}${entry.weight ? ` ${safeFixed(entry.weight)}г` : ''}${entry.sourceTool ? ` [${entry.sourceTool}]` : ''}`;
+            })
+            .join(', ');
+    }
+
+    function buildModelMaterialCompactLabel(materialEntriesDetail) {
+        const names = Array.from(new Set((materialEntriesDetail || [])
+            .map(entry => String(entry.materialData?.name || entry.matName || '').trim())
+            .filter(Boolean)));
+        if (!names.length) return '—';
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return `${names[0]}+${names[1]}`;
+        return `${names[0]} +${names.length - 1}`;
+    }
+
+    function compactLabelText(value, maxLength = 24) {
+        const text = String(value || '').trim();
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return `${text.slice(0, Math.max(1, maxLength - 1)).trim()}…`;
+    }
+
+    function normalizeDisplayModelName(value) {
+        let text = String(value || '').trim();
+        if (!text) return '';
+        text = text.replace(/\.gcode$/i, '').trim();
+        text = text.replace(/_w\d+(?:[.,]\d+)?g(?=_|$|\s)/gi, '');
+        text = text.replace(/_t\d+h\d+m\d+s(?=_|$|\s)/gi, '');
+        text = text.replace(/_t\d+m\d+s(?=_|$|\s)/gi, '');
+        text = text.replace(/_t\d+s(?=_|$|\s)/gi, '');
+        text = text.replace(/_+/g, ' ').trim();
+        const delimiterParts = text.split(/\s+-\s+/).map(part => part.trim()).filter(Boolean);
+        if (delimiterParts.length >= 3 && delimiterParts[0]) {
+            text = delimiterParts[0];
+        }
+        text = text.replace(/\s+/g, ' ').trim();
+        return text;
+    }
+
+    function chooseImportedModelName(parsed, fallbackFileName = '') {
+        const parsedName = normalizeDisplayModelName(parsed && parsed.modelName ? parsed.modelName : '');
+        if (parsedName && parsedName !== String(parsed && parsed.code || '').trim()) {
+            return parsedName;
+        }
+        const fileName = normalizeDisplayModelName(fallbackFileName);
+        if (fileName) return fileName;
+        const codeName = normalizeDisplayModelName(parsed && parsed.code ? parsed.code : '');
+        return codeName || 'Модель';
     }
 
     let lastCalcFullData = null;
@@ -9006,8 +9588,23 @@
                 const normalized = handleTimeInput({target: {value}});
                 return normalized > 0;
             });
-            requireRowField(weightInput, 'Вес', value => parseFloat(value) > 0);
-            requireRowField(materialSelect, 'Материал', value => Boolean(String(value).trim()));
+            if (row.querySelector('[data-role="model-material-entries-wrap"]:not(.d-none)')) {
+                const materialEntries = collectMaterialEntriesFromRow(row);
+                const totalWeight = sumMaterialEntriesWeight(materialEntries);
+                setFieldValidityState(weightInput, totalWeight > 0);
+                if (!(totalWeight > 0)) {
+                    registerError(`${rowLabel}: Вес по материалам`, weightInput);
+                }
+                materialEntries.forEach((entry, entryIdx) => {
+                    const materialOk = Boolean(String(entry.materialId || '').trim());
+                    const weightOk = (parseFloat(entry.weight) || 0) > 0;
+                    if (!materialOk) registerError(`${rowLabel}: Материал #${entryIdx + 1}`, weightInput);
+                    if (!weightOk) registerError(`${rowLabel}: Вес материала #${entryIdx + 1}`, weightInput);
+                });
+            } else {
+                requireRowField(weightInput, 'Вес', value => parseFloat(value) > 0);
+                requireRowField(materialSelect, 'Материал', value => Boolean(String(value).trim()));
+            }
         });
 
         return {valid: errors.length === 0, errors, firstInvalid};
@@ -9601,12 +10198,12 @@
                 const inpName = row.querySelector('input[data-role="model-name"]');
                 const selStatus = row.querySelector('select[data-role="model-status"]');
                 const inpH = row.querySelector('input[data-role="model-hours"]');
-                const inpW = row.querySelector('input[data-role="model-weight"]');
-                const selM = row.querySelector('select[data-role="model-material"]');
                 const labelToggle = row.querySelector('input[data-role="model-label"]');
-                if (!inpName || !selStatus || !inpH || !inpW || !selM) return;
+                const inpW = row.querySelector('input[data-role="model-weight"]');
+                if (!inpName || !selStatus || !inpH || !inpW) return;
                 const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
-                const w = parseFloat(inpW.value) || 0;
+                const materialEntries = collectMaterialEntriesFromRow(row).filter(entry => entry.materialId && (parseFloat(entry.weight) || 0) > 0);
+                const w = sumMaterialEntriesWeight(materialEntries);
                 let midVal = row.dataset.modelId;
                 if (midVal === undefined || midVal === null || String(midVal).trim() === '') {
                     midVal = String(getNextId('models'));
@@ -9619,8 +10216,9 @@
                     status: selStatus.value || "new",
                     hours: h,
                     weight: w,
-                    materialId: selM.value,
-                    includeLabel: !labelToggle || labelToggle.checked
+                    materialId: materialEntries[0] ? materialEntries[0].materialId : '',
+                    materialEntries,
+                    includeLabel: !!(appData.labelSettings.printLabels && labelToggle && labelToggle.checked)
                 });
             });
             calcData[pr.id] = modelsData;
@@ -9659,34 +10257,33 @@
                 const inpName = row.querySelector('input[data-role="model-name"]');
                 const selStatus = row.querySelector('select[data-role="model-status"]');
                 const inpH = row.querySelector('input[data-role="model-hours"]');
-                const inpW = row.querySelector('input[data-role="model-weight"]');
-                const selM = row.querySelector('select[data-role="model-material"]');
                 const labelToggle = row.querySelector('input[data-role="model-label"]');
-                if (!inpName || !selStatus || !inpH || !inpW || !selM) return;
+                const inpW = row.querySelector('input[data-role="model-weight"]');
+                if (!inpName || !selStatus || !inpH || !inpW) return;
                 const h = handleTimeInput({target: {value: inpH.value}}); // Обрабатываем ввод
-                const w = parseFloat(inpW.value) || 0;
-                const mid = selM.value;
-                if (!mid || h <= 0 || w <= 0) return;
+                const materialEntries = collectMaterialEntriesFromRow(row).filter(entry => entry.materialId && (parseFloat(entry.weight) || 0) > 0);
+                const realW = sumMaterialEntriesWeight(materialEntries);
+                if (!materialEntries.length || h <= 0 || realW <= 0) return;
 
                 const status = selStatus.value || "new";
                 const isReject = status === "reject";
                 if (isReject) {
                     totalRejectHours += h;
                 }
-
-                const mat = getAllMaterialsForPrinter(pr.id).find(x => String(x.id) === String(mid));
-                if (!mat) return;
-
-                const realW = w;
                 if (isReject) {
                     totalRejectWeight += realW;
                 }
-                // Агрегируем потребление для данного материала
-                materialConsumption[mid] = (materialConsumption[mid] || 0) + realW;
+                const {details: materialEntriesDetail} = getModelMaterialDetails(materialEntries);
+                if (!materialEntriesDetail.length) return;
+                materialEntriesDetail.forEach(entry => {
+                    materialConsumption[entry.materialId] = (materialConsumption[entry.materialId] || 0) + entry.weight;
+                });
 
                 const includeModelTotals = includeRejectsInCost || !isReject;
-                const matCoolingMinutes = parseFloat(mat.coolingTime) || 0;
-                const matPrepMinutes = parseFloat(mat.printerPrepMinutes) || 0;
+                const uniqueMaterialIds = Array.from(new Set(materialEntriesDetail.map(entry => String(entry.materialId))));
+                const uniqueMaterials = uniqueMaterialIds.map(mid => findMaterialById(mid)).filter(Boolean);
+                const matCoolingMinutes = uniqueMaterials.reduce((max, mat) => Math.max(max, parseFloat(mat.coolingTime) || 0), 0);
+                const matPrepMinutes = uniqueMaterials.reduce((sum, mat) => sum + (parseFloat(mat.printerPrepMinutes) || 0), 0);
                 if (includeModelTotals) {
                     prTime += h;
                     if (!isReject || includeOpRejects) prOpTime += h;
@@ -9701,8 +10298,7 @@
 
                 const costPH = (pr.hoursToRecoup > 0) ? pr.cost / pr.hoursToRecoup : 0;
                 const rawPrinterPart = includeAmortization ? h * costPH : 0;
-                const costPerGram = mat.costPerKg / 1000;
-                const rawMaterialCost = realW * costPerGram;
+                const rawMaterialCost = materialEntriesDetail.reduce((sum, entry) => sum + entry.costMaterial, 0);
                 const rawElectric = (pr.power / 1000) * h * cKwh;
                 const rawMaintenance = includeAmortization ? pr.maintCostHour * h : 0;
 
@@ -9728,8 +10324,10 @@
                     displayName: normalizedName,
                     status: selStatus.value || "new",
                     hours: h,
-                    weight: w,
-                    matName: `${mat.name} (ID: ${mat.id})`,
+                    weight: realW,
+                    matName: buildModelMaterialSummary(materialEntriesDetail),
+                    fullMatName: buildModelMaterialFullLabel(materialEntriesDetail),
+                    shortMatName: buildModelMaterialCompactLabel(materialEntriesDetail),
                     realWeight: realW,
                     costPrinterPart: costPrinterPart,
                     costMaterial: costMaterial,
@@ -9739,13 +10337,9 @@
                     excludedFromTotals: !includeModelTotals,
                     printerPrepMinutes: includeModelTotals ? matPrepMinutes : 0,
                     coolingMinutes: includeModelTotals ? matCoolingMinutes : 0,
-                    includeLabel: !labelToggle || labelToggle.checked,
-                    materialData: {
-                        id: mat.id,
-                        declaredWeight: mat.declaredWeight,
-                        manufacturer: mat.manufacturer,
-                        productionDate: mat.productionDate
-                    }
+                    includeLabel: !!(appData.labelSettings.printLabels && labelToggle && labelToggle.checked),
+                    materialEntriesDetail,
+                    materialData: materialEntriesDetail[0] ? materialEntriesDetail[0].materialData : null
                 });
             });
 
@@ -9892,7 +10486,7 @@
             const totalModels = Object.values(calcData).reduce((acc, models) => {
                 const allowedModels = models.filter(m =>
                     (includeRejectsInCost || (m.status !== 'reject')) &&
-                    (m.includeLabel !== false)
+                    (m.includeLabel === true)
                 );
                 return acc + allowedModels.length;
             }, 0);
@@ -10028,12 +10622,16 @@
                 const statusLabel = getModelStatusLabel(ln.status);
                 const qualityLabel = getModelQualityLabel(ln.status);
                 const statusDisplay = qualityLabel ? `${statusLabel} — ${qualityLabel}` : statusLabel;
+                const displayModelName = normalizeDisplayModelName(ln.name || '');
+                const summaryModelTitle = escapeHtml(ln.name || '');
+                const summaryModelName = escapeHtml(compactLabelText(displayModelName || ln.name || '', 42));
+                const summaryMaterialFull = escapeHtml(ln.fullMatName || ln.matName || '—');
                 summaryModels += `<div class="model-card">` +
                     (ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" alt="icon">` : fallbackModelCardImg) +
-                    `<h3>${ln.name}<\/h3>` +
+                    `<h3 title="${summaryModelTitle}">${summaryModelName}<\/h3>` +
                     `<p><strong>${translateUiText('Требуется:')}<\/strong> ${formatTimeForDisplay(ln.hours)}<\/p>` +
                     `<p><strong>${translateUiText('Вес:')}<\/strong> ${safeFixed(ln.realWeight)} ${translateUiText('г')}<\/p>` +
-                    `<p><strong>${translateUiText('Материал:')}<\/strong> ${ln.matName}<\/p>` +
+                    `<p title="${summaryMaterialFull}"><strong>${translateUiText('Материал:')}<\/strong> ${summaryMaterialFull}<\/p>` +
                     `<p><strong>${translateUiText('Статус:')}<\/strong> ${statusDisplay}<\/p>` +
                     `</div>`;
             });
@@ -10113,7 +10711,8 @@
                         const rawId = ln.id ? escapeHtml(String(ln.id)) : '';
                         const displayName = safeNameRaw && safeNameRaw !== rawId ? safeNameRaw : `Модель ${idx + 1}`;
                         const idBadge = rawId ? `#${idx + 1} · ${rawId}` : `#${idx + 1}`;
-                        const safeMaterial = escapeHtml(ln.matName || '—');
+                        const safeMaterial = escapeHtml(ln.shortMatName || ln.matName || '—');
+                        const safeMaterialTitle = escapeHtml(ln.fullMatName || ln.matName || '—');
                         const excludedNote = ln.excludedFromTotals ? ' <span class="badge bg-secondary ms-1">Не в расчёте<\/span>' : '';
                         const status = [statusLabel, qualityLabel].filter(Boolean).join(' · ') || '—';
                         const chipStats = [
@@ -10151,14 +10750,14 @@
                                     <div class="calc-printer-card-actions">
                                         <div class="calc-printer-card-total">${formatMoney(ln.subTotalModel)}</div>
                                         <button class="btn btn-sm btn-outline-secondary"
-                                            onclick="downloadThermoLabelHtml('${ln.name}', '${d.printerName}', '${ln.matName}', '${safeFixed(ln.hours)}', '${safeFixed(ln.realWeight)}', '${ln.thumbnail || ''}')"
+                                            onclick='downloadThermoLabelHtml(${JSON.stringify(ln.name || "")}, ${JSON.stringify(d.printerName || "")}, ${JSON.stringify(ln.shortMatName || ln.matName || "")}, ${JSON.stringify(safeFixed(ln.hours))}, ${JSON.stringify(safeFixed(ln.realWeight))}, ${JSON.stringify(ln.thumbnail || "")})'
                                             ${ln.excludedFromTotals ? 'disabled title="Модель исключена из расчёта"' : ''}>
                                             Этикетка
                                         </button>
                                     </div>
                                 </div>
                                 <div class="calc-printer-info">
-                                    <h5 class="text-truncate">${safeMaterial}</h5>
+                                    <h5 class="text-truncate" title="${safeMaterialTitle}">${safeMaterial}</h5>
                                     <div class="calc-printer-chips">${chipHtml}</div>
                                 </div>
                             </div>
@@ -11032,6 +11631,7 @@
         setLanguageOverride(appData.calcSettings.languageOverride);
         setCurrencyOverride(appData.calcSettings.currencyOverride);
         saveToLocalStorage();
+        updateCalcLabelColumnVisibility();
         showToastAuto("Сохранено");
     }
 
@@ -11155,6 +11755,9 @@
         generateQRCodeCanvas(appData.labelSettings.chatLink, qrSize, async function(qrCanvas) {
             const fallbackThumb = thumbnail || getBrandLogoBase64();
             const qrDataUrl = qrCanvas ? qrCanvas.toDataURL("image/png") : "";
+            const compactModelName = compactLabelText(normalizeDisplayModelName(modelName), 28);
+            const compactPrinterName = compactLabelText(printerName, 24);
+            const compactMaterialName = compactLabelText(materialName, 18);
             const htmlContent = `
 <!DOCTYPE html>
 <html lang="${getCurrentLanguage()}">
@@ -11202,9 +11805,9 @@
 <div id="labelContainer">
   <div class="label-header">${appData.labelSettings.companyName}<\/div>
   <div class="label-content">
-    <div style="text-align: center;">${modelName}<\/div>
-    <div>${printerName}<\/div>
-    <div>${materialName}<\/div>
+    <div style="text-align: center;">${compactModelName}<\/div>
+    <div>${compactPrinterName}<\/div>
+    <div>${compactMaterialName}<\/div>
     <div>${formatTimeForDisplay(hours)}<\/div>
     <div>${weight} ${translateUiText('г')}<\/div>
     <div>${new Date().toLocaleDateString(getCurrentLocale())}<\/div>
@@ -11302,11 +11905,12 @@
     .order-info .qr img{width:120px;height:120px;}
     .models{flex:2 1 600px;padding:1.5rem;}
     .models-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;}
-    .model-card{background:var(--bs-light-bg-subtle,#f8f9fa);border-radius:8px;padding:1rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform .3s ease,box-shadow .3s ease;}
+    .model-card{background:var(--bs-light-bg-subtle,#f8f9fa);border-radius:8px;padding:1rem;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05);transition:transform .3s ease,box-shadow .3s ease;min-width:0;overflow:hidden;}
     .model-card:hover{transform:translateY(-4px);box-shadow:0 4px 16px rgba(0,0,0,0.1);}
     .model-card img{width:48px;height:48px;margin-bottom:.5rem;}
-    .model-card h3{font-size:1rem;margin-bottom:.5rem;color:var(--bs-primary,#0d6efd);}
-    .model-card p{font-size:.9rem;margin:.25rem 0;color:var(--bs-secondary-color,#6c757d);}
+    .model-card h3{font-size:1rem;margin-bottom:.5rem;color:var(--bs-primary,#0d6efd);overflow-wrap:anywhere;word-break:break-word;}
+    .model-card p{font-size:.9rem;margin:.25rem 0;color:var(--bs-secondary-color,#6c757d);overflow-wrap:anywhere;word-break:break-word;white-space:normal;}
+    .order-info .info-item .value{overflow-wrap:anywhere;word-break:break-word;}
     .model-card p strong{color:var(--bs-body-color,#212529);}
     @media (max-width:800px){.order-summary-card{flex-direction:column;}.order-info,.models{flex:1 1 auto;}}
   </style>
@@ -11898,7 +12502,7 @@
           <td>${getModelStatusLabel(ln.status)}${getModelQualityLabel(ln.status) ? ` — ${getModelQualityLabel(ln.status)}` : ''}<\/td>
           <td>${safeFixed(ln.hours)}<\/td>
           <td>${safeFixed(ln.realWeight)}<\/td>
-          <td>${ln.matName}<\/td>
+          <td>${ln.fullMatName || ln.matName}<\/td>
           <td>${safeFixed(ln.subTotalModel)}<\/td>
         <\/tr>`;
                 });
@@ -12427,7 +13031,6 @@
                     }
 
                     printer.linesDetail?.forEach(model => {
-                        const materialId = model.materialData?.id;
                         const materialCost = model.costMaterial || 0;
                         const amortization = model.costPrinterPart || 0;
                         const electric = model.costElectric || 0;
@@ -12435,6 +13038,21 @@
                         const modelRevenue = model.subTotalModel || 0;
                         const hours = model.hours || 0;
                         const status = model.status;
+                        const materialStats = Array.isArray(model.materialEntriesDetail) && model.materialEntriesDetail.length
+                            ? model.materialEntriesDetail.map(entry => ({
+                                materialId: entry.materialId || entry.materialData?.id || '',
+                                weight: parseFloat(entry.weight) || 0,
+                                cost: parseFloat(entry.costMaterial) || 0,
+                                materialData: entry.materialData || null,
+                                matName: entry.matName || ''
+                            })).filter(entry => entry.materialId)
+                            : (model.materialData?.id ? [{
+                                materialId: model.materialData.id,
+                                weight: model.realWeight || 0,
+                                cost: materialCost,
+                                materialData: model.materialData,
+                                matName: model.matName || ''
+                            }] : []);
                         const ps = results.printerStats[printerId];
                         if (status === 'reject') {
                             results.totalRejectHours += hours;
@@ -12450,30 +13068,27 @@
 
                         orderModelCount += 1;
                         orderGrams += model.realWeight || 0;
-                        if (materialId) {
-                            orderMaterialGrams[materialId] = (orderMaterialGrams[materialId] || 0) + (model.realWeight || 0);
-                        }
-
-                        if (materialId) {
-                            // Статистика по материалам
+                        materialStats.forEach(entry => {
+                            const materialId = entry.materialId;
+                            orderMaterialGrams[materialId] = (orderMaterialGrams[materialId] || 0) + (entry.weight || 0);
                             if (!results.materialStats[materialId]) {
                                 const mat = findMaterialById(materialId);
                                 results.materialStats[materialId] = {
                                     name: mat ? `${mat.name} (ID: ${mat.id}) | ${mat.manufacturer}` :
-                                        `${model.matName} | ${model.materialData?.manufacturer || 'N/A'}`,
-                                    type: mat?.materialType || model.materialData?.materialType || '',
-                                    manufacturer: mat?.manufacturer || model.materialData?.manufacturer || '',
+                                        `${entry.matName || model.matName} | ${entry.materialData?.manufacturer || 'N/A'}`,
+                                    type: mat?.materialType || entry.materialData?.materialType || '',
+                                    manufacturer: mat?.manufacturer || entry.materialData?.manufacturer || '',
                                     totalGrams: 0,
                                     totalCost: 0,
                                     totalRevenue: 0,
                                     clientRevenue: 0
                                 };
                             }
-
-                            results.materialStats[materialId].totalGrams += model.realWeight || 0;
-                            results.materialStats[materialId].totalCost += materialCost;
-                            results.materialStats[materialId].totalRevenue += modelRevenue;
-                        }
+                            results.materialStats[materialId].totalGrams += entry.weight || 0;
+                            results.materialStats[materialId].totalCost += entry.cost || 0;
+                            const revenueShare = (model.realWeight || 0) > 0 ? modelRevenue * ((entry.weight || 0) / (model.realWeight || 0)) : 0;
+                            results.materialStats[materialId].totalRevenue += revenueShare;
+                        });
 
                         // Глобальные суммы
                         results.totalMaterialCost += materialCost;
@@ -13500,7 +14115,8 @@
                         status: m.status,
                         hours: parseTimeFromLink(m.timeStr),
                         weight: parseFloat(m.weight)||0,
-                        materialId: mid
+                        materialId: mid,
+                        includeLabel: false
                     });
                 }
             }
@@ -13732,6 +14348,10 @@
         });
         document.getElementById('saveMaterialBtn').onclick = saveMaterialFromModal;
         document.getElementById('savePrinterBtn').onclick = savePrinterFromModal;
+        const saveModelMaterialsBtn = document.getElementById('saveModelMaterialsBtn');
+        if (saveModelMaterialsBtn) saveModelMaterialsBtn.onclick = saveModelMaterialsFromModal;
+        const addModelMaterialEntryBtn = document.getElementById('addModelMaterialEntryBtn');
+        if (addModelMaterialEntryBtn) addModelMaterialEntryBtn.onclick = addModelMaterialsModalRow;
         const jsonBtn = document.getElementById('downloadConfigFileBtn');
         if (jsonBtn) jsonBtn.addEventListener('click', downloadConfigFile);
         const histBtn = document.getElementById('downloadHistoryFileBtn');
@@ -14232,13 +14852,19 @@
 
                 lastCalcFullData.detailsByPrinter.forEach(printer => {
                     printer.linesDetail.forEach(model => {
-                        if (model.materialData && model.materialData.id) {
-                            const materialId = model.materialData.id;
-                            const usedWeight = (model.realWeight || 0) / 1000;
-
+                        const entries = Array.isArray(model.materialEntriesDetail) && model.materialEntriesDetail.length
+                            ? model.materialEntriesDetail
+                            : (model.materialData && model.materialData.id ? [{
+                                materialId: model.materialData.id,
+                                weight: model.realWeight || 0
+                            }] : []);
+                        entries.forEach(entry => {
+                            const materialId = entry.materialId || entry.materialData?.id;
+                            const usedWeight = (parseFloat(entry.weight) || 0) / 1000;
+                            if (!materialId || usedWeight <= 0) return;
                             if (!materialUsage[materialId]) materialUsage[materialId] = 0;
                             materialUsage[materialId] += usedWeight;
-                        }
+                        });
                     });
                 });
 
