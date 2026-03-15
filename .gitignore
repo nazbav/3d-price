@@ -2,3 +2,19 @@ __pycache__/
 
 # IDE
 .idea/
+
+# Virtual envs
+.venv/
+.htmlenv/
+
+# Large binaries & local tools
+lightpanda
+lightpanda.exe
+
+# Backup & temp files
+*.bak
+*.tmp
+*~
+
+# Local data
+orcaslicer-calc/
