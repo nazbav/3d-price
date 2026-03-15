@@ -2,6 +2,44 @@
 
 [Русская версия](./README_RU.md)
 
+<p align="center">
+  <a href="https://github.com/nazbav/3d-price/releases">
+    <img src="https://img.shields.io/github/v/release/nazbav/3d-price?display_name=tag&style=flat-square" alt="Latest release">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/releases">
+    <img src="https://img.shields.io/github/downloads/nazbav/3d-price/total?style=flat-square" alt="Total downloads">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/pulse">
+    <img src="https://img.shields.io/github/last-commit/nazbav/3d-price?style=flat-square" alt="Last commit">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/stargazers">
+    <img src="https://img.shields.io/github/stars/nazbav/3d-price?style=flat-square" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/network/members">
+    <img src="https://img.shields.io/github/forks/nazbav/3d-price?style=flat-square" alt="GitHub forks">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/nazbav/3d-price">Repository</a> •
+  <a href="https://github.com/nazbav/3d-price/releases">Releases</a> •
+  <a href="https://github.com/nazbav/3d-price/pulse">Pulse</a> •
+  <a href="https://github.com/nazbav/3d-price/graphs/contributors">Contributors</a> •
+  <a href="https://github.com/nazbav/3d-price/graphs/traffic">Traffic</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/nazbav/3d-price">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=nazbav&repo=3d-price&show_owner=true&theme=transparent" alt="3d-price repository card">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://star-history.com/#nazbav/3d-price&Date">
+    <img src="https://api.star-history.com/svg?repos=nazbav/3d-price&type=Date" alt="Star History Chart">
+  </a>
+</p>
+
 Browser-first calculator for estimating 3D printing jobs. The active application lives in [index.html](./index.html); legacy `index*.html` pages remain in the repository but are not the primary UI anymore.
 
 ## Current Scope
@@ -149,40 +187,6 @@ Top-level release gates:
 - **English UI** — no Russian leakage in any critical path
 - **Electron wrapper** — shared path resolves; packaging produces a working build
 - **All modules** — calculator, history, clients, printers, materials, overheads, analytics, My Tax, Spoolman each verified
-
-## Project Signals
-
-<p align="center">
-  <a href="https://github.com/nazbav/3d-price/releases">
-    <img src="https://img.shields.io/github/v/release/nazbav/3d-price?display_name=tag&style=flat-square" alt="Latest release">
-  </a>
-  <a href="https://github.com/nazbav/3d-price/releases">
-    <img src="https://img.shields.io/github/downloads/nazbav/3d-price/total?style=flat-square" alt="Total downloads">
-  </a>
-  <a href="https://github.com/nazbav/3d-price/pulse">
-    <img src="https://img.shields.io/github/last-commit/nazbav/3d-price?style=flat-square" alt="Last commit">
-  </a>
-  <a href="https://github.com/nazbav/3d-price/stargazers">
-    <img src="https://img.shields.io/github/stars/nazbav/3d-price?style=flat-square" alt="GitHub stars">
-  </a>
-  <a href="https://github.com/nazbav/3d-price/network/members">
-    <img src="https://img.shields.io/github/forks/nazbav/3d-price?style=flat-square" alt="GitHub forks">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/nazbav/3d-price/releases">Releases</a> •
-  <a href="https://github.com/nazbav/3d-price/pulse">Pulse</a> •
-  <a href="https://github.com/nazbav/3d-price/graphs/contributors">Contributors</a> •
-  <a href="https://github.com/nazbav/3d-price/graphs/traffic">Traffic</a> •
-  <a href="https://github.com/nazbav/3d-price/network">Network</a>
-</p>
-
-<p align="center">
-  <sub>
-    GitHub Insights: activity, release cadence, contributor graph, and download stats for desktop builds.
-  </sub>
-</p>
 
 ## License
 
