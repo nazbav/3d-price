@@ -180,7 +180,7 @@ Regression scenarios: [`docs/superpowers/specs/2026-03-15-regression-scenarios.m
 Top-level release gates:
 
 - **Core calculation** — single and multimaterial cost computation is correct
-- **History (IndexedDB)** — save, reload, edit, delete, export/import all work
+- **History / storage** — save, reload, edit, delete, export/import all work with the current local-first storage model
 - **G-code import** — drag-drop, post-processing bridge, metadata parsing
 - **Multimaterial mapping** — full/partial/unknown material match; MM flag warning
 - **Estimate / label output** — renders correctly, downloads without clipping

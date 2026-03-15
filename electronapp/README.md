@@ -75,13 +75,20 @@ npm run dist:mac    # macOS DMG
 
 ### Environment Detection
 
-`isElectronEnv()` (line ~9984) checks `!!(window && window.backupBridge)`.
-The preload script injects `window.backupBridge`; its presence is the **sole** signal that the app is running inside Electron.
+`isElectronEnv()` no longer relies on a single signal.
+It treats the app as Electron when at least one of these markers is present:
+
+- `window.backupBridge`
+- `window.process?.versions?.electron`
+- `Electron` in `navigator.userAgent`
 
 ```js
-// Preload injects window.backupBridge
 function isElectronEnv() {
-    return !!(window && window.backupBridge);
+    return !!(
+        (window && window.backupBridge) ||
+        (window && window.process && window.process.versions && window.process.versions.electron) ||
+        /Electron/i.test(navigator.userAgent || '')
+    );
 }
 ```
 
@@ -91,10 +98,10 @@ function isElectronEnv() {
 - **Electron**: `showToastAuto()` calls `showElectronToast()`, which creates a pure-DOM overlay (CSS classes `.electron-toast-container` / `.electron-toast`) injected into `<body>`. No Bootstrap dependency — works reliably even before Bootstrap JS initialises.
 - After schema migration `window.backupBridge.notify({type: 'migrationComplete'})` is called so the main process can react (e.g. reload the window or update the tray).
 
-### History Storage (IndexedDB)
+### Main Storage Model
 
-Order history is stored in IndexedDB (`indexedDB.open(HISTORY_DB_NAME, HISTORY_DB_VERSION)`).
-Electron's renderer process exposes the full Web Storage API — **fully compatible**, no changes needed.
+The active calculator stores its main state in browser-compatible storage (`localStorage` for the root app snapshot).
+Electron's renderer process exposes the same Web Storage API — **fully compatible**, no changes needed.
 
 ### Settings Storage (localStorage)
 
