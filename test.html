@@ -3745,6 +3745,18 @@
         'Профили материала': 'Material profiles',
         'Ссылка на чек': 'Receipt link',
         'Ссылка для копирования:': 'Link to copy:',
+        'Токен не задан': 'Token is not set',
+        'Проверка...': 'Checking...',
+        'Сервис доступен': 'Service is available',
+        'Ошибка: Невозможно проверить статус': 'Error: Unable to check status',
+        'Ошибка: Нет соединения с сервером': 'Error: No connection to server',
+        'Отправка SMS...': 'Sending SMS...',
+        'Токен получен': 'Token received',
+        'Сохранить настройки': 'Save settings',
+        'Сохранить выбор для следующих импортов': 'Remember for future imports',
+        'Сохранить выбор для этого профиля': 'Remember choice for this profile',
+        'Сохранить выбор для профиля': 'Remember choice for profile',
+        'Сохранение работает только для этого браузера/компьютера (LocalStorage).': 'Saving works only for this browser/computer (LocalStorage).',
         'Код заказа:': 'Order code:',
         'Название заказа:': 'Order name:',
         'Клиент:': 'Client:',
@@ -4933,8 +4945,8 @@
         function stats() {
             const printers = Object.keys(data.printerMap || {}).length;
             const materials = Object.keys(data.materialMap || {}).length;
-            const order = data.orderAuto ? `, авто-заказ: ${data.orderAuto.kind || '—'} (${data.orderAuto.remaining || 0})` : '';
-            return `Принтеры: ${printers}, материалы: ${materials}${order}`;
+            const order = data.orderAuto ? `, ${translateUiText('авто-заказ:')} ${data.orderAuto.kind || '—'} (${data.orderAuto.remaining || 0})` : '';
+            return `${translateUiText('Принтеры:')} ${printers}, ${translateUiText('материалы:')} ${materials}${order}`;
         }
 
         load();
@@ -4948,7 +4960,7 @@
 
     function renderPromptMemoryStats(){
         const el = document.getElementById('promptMemoryStats');
-        if(el) el.textContent = PromptMemory.stats();
+        if(el) el.textContent = translateUiText(PromptMemory.stats());
     }
 
     function initPromptMemoryUi(){
@@ -5956,7 +5968,10 @@
         document.getElementById("settingsIgnoreCoolingRejects").checked = appData.calcSettings.ignoreCoolingRejects || false;
         document.getElementById("calcFinalCost").value = '';
         toggleFinalFields(document.getElementById("calcOrderStatus").value);
-        document.getElementById("companyNameInput").value = appData.labelSettings.companyName || "";
+        const companyNameValue = appData.labelSettings.companyName || "";
+        document.getElementById("companyNameInput").value = (getCurrentLanguage() === 'en' && ['Компания', 'Моя компания'].includes(companyNameValue))
+            ? translateUiText('Компания')
+            : companyNameValue;
         document.getElementById("chatLinkInput").value = appData.labelSettings.chatLink || "";
         document.getElementById("bankDetailsInput").value = appData.labelSettings.bankDetails || "";
         updateBrandLogoPreview(appData.labelSettings.companyLogo || "");
@@ -11552,10 +11567,10 @@
         const token = localStorage.getItem('my_nalog_token');
         const statusEl = document.getElementById('myNalogStatus');
         if (!token) {
-            statusEl.textContent = 'Токен не задан';
+            statusEl.textContent = translateUiText('Токен не задан');
             return;
         }
-        statusEl.textContent = 'Проверка...';
+        statusEl.textContent = translateUiText('Проверка...');
         try {
             const resp = await sendMyNalogRequest('GET', MY_NALOG_API + '/api/v1/user');
             if (resp.ok) {
@@ -11567,13 +11582,13 @@
                     statusEl.innerHTML = `<i class="bi bi-check-square me-2"></i>ИНН ${data.inn} ${data.displayName}`;
                     localStorage.setItem('my_nalog_inn', data.inn || '');
                 } else {
-                    statusEl.textContent = 'Сервис доступен';
+                    statusEl.textContent = translateUiText('Сервис доступен');
                 }
             } else {
-                statusEl.textContent = 'Ошибка: Невозможно проверить статус';
+                statusEl.textContent = translateUiText('Ошибка: Невозможно проверить статус');
             }
         } catch (e) {
-            statusEl.textContent = 'Ошибка: Нет соединения с сервером';
+            statusEl.textContent = translateUiText('Ошибка: Нет соединения с сервером');
         }
     }
 
@@ -11584,7 +11599,7 @@
             showToastAuto('Введите телефон');
             return;
         }
-        statusEl.textContent = 'Отправка SMS...';
+        statusEl.textContent = translateUiText('Отправка SMS...');
         try{
             const resp = await fetch(MY_NALOG_API+'/api/v1/auth/challenge/sms/start', {
                 method:'POST',
@@ -11594,13 +11609,13 @@
             if(resp.ok){
                 const data = await resp.json();
                 myNalogChallengeToken = data.challengeToken;
-                statusEl.textContent = 'SMS отправлено';
+                    statusEl.textContent = translateUiText('SMS отправлено');
             }else{
                 const text = await resp.text().catch(()=>resp.status);
-                statusEl.textContent = 'Ошибка: ' + text;
+                statusEl.textContent = `${translateUiText('Ошибка:')} ${text}`;
             }
         }catch(e){
-            statusEl.textContent = 'Нет соединения';
+            statusEl.textContent = translateUiText('Нет соединения');
         }
     }
 
@@ -11612,7 +11627,7 @@
             showToastAuto('Нужен телефон и код');
             return;
         }
-        statusEl.textContent = 'Подтверждение...';
+        statusEl.textContent = translateUiText('Подтверждение...');
         try{
             const challenge = myNalogChallengeToken || '';
             const deviceId = localStorage.getItem('my_nalog_device_id') || generateDeviceId();
@@ -11644,16 +11659,16 @@
                     } else {
                         await checkMyNalogStatus();
                     }
-                    statusEl.textContent = 'Токен получен';
+                    statusEl.textContent = translateUiText('Токен получен');
                 }else{
-                    statusEl.textContent = 'Код подтвержден';
+                    statusEl.textContent = translateUiText('Код подтвержден');
                 }
             }else{
                 const text = await resp.text().catch(()=>resp.status);
-                statusEl.textContent = 'Ошибка: ' + text;
+                statusEl.textContent = `${translateUiText('Ошибка:')} ${text}`;
             }
         }catch(e){
-            statusEl.textContent = 'Нет соединения';
+            statusEl.textContent = translateUiText('Нет соединения');
         }
     }
 
