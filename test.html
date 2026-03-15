@@ -3581,6 +3581,28 @@
         DKK: { roundingSteps: [1, 10] },
         PLN: { roundingSteps: [1, 10] }
     };
+    const CURRENCY_SYMBOLS = {
+        RUB: '₽',
+        USD: '$',
+        EUR: '€',
+        GBP: '£',
+        JPY: '¥',
+        CNY: '¥',
+        INR: '₹',
+        KRW: '₩',
+        TRY: '₺',
+        CHF: 'CHF',
+        CAD: '$',
+        AUD: '$',
+        NZD: '$',
+        SGD: '$',
+        HKD: '$',
+        AED: 'AED',
+        SEK: 'kr',
+        NOK: 'kr',
+        DKK: 'kr',
+        PLN: 'zł'
+    };
     const I18N_LOCALE_MAP = {
         ru: 'ru-RU',
         en: 'en-US'
@@ -4246,18 +4268,20 @@
     }
 
     function getCurrencySymbol(code = getCurrencyOverride()) {
+        const normalized = normalizeSupportedCurrency(code);
+        if (CURRENCY_SYMBOLS[normalized]) return CURRENCY_SYMBOLS[normalized];
         try {
             const parts = new Intl.NumberFormat(getCurrentLocale(), {
                 style: 'currency',
-                currency: normalizeSupportedCurrency(code),
+                currency: normalized,
                 currencyDisplay: 'narrowSymbol',
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0
             }).formatToParts(1);
             const symbol = parts.find(part => part.type === 'currency')?.value;
-            return symbol || normalizeSupportedCurrency(code);
+            return symbol || normalized;
         } catch (e) {
-            return normalizeSupportedCurrency(code);
+            return normalized;
         }
     }
 
