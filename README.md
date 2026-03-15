@@ -1,233 +1,131 @@
-# Калькулятор себестоимости 3D‑печати
+# 3D Print Cost Calculator
 
-Проект представляет набор HTML‑страниц для расчёта полной стоимости моделей, печатаемых на 3D‑принтере. Содержит как стабильные, так и экспериментальные версии калькулятора.
+[Русская версия](./README_RU.md)
 
-## Содержание репозитория
+Browser-first calculator for estimating 3D printing jobs. The active application lives in [test.html](./test.html); legacy `index*.html` pages remain in the repository but are not the primary UI anymore.
 
-1. **index1.html** – первая версия с минимальным функционалом
-1. **index2.html** – расширенная версия (устарела)
-1. **index3.html** – расширенная версия (устарела)
-1. **test.html**   – эксперименты и новые возможности
+## Current Scope
 
-Онлайн‑версию можно открыть по ссылке: <https://nazbav.github.io/3d-price/test.html> (см. раздел *Навигация и разделы*).
+- Single-file app in `test.html` with Bootstrap-based UI and inline JavaScript.
+- Local-first data model stored in browser `localStorage`.
+- Optional Electron wrapper in [`electronapp/`](./electronapp/) for desktop usage, backup tooling, and remote/offline delivery.
+- Legacy pages (`index1.html`, `index2.html`, `index3.html`) are historical snapshots, not the main development target.
 
----
+## What `test.html` Does
 
-## Быстрый старт
+- Maintains printers, materials, clients, global overheads, and calculation history.
+- Calculates print cost using material, electricity, depreciation, maintenance, operator time, downtime, preparation, shipping, markup, discount, tax, and optional label/estimate printing costs.
+- Supports urgency profiles with per-day work schedules.
+- Supports per-printer multimaterial mode:
+  - printer-level toggle `Мультиматериальная печать`
+  - per-model material composition in a modal editor
+  - total model weight derived from all material entries
+- Imports G-code into calculator rows:
+  - drag-and-drop into the calculator area
+  - external post-processing flows such as `open_calc.py`
+  - printer/material matching memory via local prompt memory
+- Parses G-code metadata including print time, thumbnails, printer profile hints, and multimaterial tool usage.
+- Generates compact thermal labels and printable estimate/order summary cards.
+- Provides analytics in the Summary tab: revenue, profit, cost structure, material usage, printer load, client statistics, and period-based charts.
+- Supports JSON import/export and encrypted short-lived cloud sync links/QR codes via Supabase.
+- Supports optional Spoolman integration for material import and spool usage updates.
 
-1. Перейдите по ссылке выше либо откройте нужный HTML‑файл локально в браузере.
-2. Заполните справочники во вкладках **«Принтеры»**, **«Материалы»** и **«Доп. расходы»**.
-3. На вкладке **«Калькулятор»** задайте параметры печати и нажмите **«Рассчитать»**.
-4. Сохраните расчёт в историю или распечатайте термоэтикетку.
+## Main UI Sections
 
-### Запуск локально
+`test.html` currently exposes these top-level sections:
+
+- `Calculate`
+- `History`
+- `Clients`
+- `Printers`
+- `Materials`
+- `Additional Costs`
+- `Settings`
+- `Summary`
+
+Settings include branding, calculation rules, cloud sync, Spoolman integration, tax helper fields, interface language, and display currency.
+
+## Quick Start
+
+### Browser
 
 ```bash
 git clone https://github.com/nazbav/3d-price.git
 cd 3d-price
-# открыть test.html в любом современном браузере
-```
-Никаких зависимостей устанавливать не требуется – все скрипты подключены через CDN.
-
----
-
-## Навигация и разделы
-
-Экспериментальная версия `test.html` содержит несколько вкладок:
-
-1. **Рассчитать** – основной калькулятор
-2. **История** – список всех сохранённых расчётов
-3. **Клиенты** – база заказчиков с телефоном и комментариями
-4. **Принтеры** – перечень доступных принтеров
-5. **Материалы** – глобальный список материалов
-6. **Доп. расходы** – разовые и постоянные траты
-7. **Настройки** – параметры калькуляции и брендинга
-8. **Сводка** – статистика по прибыли и занятости
-9. **Импорт/Экспорт** – обмен данными через JSON или Supabase
-
-При удалении принтера, указанного в истории, приложение открывает модальное окно для переноса расчётов на другой существующий принтер.
-
-### Карта переходов
-
-Обычный путь пользователя выглядит так:
-
-```
-Принтеры ─▶ Материалы ─▶ Доп. расходы ─▶ Рассчитать
-        ╰────▶ История ─▶ Сводка
-                        ╰────▶ Импорт/Экспорт
-```
-Из калькулятора можно перейти к истории либо сразу к сводке. Из истории – к редактированию клиентов и обратно.
-
----
-
-## Данные и параметры
-
-Все сущности хранятся в `LocalStorage` и состоят из нескольких блоков.
-
-### 1. Принтеры
-- `name` – название
-- `cost` – полная стоимость (включая ремонт)
-- `hoursToRecoup` – через сколько часов принтер должен окупиться
-- `power` – мощность в ваттах
-- `maintCostHour` – обслуживание (руб/ч)
-
-### 2. Материалы
-- `name` – тип и бренд
-- `costPerKg` – цена за килограмм
-- `availableKg` – количество в наличии
-- `wastePercent` – процент отхода
-
-### 3. Доп. расходы
-- `description` – комментарий
-- `cost` – общая сумма, распределяемая на часы печати
-
-### 4. Настройки калькулятора (`calcSettings`)
-- `operatorRate` – ставка оператора, руб/ч
-- `workHoursDay` – рабочих часов в день
-- `startDate` – дата начала печати
-- `costKwh` – цена электроэнергии
-- `shipping` – упаковка/доставка, руб
-- `taxPercent` – процент налога
-- `parallelPrinting` – учёт параллельной печати
-- `markupPercent` – наценка на итоговую стоимость
-
----
-
-## Формулы расчёта
-
-Ниже описаны ключевые формулы, применяемые при вычислении итоговой цены.
-
-### 1. Амортизация принтера
-
-```text
-costPerHourPrinter = cost / hoursToRecoup
-costPrinterPart    = costPerHourPrinter * hours
 ```
 
-### 2. Оплата оператора
+Open `test.html` in a modern browser.
 
-```text
-costOperatorPart = hours * operatorRate
+Typical workflow:
+
+1. Add printers.
+2. Add materials and global overheads.
+3. Open `Calculate`.
+4. Add models manually or import G-code.
+5. Run calculation and save it to history.
+
+### Electron
+
+```bash
+cd electronapp
+npm install
+npm run start
 ```
 
-### 3. Расход материала
+Packaging commands:
 
-```text
-realGrams        = grams * (1 + wastePercent / 100)
-costPerGram      = costPerKg / 1000
-costMaterialPart = realGrams * costPerGram
+```bash
+npm run make
+# or
+npm run dist:win
+npm run dist:linux
+npm run dist:mac
 ```
 
-### 4. Дополнительные расходы
+Electron-specific details live in [`electronapp/README.md`](./electronapp/README.md).
 
-```text
-sumAdditional       = Σ(cost)
-costPerHourAddition = sumAdditional / hoursToRecoup
-costAdditionalPart  = costPerHourAddition * hours
-```
+## G-code Import Notes
 
-### 5. Электричество и обслуживание
+The calculator can import G-code and map it into model rows. Current import-related behavior includes:
 
-```text
-costElectric     = (power / 1000) * hours * costKwh
-costMaintenance  = maintCostHour * hours
-```
+- printer resolution by parsed printer/profile hints
+- remembered material/printer choices in local prompt memory
+- multimaterial parsing into per-material entries
+- warnings when imported G-code contains multiple materials but the target printer is not marked as multimaterial
 
-### 6. Доставка/упаковка и налог
+Sample files used during development may exist in `g-codes/`, but they are not required for normal app usage.
 
-```text
-costShipping = shipping
-subTotal     = costPrinterPart + costOperatorPart + costMaterialPart +
-               costAdditionalPart + costElectric + costMaintenance + costShipping
-costTax      = subTotal * (taxPercent / 100)
-total        = subTotal + costTax
-```
+## Data Storage
 
-### 7. Пример расчёта срока
+- Main application data is stored in browser `localStorage`.
+- JSON import/export is available from the UI.
+- Cloud sync uses encrypted payloads and short-lived retrieval flow.
+- Electron adds local backups on top of the browser data model.
 
-```text
-daysNeeded = ceil(hours / workHoursDay)
-```
-Если указан `startDate`, к нему прибавляется `daysNeeded` для получения предполагаемой даты окончания.
+## Development Notes
 
----
+- Primary file to edit: [`test.html`](./test.html)
+- Avoid treating legacy `index*.html` pages as the source of truth for new work.
+- Root `test_offline.html` is no longer part of the active root workflow.
+- For UI and JavaScript troubleshooting, prefer `lightpanda` smoke/debug runs over the old outdated UI tests.
 
-## Алгоритм вычисления
+## Verification
 
-1. Пользователь вводит исходные данные во вкладке **Калькулятор**.
-2. Скрипт подставляет значения в формулы, описанные выше.
-3. Если активирован режим параллельной печати, время распределяется между несколькими принтерами.
-4. Результат отображается на экране и может быть сохранён в историю.
-5. При сохранении в историю данные попадают в список, где их можно отредактировать или удалить.
+Useful local checks:
 
-### Очередь и параллельная печать
+- open `test.html` in browser
+- run targeted syntax checks for inline scripts
+- use `lightpanda` for UI/JS regression hunting when environment allows it
+- run Electron manually if changes may affect desktop behavior
 
-При включённой опции `parallelPrinting` калькулятор сравнивает время для каждого выбранного принтера и определяет общее время как максимум из них. Это позволяет учитывать одновременную загрузку нескольких устройств.
+## Repository Map
 
-### Синхронизация через Supabase
+- [`test.html`](./test.html): active calculator UI
+- [`electronapp/`](./electronapp/): desktop wrapper
+- [`g-codes/`](./g-codes/): example/import G-code files when present
+- [`docs/`](./docs/): project notes and supporting documentation
+- [`orcaslicer-calc/`](./orcaslicer-calc/): slicer-related external subtree/work area present in this repo
 
-1. При загрузке страницы создаётся уникальный `sync_id` и ключ шифрования.
-2. При экспорте данные шифруются в браузере с помощью `AES-GCM` и отправляются в таблицу `user_settings`.
-3. При импорте происходит обратная процедура: данные загружаются, проверяется актуальность (не старше 5 минут) и расшифровываются тем же ключом.
-4. Для обмена с мобильным устройством генерируется QR‑код с параметрами `sync_id` и `key`.
+## License
 
-### Генерация термоэтикеток
-
-После расчёта можно вывести мини‑этикетку со сведениями о модели, дате и цене. Печать осуществляется через стандартное окно браузера или экспорт в PDF.
-
----
-
-## Customer Journey Maps
-
-### Новая печать
-1. Пользователь открывает калькулятор и добавляет свой принтер и материал.
-2. Заполняет параметры печати, нажимает **«Рассчитать»** и просматривает итог.
-3. Сохраняет расчёт, получает ориентировочную дату окончания и при необходимости печатает этикетку.
-4. Данные сохраняются в историю, где можно отслеживать статус заказа.
-
-### Постоянный клиент с облачным профилем
-1. Пользователь сканирует QR‑код, созданный ранее на основном устройстве.
-2. Происходит загрузка настроек из Supabase – все принтеры, материалы и история восстанавливаются.
-3. Менеджер выбирает клиента из списка, проводит новый расчёт и отправляет ссылку заказчику.
-4. По завершении заказ архивируется, а статистика обновляется в разделе **Сводка**.
-
----
-
-## Импорт, экспорт и хранение данных
-
-- Все данные хранятся локально в `LocalStorage` и не требуют подключения к серверу.
-- Во вкладке **Импорт/Экспорт** можно сохранить JSON на диск или загрузить его обратно.
-- Через Supabase доступна облачная синхронизация: данные шифруются в браузере, хранятся не более 5 минут и доступны по ссылке или QR‑коду.
-
-### Резервные копии в Electron
-
-При запуске десктопной версии (см. каталог `electronapp/`) во вкладке **«Импорт/Экспорт»** появляется блок *«Резервные копии (Electron)»*. Он позволяет:
-
-- автоматически создавать бэкап при первом запуске приложения за день (включено по умолчанию);
-- настроить директорию хранения, срок (N дней) и лимит количества файлов;
-- в один клик открыть папку с бэкапами или запустить копирование вручную;
-- получать подсказки о ходе/результате через Toast‑уведомления.
-
-Все операции выполняются локально: данные сохраняются в выбранную папку (`%APPDATA%/GCodeCalc/backups` по умолчанию), ничего не отправляется во внешний облачный сервис.
-
----
-
-## Тёмная тема
-
-Кнопка переключения темы находится в шапке каждой страницы. Выбранная тема запоминается в `LocalStorage`.
-
----
-
-## Связь
-
-Если у вас есть вопросы или предложения, создавайте issue или пишите автору через профиль GitHub.
-
----
-
-## Лицензия
-
-Проект распространяется по лицензии MIT.
-
----
-
-**Приятных расчётов и успешной печати!**
+MIT
