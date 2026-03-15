@@ -7611,7 +7611,18 @@
         }
         saveToLocalStorage();
         renderPrintersTable();
-        renderCalcPrinters();
+        // Обновляем заголовок блока принтера точечно, чтобы не стирать модельные строки из DOM
+        const printerBlock = document.querySelector(`.calc-printer-block[data-printer-id="${p.id}"]`);
+        if (printerBlock) {
+            const h5 = printerBlock.querySelector('h5');
+            if (h5) h5.textContent = `Принтер: ${p.name} (ID: ${p.id})`;
+            const smallText = printerBlock.querySelector('.small-text');
+            if (smallText) smallText.textContent = `Мощность: ${p.power}Вт, Обсл: ${p.maintCostHour}₽/ч, Часы окупаемости: ${p.hoursToRecoup}.`;
+        } else {
+            // Блока ещё нет (первый рендер или пересоздание) — полный рендер
+            renderCalcPrinters();
+        }
+        updateCalcLabelColumnVisibility();
         renderSummary();
         bootstrap.Modal.getInstance(document.getElementById('printerModal')).hide();
     }
