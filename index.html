@@ -1308,6 +1308,7 @@
         }
 
         .desktop-app-banner {
+            display: flex;
             align-items: center;
             gap: 1rem;
             padding: 1rem 1.1rem;
@@ -1391,27 +1392,6 @@
             background: rgba(30, 41, 59, 0.78);
             border-color: rgba(148, 163, 184, 0.16);
         }
-        .desktop-app-banner-close {
-            background: none;
-            border: none;
-            padding: 0.2rem 0.4rem;
-            cursor: pointer;
-            color: var(--bs-secondary-color, #6c757d);
-            opacity: 0.5;
-            font-size: 1rem;
-            line-height: 1;
-            flex-shrink: 0;
-            border-radius: 0.4rem;
-            transition: opacity 0.15s;
-        }
-        .desktop-app-banner-close:hover {
-            opacity: 1;
-            background: rgba(0,0,0,0.06);
-        }
-        [data-bs-theme="dark"] .desktop-app-banner-close:hover {
-            background: rgba(255,255,255,0.08);
-        }
-
         .model-material-summary-list {
             display: flex;
             flex-direction: column;
@@ -2438,7 +2418,7 @@
                             </div>
                             <div class="calc-result-panel" id="calcResult" style="display:none;"></div>
                         </div>
-                        <div class="desktop-app-banner-wrap" id="desktopAppBannerWrap">
+                        <div class="calc-card desktop-app-banner-wrap" id="desktopAppBannerWrap">
                             <div class="desktop-app-banner" id="desktopAppBanner" role="note" aria-label="Рекомендация">
                                 <div class="desktop-app-banner-icon" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -2456,7 +2436,6 @@
                                         </a>
                                     </div>
                                 </div>
-                                <button class="desktop-app-banner-close" onclick="document.getElementById('desktopAppBannerWrap').style.display='none'" title="Скрыть" aria-label="Скрыть">✕</button>
                             </div>
                         </div>
                     </div>
