@@ -1302,6 +1302,77 @@
             background: rgba(13, 110, 253, 0.15);
         }
 
+        .desktop-app-banner {
+            display: none;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.8rem 1.1rem;
+            margin-top: 1rem;
+            border-radius: 0.85rem;
+            border: 1px solid rgba(13, 110, 253, 0.18);
+            background: linear-gradient(120deg, rgba(13, 110, 253, 0.06) 0%, rgba(13, 202, 240, 0.04) 100%);
+            font-size: 0.875rem;
+            color: var(--bs-secondary-color, #6c757d);
+            transition: border-color 0.2s;
+        }
+        .desktop-app-banner:hover {
+            border-color: rgba(13, 110, 253, 0.35);
+        }
+        [data-bs-theme="dark"] .desktop-app-banner {
+            border-color: rgba(99, 157, 255, 0.2);
+            background: linear-gradient(120deg, rgba(99, 157, 255, 0.07) 0%, rgba(13, 202, 240, 0.05) 100%);
+            color: var(--bs-secondary-color, #9ea6b0);
+        }
+        [data-bs-theme="dark"] .desktop-app-banner:hover {
+            border-color: rgba(99, 157, 255, 0.4);
+        }
+        .desktop-app-banner-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+            flex-shrink: 0;
+            opacity: 0.75;
+        }
+        .desktop-app-banner-body {
+            flex: 1;
+            line-height: 1.45;
+        }
+        .desktop-app-banner-title {
+            font-weight: 600;
+            color: var(--bs-body-color);
+            font-size: 0.9rem;
+        }
+        .desktop-app-banner a.desktop-app-link {
+            color: var(--bs-primary);
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .desktop-app-banner a.desktop-app-link:hover {
+            text-decoration: underline;
+        }
+        .desktop-app-banner-close {
+            background: none;
+            border: none;
+            padding: 0.2rem 0.4rem;
+            cursor: pointer;
+            color: var(--bs-secondary-color, #6c757d);
+            opacity: 0.5;
+            font-size: 1rem;
+            line-height: 1;
+            flex-shrink: 0;
+            border-radius: 0.4rem;
+            transition: opacity 0.15s;
+        }
+        .desktop-app-banner-close:hover {
+            opacity: 1;
+            background: rgba(0,0,0,0.06);
+        }
+        [data-bs-theme="dark"] .desktop-app-banner-close:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
         .calc-alert {
             border-radius: 0.75rem;
             padding: 1rem;
@@ -2279,6 +2350,19 @@
                                 Пока нет данных — запустите расчёт.
                             </div>
                             <div class="calc-result-panel" id="calcResult" style="display:none;"></div>
+                            <div class="desktop-app-banner" id="desktopAppBanner" role="note" aria-label="Рекомендация">
+                                <div class="desktop-app-banner-icon">🖥️</div>
+                                <div class="desktop-app-banner-body">
+                                    <div class="desktop-app-banner-title">Используете Windows?</div>
+                                    <div>Для удобства рекомендуем
+                                        <a class="desktop-app-link" href="https://github.com/nazbav/3d-price/releases" target="_blank" rel="noopener noreferrer">
+                                            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="margin-bottom:1px"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                                            скачать десктопную версию
+                                        </a>
+                                    </div>
+                                </div>
+                                <button class="desktop-app-banner-close" onclick="document.getElementById('desktopAppBanner').style.display='none'" title="Скрыть" aria-label="Скрыть">✕</button>
+                            </div>
                         </div>
                     </div>
                     <aside class="calc-sidebar">
@@ -11220,6 +11304,13 @@
         saveToLocalStorage();
         renderHistoryTable();
         updateHistoryStats();
+
+        // Рекомендуем десктоп-версию Windows-пользователям вне Electron
+        const _daBanner = document.getElementById('desktopAppBanner');
+        if (_daBanner && !isElectronEnv()) {
+            const _isWin = /Win/i.test(navigator.platform || '') || /Windows/i.test(navigator.userAgent || '');
+            if (_isWin) _daBanner.style.display = 'flex';
+        }
     }
 
     function findMaterialById(mid) {
