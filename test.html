@@ -9962,19 +9962,70 @@
         reader.readAsDataURL(file);
     }
 
-    /* Функция генерации QR-кода */
+    /* Функция генерации QR-кода
+       Поведение:
+       - если глобальный QRCode уже загружен — использует его
+       - если нет — динамически подгружает qrcodejs с CDN и затем использует
+       - если загрузить библиотеку не удалось — вызывает callback(null)
+    */
     function generateQRCodeCanvas(data, size, callback){
-        const tempDiv = document.createElement("div");
-        new QRCode(tempDiv, {
-            text: data,
-            width: size,
-            height: size,
-            correctLevel: QRCode.CorrectLevel.H
-        });
-        setTimeout(() => {
-            const qrCanvas = tempDiv.querySelector("canvas");
-            callback(qrCanvas);
-        }, 100);
+        function createAndReturnCanvas(){
+            try {
+                const tempDiv = document.createElement("div");
+                // библиотека qrcodejs создаёт элемент <canvas> внутри контейнера
+                new QRCode(tempDiv, {
+                    text: data,
+                    width: size,
+                    height: size,
+                    correctLevel: QRCode.CorrectLevel && QRCode.CorrectLevel.H ? QRCode.CorrectLevel.H : undefined
+                });
+                // небольшой таймаут чтобы библиотека успела вставить canvas
+                setTimeout(() => {
+                    const qrCanvas = tempDiv.querySelector("canvas");
+                    callback(qrCanvas || null);
+                }, 100);
+            } catch (e) {
+                console.warn('generateQRCodeCanvas failed to create QR using QRCode:', e);
+                callback(null);
+            }
+        }
+
+        if (typeof QRCode !== 'undefined') {
+            createAndReturnCanvas();
+            return;
+        }
+
+        // Динамически подгружаем библиотеку и затем создаём QR
+        const cdn = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+        // Проверим, не загружался ли уже такой скрипт
+        const existing = Array.from(document.getElementsByTagName('script')).find(s => s.src && s.src.indexOf('qrcode.min.js') !== -1);
+        if (existing) {
+            // если скрипт есть, но объект ещё не объявлен — ждём его загрузки
+            if (typeof QRCode === 'undefined') {
+                existing.addEventListener('load', () => createAndReturnCanvas());
+                existing.addEventListener('error', () => callback(null));
+            } else {
+                createAndReturnCanvas();
+            }
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = cdn;
+        script.async = true;
+        script.onload = function() {
+            if (typeof QRCode !== 'undefined') {
+                createAndReturnCanvas();
+            } else {
+                console.warn('qrcode script loaded but QRCode is still undefined');
+                callback(null);
+            }
+        };
+        script.onerror = function() {
+            console.warn('Failed to load qrcodejs from CDN:', cdn);
+            callback(null);
+        };
+        document.head.appendChild(script);
     }
 
     function getExportBridge() {
