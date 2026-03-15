@@ -178,24 +178,28 @@ npm run dist:mac
 
 ### Готовность к релизу
 
-Полная процедура проверки перед релизом (синтаксическая проверка JS, миграционные тесты, ручной smoke-чеклист, проверка Electron и таблица доказательств) описана в runbook:
+Сейчас в репозитории нет отдельного дерева `docs/` с release-runbook, поэтому актуальные опорные материалы лежат в корне:
 
-**[`docs/superpowers/specs/2026-03-15-verification-runbook.md`](./docs/superpowers/specs/2026-03-15-verification-runbook.md)**
+- [`FEATURE_LIST.md`](./FEATURE_LIST.md): обзор возможностей
+- [`CHANGELOG.md`](./CHANGELOG.md): история изменений
 
-> **НЕ ВЫПУСКАТЬ релиз без выполнения всех пунктов runbook.**
+Перед релизом нужно вручную проверить основной сценарий калькуляции, импорт G-code, мультиматериальные кейсы, экспорт/этикетки и Electron-обёртку.
 
 ## Карта репозитория
 
 - [`index.html`](./index.html): активный интерфейс калькулятора
 - [`electronapp/`](./electronapp/): десктопная оболочка
 - [`g-codes/`](./g-codes/): примеры и тестовые G-code, если присутствуют
-- [`docs/`](./docs/): заметки и документация
+- [`FEATURE_LIST.md`](./FEATURE_LIST.md): сводка по возможностям
+- [`CHANGELOG.md`](./CHANGELOG.md): история релизных изменений
 - [`orcaslicer-calc/`](./orcaslicer-calc/): внешний slicer-related subtree/work area внутри репозитория
 
 ## Готовность к продакшену / Чеклист релиза
 
-Полный чеклист: [`docs/superpowers/specs/2026-03-15-production-readiness-checklist.md`](./docs/superpowers/specs/2026-03-15-production-readiness-checklist.md)  
-Матрица регрессионных сценариев: [`docs/superpowers/specs/2026-03-15-regression-scenarios.md`](./docs/superpowers/specs/2026-03-15-regression-scenarios.md)
+Опорные материалы:
+
+- [`FEATURE_LIST.md`](./FEATURE_LIST.md)
+- [`CHANGELOG.md`](./CHANGELOG.md)
 
 Верхнеуровневые условия выпуска релиза:
 

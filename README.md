@@ -158,24 +158,28 @@ Useful local checks:
 
 ### Production Readiness
 
-Full pre-release verification procedure (JS syntax check, migration tests, manual smoke checklist, Electron smoke, and evidence gates) is documented in the runbook:
+This repository currently keeps release-facing notes in root-level project files rather than a dedicated `docs/` tree:
 
-**[`docs/superpowers/specs/2026-03-15-verification-runbook.md`](./docs/superpowers/specs/2026-03-15-verification-runbook.md)**
+- [`FEATURE_LIST.md`](./FEATURE_LIST.md): feature overview
+- [`CHANGELOG.md`](./CHANGELOG.md): change history
 
-> **DO NOT release without completing all items in the runbook.**
+Before release, verify the active calculator flow, G-code import, multimaterial mapping, label/export output, and Electron wrapper manually.
 
 ## Repository Map
 
 - [`index.html`](./index.html): active calculator UI
 - [`electronapp/`](./electronapp/): desktop wrapper
 - [`g-codes/`](./g-codes/): example/import G-code files when present
-- [`docs/`](./docs/): project notes and supporting documentation
+- [`FEATURE_LIST.md`](./FEATURE_LIST.md): high-level feature inventory
+- [`CHANGELOG.md`](./CHANGELOG.md): release history and notable changes
 - [`orcaslicer-calc/`](./orcaslicer-calc/): slicer-related external subtree/work area present in this repo
 
 ## Production Readiness / Release Checklist
 
-Full checklist: [`docs/superpowers/specs/2026-03-15-production-readiness-checklist.md`](./docs/superpowers/specs/2026-03-15-production-readiness-checklist.md)  
-Regression scenarios: [`docs/superpowers/specs/2026-03-15-regression-scenarios.md`](./docs/superpowers/specs/2026-03-15-regression-scenarios.md)
+Supporting references:
+
+- [`FEATURE_LIST.md`](./FEATURE_LIST.md)
+- [`CHANGELOG.md`](./CHANGELOG.md)
 
 Top-level release gates:
 
