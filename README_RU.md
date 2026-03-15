@@ -170,6 +170,40 @@ npm run dist:mac
 - **Обёртка Electron** — shared path разрешается корректно; сборка даёт рабочий исполняемый файл
 - **Все модули** — калькулятор, история, клиенты, принтеры, материалы, накладные расходы, аналитика, «Мой налог», Spoolman — все проверены
 
+## Сигналы проекта
+
+<p align="center">
+  <a href="https://github.com/nazbav/3d-price/releases">
+    <img src="https://img.shields.io/github/v/release/nazbav/3d-price?display_name=tag&style=flat-square" alt="Последний релиз">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/releases">
+    <img src="https://img.shields.io/github/downloads/nazbav/3d-price/total?style=flat-square" alt="Всего скачиваний">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/pulse">
+    <img src="https://img.shields.io/github/last-commit/nazbav/3d-price?style=flat-square" alt="Последний коммит">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/stargazers">
+    <img src="https://img.shields.io/github/stars/nazbav/3d-price?style=flat-square" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/nazbav/3d-price/network/members">
+    <img src="https://img.shields.io/github/forks/nazbav/3d-price?style=flat-square" alt="GitHub forks">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/nazbav/3d-price/releases">Releases</a> •
+  <a href="https://github.com/nazbav/3d-price/pulse">Pulse</a> •
+  <a href="https://github.com/nazbav/3d-price/graphs/contributors">Contributors</a> •
+  <a href="https://github.com/nazbav/3d-price/graphs/traffic">Traffic</a> •
+  <a href="https://github.com/nazbav/3d-price/network">Network</a>
+</p>
+
+<p align="center">
+  <sub>
+    GitHub Insights по активности, релизам, участникам и статистике скачиваний десктопных сборок.
+  </sub>
+</p>
+
 ## Лицензия
 
 MIT
