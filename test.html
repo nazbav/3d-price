@@ -54,7 +54,7 @@
         .small-text { font-size: 0.9rem; color: #555; }
         .footer { margin-top: 40px; font-size: 0.9rem; border-top: 1px solid var(--bs-border-color); padding-top: 10px; }
         table td, table th { vertical-align: middle; white-space: nowrap; }
-        .history-client { font-size: 0.85rem; }
+        .history-client { font-size: 0.85rem; overflow-wrap: anywhere; word-break: break-word; }
         .btn-group-sm > .btn { font-size: 0.8rem; padding: 2px 6px; margin-left: 2px; }
         thead th { background-color: var(--bs-table-bg) !important; color: var(--bs-body-color) !important; }
         [data-bs-theme="dark"] thead th { background-color: var(--bs-dark-bg-subtle) !important; color: var(--bs-light) !important; }
@@ -1092,6 +1092,9 @@
             display: flex;
             flex-direction: column;
             gap: 0.2rem;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .summary-mini-bar {
@@ -1368,6 +1371,9 @@
             background: var(--app-navbar-bg);
             border: 1px solid var(--app-navbar-border);
             padding: 0.9rem;
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         [data-bs-theme="dark"] .calc-result-info {
@@ -1626,6 +1632,8 @@
             background: rgba(148, 163, 184, 0.2);
             border: 1px solid rgba(148, 163, 184, 0.25);
             line-height: 1.1;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         [data-bs-theme="dark"] .calc-printer-chip {
@@ -1754,6 +1762,15 @@
         .calc-result-alert {
             border-radius: 0.85rem;
             padding: 1rem;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #multiPromptModal .modal-body,
+        #multiPromptModal .form-label,
+        #multiPromptModal .form-text {
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 </style>
 </head>
@@ -3662,6 +3679,37 @@
         'Импорт/Экспорт': 'Import/Export',
         'Мой Налог': 'My Tax',
         'О калькуляторе': 'About calculator',
+        'Подтверждение': 'Confirmation',
+        'Файл:': 'File:',
+        'Профиль:': 'Profile:',
+        'Выберите материал для модели': 'Select material for model',
+        'Выберите принтер для моделей': 'Select printer for models',
+        'Куда добавить модель?': 'Where to add the model?',
+        'Массовое редактирование принтеров': 'Bulk edit printers',
+        'Массовое редактирование материалов': 'Bulk edit materials',
+        'Расход': 'Expense',
+        'Клиент': 'Client',
+        'Переназначить профиль': 'Reassign profile',
+        'Нет профилей': 'No profiles',
+        'Удалить статью?': 'Delete item?',
+        'Удалить клиента?': 'Delete client?',
+        'Удалить выбранный расчет из истории?': 'Delete the selected calculation from history?',
+        'Текущий расчёт': 'Current calculation',
+        'Создать новый расчёт': 'Create new calculation',
+        '-- Выберите материал --': '-- Select material --',
+        '-- Выберите тип --': '-- Select type --',
+        'Новый профиль': 'New profile',
+        'профиль изменён': 'profile changed',
+        'подбор по дедлайну': 'matched by deadline',
+        'дедлайн просрочен': 'deadline missed',
+        'Дополнительные услуги': 'Additional services',
+        'Услуга': 'Service',
+        'Цена': 'Price',
+        'Даже при максимально быстром профиле срок не соблюдается — сократите объём или расширьте график.': 'Even with the fastest profile, the deadline is missed. Reduce the workload or expand the schedule.',
+        'Профиль срочности автоматически изменён на': 'Urgency profile was automatically changed to',
+        'Дедлайн не соблюдается. Попробуйте выбрать более срочный профиль или скорректировать график.': 'The deadline is missed. Try a more urgent profile or adjust the schedule.',
+        'Предупреждения:': 'Warnings:',
+        'G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.': 'The G-code contains multiple materials. The printer is not marked as multi-material, but the model will still be imported with a warning.',
         'Мультиматериальная печать': 'Multi-material printing',
         'Материалы модели': 'Model materials',
         'Материалы модели:': 'Model materials:',
@@ -4018,6 +4066,9 @@
         ,'не в расчёте': 'not included'
         ,'Обновление формата данных': 'Data format update'
         ,'Сейчас мы переведём ваши сохранённые расчёты на новый формат. Для безопасности сначала скачайте резервную копию.': 'We will now migrate your saved calculations to the new format. For safety, download a backup first.'
+        ,'Резервная копия сохранена. Можно переходить к шагу 2.': 'Backup saved. You can proceed to step 2.'
+        ,'Идёт обновление. Пожалуйста, не закрывайте окно.': 'Updating. Please do not close the window.'
+        ,'Обновляем...': 'Updating...'
         ,'Скачать резервную копию': 'Download backup copy'
         ,'Шаг 1: сохраните текущие данные.': 'Step 1: save the current data.'
         ,'Обновить данные': 'Update data'
@@ -4031,6 +4082,7 @@
         ,'Копировать': 'Copy'
         ,'Удл.': 'Delete'
         ,'Добавить материал': 'Add material'
+        ,'Выберите материал': 'Select material'
         ,'Профили Orca': 'Orca profiles'
         ,'Стоим./кг': 'Cost/kg'
         ,'Ср. цена (₽/г)': 'Avg. price (RUB/g)'
@@ -4209,6 +4261,10 @@
         { pattern: /^Удалено (\d+) дубликатов\. Обновите страницу для применения изменений\.$/u, replace: (_, count) => `Deleted ${count} duplicates. Refresh the page to apply changes.` },
         { pattern: /^Ошибка очистки дубликатов: (.+)$/u, replace: (_, tail) => `Duplicate cleanup error: ${tail}` },
         { pattern: /^Принтер: (.+)$/u, replace: (_, tail) => `Printer: ${tail}` },
+        { pattern: /^Материал для профиля (.+)$/u, replace: (_, tail) => `Material for profile ${tail}` },
+        { pattern: /^Принтер для профиля (.+)$/u, replace: (_, tail) => `Printer for profile ${tail}` },
+        { pattern: /^Принтер для (.+)$/u, replace: (_, tail) => `Printer for ${tail}` },
+        { pattern: /^Материала "(.+)" недостаточно: требуется (.+) г, остаток (.+) г\.$/u, replace: (_, name, need, balance) => `Material "${name}" is insufficient: required ${need} g, available ${balance} g.` },
         { pattern: /^Мощность: ([0-9.]+)Вт, Обсл: ([0-9.]+)₽\/ч, Часы окупаемости: (.+)\.$/u, replace: (_, power, maint, payback) => `Power: ${power}W, Maint.: ${maint} RUB/h, Payback hours: ${payback}.` },
         { pattern: /^Мощность: ([^,]+), Обсл: ([^,]+), Часы окупаемости: (.+)\.$/u, replace: (_, power, maint, payback) => `Power: ${power}, Maint.: ${maint}, Payback hours: ${payback}.` },
         { pattern: /^Итого: (.+)$/u, replace: (_, tail) => `Total: ${tail}` },
@@ -5065,7 +5121,7 @@
         return __modalQueue.run(() => new Promise(res=>{
             const body = document.getElementById('multiPromptBody');
             body.innerHTML = '';
-            document.getElementById('multiPromptTitle').textContent = title;
+            document.getElementById('multiPromptTitle').textContent = translateUiText(title || '');
 
             const elements = [];
 
@@ -5097,7 +5153,7 @@
                     const lbl=document.createElement('label');
                     lbl.className='form-check-label ms-2';
                     lbl.setAttribute('for', id);
-                    lbl.textContent=f.label||'';
+                    lbl.textContent=translateUiText(f.label||'');
 
                     wrap.appendChild(el);
                     wrap.appendChild(lbl);
@@ -5105,7 +5161,7 @@
                     const lbl=document.createElement('label');
                     lbl.className='form-label';
                     lbl.setAttribute('for', id);
-                    lbl.textContent=f.label||'';
+                    lbl.textContent=translateUiText(f.label||'');
 
                     el=document.createElement('select');
                     el.className='form-select';
@@ -5114,7 +5170,7 @@
                     (f.options||[]).forEach(opt=>{
                         const o=document.createElement('option');
                         o.value=opt.value;
-                        o.textContent=opt.label;
+                        o.textContent=translateUiText(opt.label);
                         if(Array.isArray(f.value) && f.value.includes(opt.value)) o.selected=true;
                         el.appendChild(o);
                     });
@@ -5125,7 +5181,7 @@
                     const lbl=document.createElement('label');
                     lbl.className='form-label';
                     lbl.setAttribute('for', id);
-                    lbl.textContent=f.label||'';
+                    lbl.textContent=translateUiText(f.label||'');
 
                     el=document.createElement('select');
                     el.className='form-select';
@@ -5134,7 +5190,7 @@
                     (f.options||[]).forEach(opt=>{
                         const o=document.createElement('option');
                         o.value=opt.value;
-                        o.textContent=opt.label;
+                        o.textContent=translateUiText(opt.label);
                         if(String(f.value ?? '') === String(opt.value)) o.selected=true;
                         el.appendChild(o);
                     });
@@ -5145,7 +5201,7 @@
                     const lbl=document.createElement('label');
                     lbl.className='form-label';
                     lbl.setAttribute('for', id);
-                    lbl.textContent=f.label||'';
+                    lbl.textContent=translateUiText(f.label||'');
 
                     el=document.createElement('textarea');
                     el.className='form-control';
@@ -5159,7 +5215,7 @@
                     const lbl=document.createElement('label');
                     lbl.className='form-label';
                     lbl.setAttribute('for', id);
-                    lbl.textContent=f.label||'';
+                    lbl.textContent=translateUiText(f.label||'');
 
                     el=document.createElement('input');
                     el.type='number';
@@ -5176,14 +5232,14 @@
                     const lbl=document.createElement('label');
                     lbl.className='form-label';
                     lbl.setAttribute('for', id);
-                    lbl.textContent=f.label||'';
+                    lbl.textContent=translateUiText(f.label||'');
 
                     el=document.createElement('input');
                     el.type=f.type||'text';
                     el.className='form-control';
                     el.id=id;
                     el.value=f.value||'';
-                    if (f.placeholder) el.placeholder = f.placeholder;
+                    if (f.placeholder) el.placeholder = translateUiText(f.placeholder);
 
                     wrap.appendChild(lbl);
                     wrap.appendChild(el);
@@ -5194,7 +5250,7 @@
                 if (f.help) {
                     const help=document.createElement('div');
                     help.className='form-text';
-                    help.textContent = f.help;
+                    help.textContent = translateUiText(f.help);
                     wrap.appendChild(help);
                 }
 
@@ -5248,7 +5304,7 @@
 
     async function showConfirmModal(message, options = {}) {
         const title = options.title || 'Подтверждение';
-        const safe = escapeHtml(message || '').replace(/\n/g, '<br>');
+        const safe = escapeHtml(translateUiText(message || '')).replace(/\n/g, '<br>');
         const result = await showMultiPrompt(title, [
             { type: 'html', className: 'mb-0', html: `<div class="mb-0">${safe}</div>` }
         ]);
@@ -5273,11 +5329,11 @@
         const safeProfile = (profile || '').trim();
         const infoHtml = (() => {
             const thumb = thumbnail ? `<img src="data:image/png;base64,${thumbnail}" style="width:80px;height:80px;object-fit:contain;border:1px solid #ccc;border-radius:4px;margin-bottom:10px;display:block;">` : '';
-            const prof = safeProfile ? `<div class="small text-muted"><strong>Профиль:</strong> ${escapeHtml(safeProfile)}</div>` : '';
+            const prof = safeProfile ? `<div class="small text-muted"><strong>${translateUiText('Профиль:')}</strong> ${escapeHtml(safeProfile)}</div>` : '';
             return `
                 <div class="mb-2 p-3 border rounded bg-light">
                     ${thumb}
-                    <div class="mb-1"><strong>Файл:</strong> ${escapeHtml(fileName||'')}</div>
+                    <div class="mb-1"><strong>${translateUiText('Файл:')}</strong> ${escapeHtml(fileName||'')}</div>
                     ${prof}
                 </div>`;
         })();
@@ -5864,18 +5920,18 @@
         const startBtn = document.getElementById('schemaMigrationStartBtn');
         if (backupStatus) {
             backupStatus.textContent = migrationState.backupDone
-                ? 'Резервная копия сохранена. Можно переходить к шагу 2.'
-                : 'Шаг 1: сохраните текущие данные.';
+                ? translateUiText('Резервная копия сохранена. Можно переходить к шагу 2.')
+                : translateUiText('Шаг 1: сохраните текущие данные.');
         }
         if (progress) {
-            progress.textContent = migrationState.inProgress ? 'Идёт обновление. Пожалуйста, не закрывайте окно.' : '';
+            progress.textContent = migrationState.inProgress ? translateUiText('Идёт обновление. Пожалуйста, не закрывайте окно.') : '';
         }
         if (backupBtn) {
             backupBtn.disabled = migrationState.inProgress;
         }
         if (startBtn) {
             startBtn.disabled = !migrationState.backupDone || migrationState.inProgress;
-            startBtn.textContent = migrationState.inProgress ? 'Обновляем...' : 'Обновить данные';
+            startBtn.textContent = migrationState.inProgress ? translateUiText('Обновляем...') : translateUiText('Обновить данные');
         }
         if (errorEl && errorEl.dataset.dismissOnUpdate === 'true') {
             errorEl.textContent = '';
@@ -5910,7 +5966,7 @@
             updateSchemaMigrationUi();
         } catch (e) {
             if (errorEl) {
-                errorEl.textContent = 'Не удалось сохранить резервную копию: ' + (e && e.message ? e.message : String(e));
+                errorEl.textContent = `${translateUiText('Не удалось сохранить резервную копию:')} ${e && e.message ? e.message : String(e)}`;
             }
         }
     }
@@ -5920,14 +5976,14 @@
         if (errorEl) errorEl.textContent = '';
         if (!migrationState.backupDone) {
             if (errorEl) {
-                errorEl.textContent = 'Сначала скачайте резервную копию.';
+                errorEl.textContent = translateUiText('Сначала скачайте резервную копию.');
                 errorEl.dataset.dismissOnUpdate = 'true';
             }
             return;
         }
         if (!migrationState.rawData) {
             if (errorEl) {
-                errorEl.textContent = 'Нет данных для миграции.';
+                errorEl.textContent = translateUiText('Нет данных для миграции.');
             }
             return;
         }
@@ -5974,7 +6030,7 @@
                     };
                     migrationState.inProgress = false;
                     if (errorEl) {
-                        errorEl.textContent = 'Не удалось обновить данные: ' + (e && e.message ? e.message : String(e)) + '. Резервная копия сохранена у вас. Попробуйте позже или импортируйте файл вручную.';
+                        errorEl.textContent = `${translateUiText('Не удалось обновить данные:')} ${e && e.message ? e.message : String(e)}. ${translateUiText('Резервная копия сохранена у вас. Попробуйте позже или импортируйте файл вручную.')}`;
                     }
                     try {
                         if (migrationState.rawData) localStorage.setItem(STORAGE_KEY, migrationState.rawData);
@@ -6269,7 +6325,7 @@
         captureScheduleFromInputs(currentUrgencyProfileId);
         const newProfile = {
             id: `urg_${Date.now()}`,
-            title: 'Новый профиль',
+            title: translateUiText('Новый профиль'),
             markupPercent: 0,
             description: '',
             schedule: createScheduleFromPeriods(DEFAULT_OPERATOR_PERIODS),
@@ -6352,9 +6408,9 @@
             indexTh.style.width = "5%";
             indexTh.textContent = "#";
             const startTh = document.createElement("th");
-            startTh.textContent = "Начало";
+            startTh.textContent = translateUiText("Начало");
             const endTh = document.createElement("th");
-            endTh.textContent = "Конец";
+            endTh.textContent = translateUiText("Конец");
             headerRow.appendChild(indexTh);
             headerRow.appendChild(startTh);
             headerRow.appendChild(endTh);
@@ -6935,7 +6991,7 @@
         const materialEntries = await resolveMaterialEntriesForParsedGcode(pr.id, parsed, parsed.modelName || parsed.code || 'model.gcode');
         if (!materialEntries.length) return;
         if (materialEntries.length > 1 && !printerSupportsMultiMaterial(pr.id)) {
-            showToastAuto('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.');
+            showToastAuto(translateUiText('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.'));
         }
         const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
         addModelRow(pr.id, {
@@ -7074,7 +7130,7 @@
                 const materialEntries = await resolveMaterialEntriesForParsedGcode(printerId, parsed, f.name);
                 if (!materialEntries.length) continue;
                 if (materialEntries.length > 1 && !printerSupportsMultiMaterial(printerId)) {
-                    showToastAuto('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.');
+                    showToastAuto(translateUiText('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.'));
                 }
 
                 const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
@@ -7146,8 +7202,8 @@
         }
 
         const options = [
-            { value:'current', label:'Текущий расчёт' },
-            { value:'new', label:'Создать новый расчёт' },
+            { value:'current', label:translateUiText('Текущий расчёт') },
+            { value:'new', label:translateUiText('Создать новый расчёт') },
         ].concat((appData.calcHistory||[]).map(h => ({
             value: String(h.timestamp),
             label: (h.calcName || h.dateStr || String(h.timestamp))
@@ -7223,7 +7279,7 @@
 
         const normalizedThumb = parsed.thumb ? await ensureThumbnailOpaque(parsed.thumb) : '';
         if (materialEntries.length > 1 && !printerSupportsMultiMaterial(pr.id)) {
-            showToastAuto('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.');
+            showToastAuto(translateUiText('G-code содержит несколько материалов. Принтер не помечен как мультиматериальный, но модель будет импортирована с предупреждением.'));
         }
         addModelRow(pr.id, {
             id: parsed.code,
@@ -7651,7 +7707,7 @@
         select.innerHTML = '';
         const placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = '-- Выберите тип --';
+        placeholder.textContent = translateUiText('-- Выберите тип --');
         select.appendChild(placeholder);
         const groups = Array.isArray(catalog.groups) ? catalog.groups : [];
         groups.forEach(group => {
@@ -8736,7 +8792,7 @@
             const placeholder = document.createElement('div');
             placeholder.className = 'calc-empty-placeholder text-muted small';
             placeholder.id = 'calcPrintersEmpty';
-            placeholder.textContent = 'Добавьте модель или перетащите файл .gcode в данную область';
+            placeholder.textContent = translateUiText('Добавьте модель или перетащите файл .gcode в данную область');
             c.appendChild(placeholder);
             return;
         }
@@ -9810,7 +9866,7 @@
         if (warningsBox) {
             if (details.warnings && details.warnings.length) {
                 warningsBox.style.display = 'block';
-                warningsBox.innerHTML = `<strong>Предупреждения:</strong><br>${details.warnings.join('<br/>')}`;
+                warningsBox.innerHTML = `<strong>${translateUiText('Предупреждения:')}</strong><br>${details.warnings.map(w => escapeHtml(translateUiText(w))).join('<br>')}`;
             } else {
                 warningsBox.style.display = 'none';
                 warningsBox.innerHTML = '';
@@ -9985,7 +10041,7 @@
         const toast = document.createElement('div');
         const type = options.type || 'success';
         toast.className = ['electron-toast', type === 'error' ? 'error' : (type === 'warning' ? 'warning' : 'success')].join(' ');
-        toast.textContent = message;
+        toast.textContent = translateUiText(message);
         container.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('show'));
         const delay = Number.isFinite(options.delay) ? options.delay : 5000;
@@ -10035,7 +10091,7 @@
             {
                 delay: 10000,
                 type: 'dark',
-                actionHtml: '<div class="me-2"><button class="btn btn-sm btn-outline-light" onclick="openGlobalMaterialsTab()">Открыть<\/button><\/div>'
+                actionHtml: `<div class="me-2"><button class="btn btn-sm btn-outline-light" onclick="openGlobalMaterialsTab()">${translateUiText('Открыть')}<\/button><\/div>`
             }
         );
     }
@@ -10557,13 +10613,13 @@
         const deadlineLabel = deadlineDate ? formatSummaryDateLabel(deadlineDate) : '';
         const urgencyHintParts = [];
         if (autoDeadlineApplied) {
-            urgencyHintParts.push('подбор по дедлайну');
+            urgencyHintParts.push(translateUiText('подбор по дедлайну'));
             if (autoDeadlineChangedProfile) {
-                urgencyHintParts.push('профиль изменён');
+                urgencyHintParts.push(translateUiText('профиль изменён'));
             }
         }
         if (deadlineMet === false) {
-            urgencyHintParts.push('дедлайн просрочен');
+            urgencyHintParts.push(translateUiText('дедлайн просрочен'));
         }
         const downtimeParts = [];
         if (totalCoolingHours > 0) {
@@ -10590,34 +10646,34 @@
             `).join('');
             htmlRes += `
                 <div class="calc-result-card">
-                    <div class="calc-result-card-title">Дополнительные услуги</div>
+                    <div class="calc-result-card-title">${translateUiText('Дополнительные услуги')}</div>
                     <div class="calc-result-table table-responsive">
                         <table class="table table-sm table-bordered mb-0">
                             <thead>
                                 <tr>
-                                    <th>Услуга</th>
-                                    <th>Цена</th>
-                                    <th>Кол-во</th>
-                                    <th>Тип</th>
-                                    <th class="text-end">Итого</th>
+                                    <th>${translateUiText('Услуга')}</th>
+                                    <th>${translateUiText('Цена')}</th>
+                                    <th>${translateUiText('Кол-во')}</th>
+                                    <th>${translateUiText('Тип')}</th>
+                                    <th class="text-end">${translateUiText('Итого')}</th>
                                 </tr>
                             </thead>
                             <tbody>${serviceRows}</tbody>
                         </table>
                     </div>
-                    <div class="text-end fw-semibold mt-2">Всего: ${formatMoney(servicesTotal)}</div>
+                    <div class="text-end fw-semibold mt-2">${translateUiText('Всего:')} ${formatMoney(servicesTotal)}</div>
                 </div>
             `;
         }
 
         if (deadlineDate && autoDeadlineApplied) {
             if (deadlineMet === false) {
-                htmlRes += `<div class="text-danger small mt-2">⚠️ Даже при максимально быстром профиле срок не соблюдается — сократите объём или расширьте график.<\/div>`;
+                htmlRes += `<div class="text-danger small mt-2">⚠️ ${translateUiText('Даже при максимально быстром профиле срок не соблюдается — сократите объём или расширьте график.')}<\/div>`;
             } else if (autoDeadlineChangedProfile && urgencyProfile) {
-                htmlRes += `<div class="text-muted small mt-2">Профиль срочности автоматически изменён на "${urgencyProfile.title}".<\/div>`;
+                htmlRes += `<div class="text-muted small mt-2">${translateUiText('Профиль срочности автоматически изменён на')} "${escapeHtml(getLocalizedProfileTitle(urgencyProfile))}".<\/div>`;
             }
         } else if (deadlineDate && deadlineMet === false) {
-            htmlRes += `<div class="text-danger small mt-2">⚠️ Дедлайн не соблюдается. Попробуйте выбрать более срочный профиль или скорректировать график.<\/div>`;
+            htmlRes += `<div class="text-danger small mt-2">⚠️ ${translateUiText('Дедлайн не соблюдается. Попробуйте выбрать более срочный профиль или скорректировать график.')}<\/div>`;
         }
 
         // формируем HTML карточки итогов для скачивания
@@ -10687,7 +10743,7 @@
             });
         });
         if (warnings.length > 0) {
-            htmlRes += `<div class="calc-result-alert alert alert-warning mt-3"><strong>Предупреждения:<\/strong><br/>` + warnings.join("<br/>") + `<\/div>`;
+            htmlRes += `<div class="calc-result-alert alert alert-warning mt-3"><strong>${translateUiText('Предупреждения:')}<\/strong><br/>` + warnings.map(w => escapeHtml(translateUiText(w))).join("<br/>") + `<\/div>`;
         }
 
 
@@ -12678,7 +12734,7 @@
             const valueFormatter = options.valueFormatter;
             const total = segments.reduce((sum, seg) => sum + (seg.value || 0), 0);
             if (!total) {
-                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+                return `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет данных')}</div>`;
             }
             const radius = (size - thickness) / 2;
             const circumference = 2 * Math.PI * radius;
@@ -12711,7 +12767,7 @@
                 : '';
             return `
               <div class="summary-donut" style="width:${size}px;height:${size}px;">
-                <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="${escapeHtml(centerLabel || 'Диаграмма')}" focusable="false">
+                <svg viewBox="0 0 ${size} ${size}" role="img" aria-label="${escapeHtml(centerLabel || translateUiText('Диаграмма'))}" focusable="false">
                   <circle cx="${size / 2}" cy="${size / 2}" r="${radius}" fill="none" stroke="rgba(148, 163, 184, 0.25)" stroke-width="${thickness}"></circle>
                   <g transform="rotate(-90 ${size / 2} ${size / 2})">
                     ${circles}
@@ -12733,7 +12789,7 @@
 
         const buildSparklineChart = (series, options = {}) => {
             if (!series || !series.length) {
-                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+                return `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет данных')}</div>`;
             }
             const width = options.width || 160;
             const height = options.height || 60;
@@ -12776,7 +12832,7 @@
         const buildTimeTrack = (segments) => {
             const total = segments.reduce((sum, seg) => sum + (seg.value || 0), 0);
             if (!total) {
-                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+                return `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет данных')}</div>`;
             }
             const bars = segments.map(seg => {
                 const percent = total > 0 ? (seg.value / total) * 100 : 0;
@@ -12792,7 +12848,7 @@
         const buildStatusBars = (items) => {
             const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
             if (!total) {
-                return `<div class="calc-empty-placeholder text-muted small">Нет данных</div>`;
+                return `<div class="calc-empty-placeholder text-muted small">${translateUiText('Нет данных')}</div>`;
             }
             const rows = items.map(item => {
                 const percent = total > 0 ? (item.value / total) * 100 : 0;
