@@ -380,8 +380,8 @@
         .model-card { background: #fff; border-radius: 8px; padding: 1rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform .3s ease, box-shadow .3s ease; }
         .model-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
         .model-card img { width: 48px; height: 48px; margin-bottom: 0.5rem; }
-        .model-card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #4a90e2; }
-        .model-card p { font-size: 0.9rem; margin: 0.25rem 0; color: #666; }
+        .model-card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #4a90e2; overflow-wrap: anywhere; word-break: break-word; }
+        .model-card p { font-size: 0.9rem; margin: 0.25rem 0; color: #666; overflow-wrap: anywhere; word-break: break-word; }
         .model-card p strong { color: #333; }
 
         @media (max-width: 800px) {
@@ -5108,7 +5108,7 @@
             btn.addEventListener('click', () => {
                 PromptMemory.clear();
                 renderPromptMemoryStats();
-                showToastAuto('Сохранённые ответы модалок импорта очищены.');
+                showToastAuto(translateUiText('Сохранённые ответы модалок импорта очищены.'));
             });
         }
         renderPromptMemoryStats();
@@ -5341,12 +5341,12 @@
         const options = [{value:'', label:'-- Выберите материал --'}].concat(materialOptions||[]);
 
         const rememberLabel = safeProfile
-            ? `Сохранить выбор для профиля «${safeProfile}»`
-            : 'Сохранить выбор для этого профиля';
+            ? `${translateUiText('Сохранить выбор для профиля')} «${safeProfile}»`
+            : translateUiText('Сохранить выбор для этого профиля');
 
-        return showMultiPrompt('Выберите материал для модели', [
+        return showMultiPrompt(translateUiText('Выберите материал для модели'), [
             { type:'html', html: infoHtml },
-            { id:'materialId', label:'Материал', type:'select', options, value:'' },
+            { id:'materialId', label:translateUiText('Материал'), type:'select', options, value:'' },
             { id:'remember', label: rememberLabel, type:'checkbox', value:false }
         ]).then(r=>{
             if(!r || !r.materialId) return null;
@@ -6338,7 +6338,7 @@
 
     function deleteCurrentUrgencyProfile() {
         if (urgencyProfilesDraft.length <= 1) {
-            showToastAuto('Должен быть хотя бы один профиль.');
+            showToastAuto(translateUiText('Должен быть хотя бы один профиль.'));
             return;
         }
         const targetId = currentUrgencyProfileId;
@@ -6613,13 +6613,13 @@
         try {
             const totalHours = parseFloat(document.getElementById('workdayTotalHours').value) || 0;
             if (totalHours <= 0) {
-                showToastAuto('Укажите длительность смены.');
+                showToastAuto(translateUiText('Укажите длительность смены.'));
                 return;
             }
             const startValue = document.getElementById('workdayStartTime').value;
             const startMinutes = timeStringToMinutes(startValue);
             if (Number.isNaN(startMinutes)) {
-                showToastAuto('Укажите корректное время начала.');
+                showToastAuto(translateUiText('Укажите корректное время начала.'));
                 return;
             }
             const skipLunch = document.getElementById('workdaySkipLunch').checked;
@@ -6629,15 +6629,15 @@
             if (!skipLunch) {
                 const lunchStart = timeStringToMinutes(document.getElementById('workdayLunchStart').value);
                 if (Number.isNaN(lunchStart)) {
-                    showToastAuto('Укажите время обеда.');
+                    showToastAuto(translateUiText('Укажите время обеда.'));
                     return;
                 }
                 if (lunchStart < startMinutes) {
-                    showToastAuto('Обед не может начинаться раньше смены.');
+                    showToastAuto(translateUiText('Обед не может начинаться раньше смены.'));
                     return;
                 }
                 if (lunchStart >= startMinutes + totalWorkMinutes) {
-                    showToastAuto('Обед должен попадать в рабочее время.');
+                    showToastAuto(translateUiText('Обед должен попадать в рабочее время.'));
                     return;
                 }
                 if (lunchDuration > 0) {
@@ -6660,12 +6660,12 @@
             }
             const {segments, end} = buildTemplateSegments(startMinutes, totalWorkMinutes, validBreaks);
             if (end > 24 * 60) {
-                showToastAuto('Смена выходит за пределы одних суток. Отрегулируйте параметры.');
+                showToastAuto(translateUiText('Смена выходит за пределы одних суток. Отрегулируйте параметры.'));
                 return;
             }
             const days = gatherSelectedWorkdays();
             if (!days.length) {
-                showToastAuto('Выберите хотя бы один день недели.');
+                showToastAuto(translateUiText('Выберите хотя бы один день недели.'));
                 return;
             }
             days.forEach(day => setScheduleForDay(day, segments));
@@ -6676,7 +6676,7 @@
                     modalInstance.hide();
                 }
             }
-            showToastAuto('График заполнен. Не забудьте сохранить настройки.');
+            showToastAuto(translateUiText('График заполнен. Не забудьте сохранить настройки.'));
         } catch (error) {
             showToastAuto(error.message || 'Не удалось применить шаблон.');
         }
@@ -6985,7 +6985,7 @@
     async function addModelFromGcode(parsed){
         const pr = await resolvePrinterForLink(parsed.printer);
         if(!pr){
-            showToastAuto('Не найден принтер '+parsed.printer);
+            showToastAuto(translateUiText('Не найден принтер '+parsed.printer));
             return;
         }
         const materialEntries = await resolveMaterialEntriesForParsedGcode(pr.id, parsed, parsed.modelName || parsed.code || 'model.gcode');
@@ -7040,7 +7040,7 @@
             label: `${p.name} (ID: ${p.id})`
         }));
         if (!options.length) return null;
-        const result = await showMultiPrompt('Выберите принтер для моделей', [
+        const result = await showMultiPrompt(translateUiText('Выберите принтер для моделей'), [
             {id:'printerId', label:'Принтер', type:'select', options, value: options[0].value}
         ]);
         if (result && result.printerId) {
@@ -7114,7 +7114,7 @@
 
             const printerId = await resolveDropPrinterId(e.target);
             if (!printerId) {
-                showToastAuto('Не удалось определить цель. Перетащите файл в блок принтера или выберите его при подсказке.');
+                showToastAuto(translateUiText('Не удалось определить цель. Перетащите файл в блок принтера или выберите его при подсказке.'));
                 return;
             }
 
@@ -7209,7 +7209,7 @@
             label: (h.calcName || h.dateStr || String(h.timestamp))
         })));
 
-        const res = await showMultiPrompt('Куда добавить модель?', [
+        const res = await showMultiPrompt(translateUiText('Куда добавить модель?'), [
             { id:'targetOrder', label:'Расчёт', type:'select', options, value:'current' },
             { id:'remember', label:'Сохранить выбор для следующих импортов', type:'checkbox', value:false,
                 help:'Полезно, когда Orca экспортирует пачку моделей подряд.' ,
@@ -7265,7 +7265,7 @@
 
         const pr = await resolvePrinterForLink(parsed.printer);
         if(!pr){
-            showToastAuto('Не найден принтер для профиля: ' + (parsed.printer || 'Unknown'));
+            showToastAuto(translateUiText('Не найден принтер для профиля: ' + (parsed.printer || 'Unknown')));
             return;
         }
         const materialEntries = await resolveMaterialEntriesForParsedGcode(pr.id, parsed, fn);
@@ -7402,7 +7402,7 @@
     async function massEdit(type) {
         switch(type) {
             case 'printers': {
-                const vals = await showMultiPrompt('Массовое редактирование принтеров', [
+                const vals = await showMultiPrompt(translateUiText('Массовое редактирование принтеров'), [
                     {id:'cost',label:'Стоимость (₽)',type:'number'},
                     {id:'hours',label:'Часы окупаемости',type:'number'},
                     {id:'power',label:'Мощность (Вт)',type:'number'},
@@ -7425,7 +7425,7 @@
                 break;
             case 'globalMaterials':
             {
-                const vals = await showMultiPrompt('Массовое редактирование материалов',[
+                const vals = await showMultiPrompt(translateUiText('Массовое редактирование материалов'),[
                     {id: 'materialType', label: 'Тип материала'},
                     {id:'cost',label:'Стоимость за кг',type:'number'},
                     {id:'balance',label:'Остаток (кг)',type:'number'},
@@ -7468,7 +7468,7 @@
                 break;
             case 'globalAdditional':
             {
-                const vals = await showMultiPrompt('Накладные расходы',[
+                const vals = await showMultiPrompt(translateUiText('Накладные расходы'),[
                     {id:'cost',label:'Стоимость (₽)',type:'number'},
                     {id:'hours',label:'Часы окупаемости',type:'number'},
                     {id:'use',label:'Включать в расчёт',type:'checkbox',value:true},
@@ -7617,7 +7617,7 @@
     }
     async function onDeletePrinter(id){
         if(isPrinterUsedInHistory(id)){
-            showToastAuto("Нельзя удалить принтер: он используется в истории заказов.");
+            showToastAuto(translateUiText("Нельзя удалить принтер: он используется в истории заказов."));
             return;
         }
         if(!await showConfirmModal("Удалить принтер?")) return;
@@ -8020,7 +8020,7 @@
     async function onEditGlobalAdditional(id){
         const x = appData.additionalGlobal.find(a => String(a.id) === String(id));
         if(!x) return;
-        const vals = await showMultiPrompt('Расход',[
+        const vals = await showMultiPrompt(translateUiText('Расход'),[
             {id:'desc',label:'Описание',value:x.description},
             {id:'cost',label:'Стоимость (₽)',type:'number',value:x.cost},
             {id:'hours',label:'Часы окуп.',type:'number',value:x.hoursToRecoup||1000},
@@ -8251,7 +8251,7 @@
     }
 
     async function promptClientData(defaults = {}) {
-        return await showMultiPrompt('Клиент', [
+        return await showMultiPrompt(translateUiText('Клиент'), [
             {id: 'name', label: 'Имя', value: defaults.name || ''},
             {id: 'phone', label: 'Телефон', value: defaults.phone || ''},
             {id: 'links', label: 'Ссылки', value: defaults.links || ''}
@@ -9525,7 +9525,7 @@
         const file = event.target.files && event.target.files[0];
         if (!file) return;
         if (file.type !== 'image/png') {
-            showToastAuto('Загрузите логотип в формате PNG.');
+            showToastAuto(translateUiText('Загрузите логотип в формате PNG.'));
             event.target.value = '';
             return;
         }
@@ -9551,7 +9551,7 @@
                 updateBrandLogoPreview(base64);
                 saveToLocalStorage();
             };
-            img.onerror = () => showToastAuto('Не удалось обработать логотип. Попробуйте другой файл.');
+            img.onerror = () => showToastAuto(translateUiText('Не удалось обработать логотип. Попробуйте другой файл.'));
             img.src = reader.result;
         };
         reader.readAsDataURL(file);
@@ -10104,7 +10104,7 @@
     function onCalculateAll() {
         const validationState = validateCalculationForm();
         if (!validationState.valid) {
-            showToastAuto('Заполните обязательные поля:\n- ' + validationState.errors.join('\n- '));
+            showToastAuto(translateUiText('Заполните обязательные поля:\n- ' + validationState.errors.join('\n- ')));
             if (validationState.firstInvalid) {
                 if (typeof validationState.firstInvalid.scrollIntoView === 'function') {
                     validationState.firstInvalid.scrollIntoView({behavior: 'smooth', block: 'center'});
@@ -11274,9 +11274,9 @@
                 label: `${m.name} (ID: ${m.id}${m.spoolmanSpoolId ? ` | SM: ${m.spoolmanSpoolId}` : ''})`
             }));
 
-            const res=await showMultiPrompt('Материал для профиля '+safeProfile,[
-                {id:'mid',label:'Материал',type:'select',options,value:options[0]?.value||''},
-                {id:'remember',label:`Сохранить выбор для профиля «${safeProfile}»`,type:'checkbox',value:false,help:'Сохранение работает только для этого браузера/компьютера (LocalStorage).'}
+            const res=await showMultiPrompt(translateUiText('Материал для профиля')+' '+safeProfile,[
+                {id:'mid',label:translateUiText('Материал'),type:'select',options,value:options[0]?.value||''},
+                {id:'remember',label:`${translateUiText('Сохранить выбор для профиля')} «${safeProfile}»`,type:'checkbox',value:false,help:'Сохранение работает только для этого браузера/компьютера (LocalStorage).'}
             ]);
 
             if(res && res.mid){
@@ -11306,7 +11306,7 @@
         });
         if(sel.options.length===0){
             const opt=document.createElement('option');
-            opt.textContent='Нет профилей';
+            opt.textContent=translateUiText('Нет профилей');
             opt.disabled=true;
             sel.appendChild(opt);
         }
@@ -11315,7 +11315,7 @@
         const mat=findMaterialById(mid);
         if(!mat) return;
         if(appData.materialProfiles.length===0){
-            showToastAuto('Нет профилей Orca. Добавьте их в менеджере.');
+            showToastAuto(translateUiText('Нет профилей Orca. Добавьте их в менеджере.'));
             return;
         }
         currentMaterialForProfiles=String(mid);
@@ -11373,7 +11373,7 @@
         const pf=appData.printerProfiles.find(p=>String(p.id)===String(pid));
         if(!pf) return;
         const options=appData.printers.map(pr=>({value:String(pr.id),label:pr.name}));
-        const res=await showMultiPrompt('Переназначить профиль',[{id:'prid',label:'Принтер',type:'select',options,value:pf.printerId}]);
+        const res=await showMultiPrompt(translateUiText('Переназначить профиль'),[{id:'prid',label:'Принтер',type:'select',options,value:pf.printerId}]);
         if(!res || !res.prid) return;
         const newPr=appData.printers.find(pr=>String(pr.id)===String(res.prid));
         if(!newPr) return;
@@ -11409,7 +11409,7 @@
         const reader=new FileReader();
         reader.onload=()=>{
             try{ const data=JSON.parse(reader.result); appData.materialProfiles.push({id:getNextId('materialProfiles'),config:data,info:''}); saveToLocalStorage(); renderMaterialProfilesTable(); }
-            catch(e){ showToastAuto('Ошибка: '+e); }
+            catch(e){ showToastAuto(translateUiText('Ошибка: '+e)); }
         };
         reader.readAsText(file);
     }
@@ -11564,7 +11564,7 @@
                 await initAll();
                 showToastAuto(alertMessage);
             }catch(e){
-                showToastAuto("Ошибка: " + e);
+                showToastAuto(translateUiText("Ошибка: " + e));
             }
         };
         reader.readAsText(file);
@@ -11584,9 +11584,9 @@
                 await saveToLocalStorage({skipHistory:true});
                 renderHistoryTable();
                 updateHistoryStats();
-                showToastAuto("История импортирована.");
+                showToastAuto(translateUiText("История импортирована."));
             }catch(e){
-                showToastAuto("Ошибка: " + e);
+                showToastAuto(translateUiText("Ошибка: " + e));
             }
         };
         reader.readAsText(file);
@@ -11671,7 +11671,7 @@
         initUrgencyProfilesDraft();
         renderUrgencyProfileOptions();
         renderCalcUrgencySelect();
-        showToastAuto("Сохранено");
+        showToastAuto(translateUiText("Сохранено"));
     }
 
     function saveCalcSettings(){
@@ -11696,7 +11696,7 @@
         setCurrencyOverride(appData.calcSettings.currencyOverride);
         saveToLocalStorage();
         updateCalcLabelColumnVisibility();
-        showToastAuto("Сохранено");
+        showToastAuto(translateUiText("Сохранено"));
     }
 
     function onModelThumbnailChange(e, code){
@@ -11904,7 +11904,7 @@
                 }
             }
         }
-        if(!mat) { showToastAuto("Материал не найден."); return; }
+        if(!mat) { showToastAuto(translateUiText("Материал не найден.")); return; }
 
         // Формируем HTML для этикетки (30x20 мм)
         const htmlContent = `
@@ -12010,7 +12010,7 @@
     }
 
     async function downloadSummaryCardHtml(){
-        if(!lastSummaryCardHtml){showToastAuto('Нет данных.');return;}
+        if(!lastSummaryCardHtml){showToastAuto(translateUiText('Нет данных.'));return;}
         const meta = buildExportOrderMeta();
         await saveHtmlExportOrDownload(
             lastSummaryCardHtml,
@@ -12158,8 +12158,8 @@
     }
 
     async function sendMyNalogReceipt(){
-        if(!lastCalcFullData){ showToastAuto('Нет данных расчёта.'); return; }
-        if(!Array.isArray(lastCalcFullData.nalogReceipts)) lastCalcFullData.nalogReceipts = [];
+        if(!lastCalcFullData){ showToastAuto(translateUiText('Нет данных расчёта.')); return; }
+        if(!Array.isArray(lastCalcFullData.nalogReceipts))lastCalcFullData.nalogReceipts = [];
         if(lastCalcFullData.nalogReceipts.length){
             const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
             const inn = localStorage.getItem('my_nalog_inn') || '';
@@ -12216,19 +12216,19 @@
 
                     updateReceiptsUi();
 
-                    showToastAuto('Чек отправлен.');
+                    showToastAuto(translateUiText('Чек отправлен.'));
                     const receiptUrl = inn ? `https://lknpd.nalog.ru/api/v1/receipt/${inn}/${data.approvedReceiptUuid}/print` : '';
                     showCheckLinkModal(receiptUrl);
 
                 }else{
-                    showToastAuto('Запрос отправлен в Мой Налог');
+                    showToastAuto(translateUiText('Запрос отправлен в Мой Налог'));
                 }
             }else{
                 const text = await resp.text().catch(()=>resp.status);
-                showToastAuto('Ошибка отправки: '+text);
+                showToastAuto(translateUiText('Ошибка отправки: '+text));
             }
         }catch(e){
-            showToastAuto('Не удалось подключиться к сервису Мой Налог');
+            showToastAuto(translateUiText('Не удалось подключиться к сервису Мой Налог'));
         }finally{
             if(btn) btn.disabled = false;
         }
@@ -12236,13 +12236,13 @@
 
     async function cancelMyNalogReceipt(){
         if(!lastCalcFullData || !Array.isArray(lastCalcFullData.nalogReceipts) || !lastCalcFullData.nalogReceipts.length){
-            showToastAuto('Нет чека для отмены.');
+            showToastAuto(translateUiText('Нет чека для отмены.'));
             return;
         }
         const last = lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1];
         const comment = await showTextPrompt('Причина отмены чека', 'Причина', '');
         if (!comment || !comment.trim()) {
-            showToastAuto('Не указана причина отмены чека.\nЧек не будет отменён.');
+            showToastAuto(translateUiText('Не указана причина отмены чека.\nЧек не будет отменён.'));
             return;
         }
         const btn=document.getElementById('cancelMyNalogBtn');
@@ -12259,9 +12259,9 @@
             const cancelBtn=document.getElementById('cancelMyNalogBtn');
             const showCancel = lastCalcFullData.nalogReceipts.length && !lastCalcFullData.nalogReceipts[lastCalcFullData.nalogReceipts.length-1].canceled;
             if(cancelBtn) cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
-            showToastAuto('Чек отменён.');
+            showToastAuto(translateUiText('Чек отменён.'));
         }else{
-            showToastAuto('Ошибка отмены чека');
+            showToastAuto(translateUiText('Ошибка отмены чека'));
         }
         if(btn) btn.disabled=false;
     }
@@ -12271,10 +12271,10 @@
         localStorage.setItem('my_nalog_token', token);
         const phoneEl = document.getElementById('myNalogPhone');
         if(phoneEl) localStorage.setItem('my_nalog_phone', phoneEl.value.trim());
-        showToastAuto('Сохранено');
+        showToastAuto(translateUiText('Сохранено'));
     }
 
-    async function checkMyNalogStatus() {
+    async function checkMyNalogStatus(){
         const token = localStorage.getItem('my_nalog_token');
         const statusEl = document.getElementById('myNalogStatus');
         if (!token) {
@@ -12307,7 +12307,7 @@
         const phoneNum = document.getElementById('myNalogPhone').value.trim();
         const statusEl = document.getElementById('myNalogStatus');
         if(!phoneNum){
-            showToastAuto('Введите телефон');
+            showToastAuto(translateUiText('Введите телефон'));
             return;
         }
         statusEl.textContent = translateUiText('Отправка SMS...');
@@ -12335,7 +12335,7 @@
         const code = document.getElementById('myNalogSms').value.trim();
         const statusEl = document.getElementById('myNalogStatus');
         if(!phoneNum || !code){
-            showToastAuto('Нужен телефон и код');
+            showToastAuto(translateUiText('Нужен телефон и код'));
             return;
         }
         statusEl.textContent = translateUiText('Подтверждение...');
@@ -12507,7 +12507,7 @@
     }
 
     function downloadFullDetailedCalculation(){
-        if(!lastCalcFullData){ showToastAuto("Нет данных расчёта."); return; }
+        if(!lastCalcFullData){ showToastAuto(translateUiText("Нет данных расчёта.")); return; }
         const h = generateMaxDetailedCalcHtml(lastCalcFullData);
         const b = new Blob([h], {type:"text/html"});
         const u = URL.createObjectURL(b);
@@ -12579,7 +12579,7 @@
     }
     function onEditCalcHistory(timestamp){
         const it = appData.calcHistory.find(x => x.timestamp === timestamp);
-        if(!it){ showToastAuto("Нет такого элемента в истории"); return; }
+        if(!it){ showToastAuto(translateUiText("Нет такого элемента в истории")); return; }
 
         const missing = [];
         if(it.calcData){
@@ -12590,7 +12590,7 @@
         if(missing.length){
             const opts = appData.printers.map(p=>({value:String(p.id),label:p.name||p.id}));
             const fields = missing.map(id=>({id:id,label:`Принтер для ${id}`,type:'select',options:opts}));
-            showMultiPrompt('Не найдены принтеры', fields).then(vals=>{
+            showMultiPrompt(translateUiText('Не найдены принтеры'), fields).then(vals=>{
                 if(!vals) return;
                 missing.forEach(id=>{
                     const newId = vals[id];
@@ -14121,9 +14121,9 @@
         if(candidates.length<=0) return null;
 
         const options=candidates.map(p=>({value:String(p.id),label:p.name}));
-        const res=await showMultiPrompt('Принтер для профиля '+safeKey,[
+        const res=await showMultiPrompt(translateUiText('Принтер для профиля')+' '+safeKey,[
             {id:'pid',label:'Принтер',type:'select',options,value:options[0]?.value||''},
-            {id:'remember',label:`Сохранить выбор для профиля «${safeKey}»`,type:'checkbox',value:false,help:'Сохранение работает только для этого браузера/компьютера (LocalStorage).'}
+            {id:'remember',label:`${translateUiText('Сохранить выбор для профиля')} «${safeKey}»`,type:'checkbox',value:false,help:'Сохранение работает только для этого браузера/компьютера (LocalStorage).'}
         ]);
 
         if(res && res.pid){
@@ -14168,7 +14168,7 @@
         if(incomingLinkData){
             const pr = await resolvePrinterForLink(incomingLinkData.printerKey);
             if(!pr){
-                showToastAuto('Не найден принтер '+incomingLinkData.printerKey);
+                showToastAuto(translateUiText('Не найден принтер '+incomingLinkData.printerKey));
             } else {
                 for(const m of incomingLinkData.models){
                     const mid = await resolveMaterialIdByProfile(m.matName);
@@ -14235,7 +14235,7 @@
                 updated_at: new Date().toISOString()
             }, { onConflict: 'sync_id' });
 
-        if (error) showToastAuto("Ошибка сохранения: " + error.message);
+        if (error) showToastAuto(translateUiText("Ошибка сохранения: " + error.message));
         else showToastAuto("✅ Данные сохранены в облако.");
     }
 
@@ -14247,7 +14247,7 @@
             .single();
 
         if (error || !data) {
-            showToastAuto("Ошибка загрузки: " + error?.message);
+            showToastAuto(translateUiText("Ошибка загрузки: " + error?.message));
             return;
         }
 
@@ -14255,7 +14255,7 @@
         const createdAt = new Date(data.created_at);
         const now = new Date();
         if ((now - createdAt) > 5 * 60 * 1000) { // 5 минут
-            showToastAuto("Данные устарели и были удалены");
+            showToastAuto(translateUiText("Данные устарели и были удалены"));
             await _supabase.from('user_settings').delete().eq('sync_id', syncId);
             return;
         }
@@ -14267,11 +14267,11 @@
             await initAll();
             showToastAuto("✅ Настройки загружены.");
         } catch (e) {
-            showToastAuto("Ошибка расшифровки.");
+            showToastAuto(translateUiText("Ошибка расшифровки."));
         }
     }
 
-    async function saveHistoryToCloud() {
+    async function saveHistoryToCloud(){
         const history = await loadHistoryLayer();
         const encrypted = await encryptData({calcHistory: Array.isArray(history) ? history : []}, encryptionKey);
         const { error } = await _supabase
@@ -14282,7 +14282,7 @@
                 updated_at: new Date().toISOString()
             }, { onConflict: 'sync_id' });
 
-        if (error) showToastAuto("Ошибка сохранения истории: " + error.message);
+        if (error) showToastAuto(translateUiText("Ошибка сохранения истории: " + error.message));
         else showToastAuto("✅ История сохранена в облако.");
     }
 
@@ -14294,14 +14294,14 @@
             .single();
 
         if (error || !data) {
-            showToastAuto("Ошибка загрузки истории: " + error?.message);
+            showToastAuto(translateUiText("Ошибка загрузки истории: " + error?.message));
             return;
         }
 
         const createdAt = new Date(data.created_at);
         const now = new Date();
         if ((now - createdAt) > 5 * 60 * 1000) { // 5 минут
-            showToastAuto("Данные устарели и были удалены");
+            showToastAuto(translateUiText("Данные устарели и были удалены"));
             await _supabase.from('user_settings').delete().eq('sync_id', syncHistoryId);
             return;
         }
@@ -14316,7 +14316,7 @@
             updateHistoryStats();
             showToastAuto("✅ История загружена.");
         } catch (e) {
-            showToastAuto("Ошибка расшифровки истории.");
+            showToastAuto(translateUiText("Ошибка расшифровки истории."));
         }
     }
 
@@ -14364,7 +14364,7 @@
     async function generateSyncLinkAndQR(kind = 'config') {
         const baseUrl = await resolveSyncBaseUrl();
         if (!baseUrl) {
-            showToastAuto("Ссылка синхронизации требует HTTP(S) источника. Укажите «Источник интерфейса» и пересоберите офлайн.");
+            showToastAuto(translateUiText("Ссылка синхронизации требует HTTP(S) источника. Укажите «Источник интерфейса» и пересоберите офлайн."));
             return;
         }
         if (kind === 'history') await saveHistoryToCloud();

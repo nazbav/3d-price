@@ -118,6 +118,14 @@ Useful local checks:
 - use `lightpanda` for UI/JS regression hunting when environment allows it
 - run Electron manually if changes may affect desktop behavior
 
+### Production Readiness
+
+Full pre-release verification procedure (JS syntax check, migration tests, manual smoke checklist, Electron smoke, and evidence gates) is documented in the runbook:
+
+**[`docs/superpowers/specs/2026-03-15-verification-runbook.md`](./docs/superpowers/specs/2026-03-15-verification-runbook.md)**
+
+> **DO NOT release without completing all items in the runbook.**
+
 ## Repository Map
 
 - [`test.html`](./test.html): active calculator UI
@@ -125,6 +133,22 @@ Useful local checks:
 - [`g-codes/`](./g-codes/): example/import G-code files when present
 - [`docs/`](./docs/): project notes and supporting documentation
 - [`orcaslicer-calc/`](./orcaslicer-calc/): slicer-related external subtree/work area present in this repo
+
+## Production Readiness / Release Checklist
+
+Full checklist: [`docs/superpowers/specs/2026-03-15-production-readiness-checklist.md`](./docs/superpowers/specs/2026-03-15-production-readiness-checklist.md)  
+Regression scenarios: [`docs/superpowers/specs/2026-03-15-regression-scenarios.md`](./docs/superpowers/specs/2026-03-15-regression-scenarios.md)
+
+Top-level release gates:
+
+- **Core calculation** — single and multimaterial cost computation is correct
+- **History (IndexedDB)** — save, reload, edit, delete, export/import all work
+- **G-code import** — drag-drop, post-processing bridge, metadata parsing
+- **Multimaterial mapping** — full/partial/unknown material match; MM flag warning
+- **Estimate / label output** — renders correctly, downloads without clipping
+- **English UI** — no Russian leakage in any critical path
+- **Electron wrapper** — shared path resolves; packaging produces a working build
+- **All modules** — calculator, history, clients, printers, materials, overheads, analytics, My Tax, Spoolman each verified
 
 ## License
 
