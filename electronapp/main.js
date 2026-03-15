@@ -1145,6 +1145,11 @@ function applyExportAutoOpenOverride(raw, skipSave = false) {
 function applyPathOverridesFromSettings() {
   try {
     const settings = loadSettings();
+    // Migrate old test.html URL → index.html
+    if (settings && typeof settings.remoteSource === 'string' && settings.remoteSource.includes('/test.html')) {
+      settings.remoteSource = settings.remoteSource.replace('/test.html', '/index.html');
+      saveSettings(settings);
+    }
     if (settings && typeof settings.remoteSource === 'string' && settings.remoteSource.trim()) {
       try { applyRemoteSourceOverride(settings.remoteSource, true); }
       catch { applyRemoteSourceOverride(DEFAULT_REMOTE_SOURCE, true); }
