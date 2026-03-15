@@ -1302,38 +1302,40 @@
             background: rgba(13, 110, 253, 0.15);
         }
 
-        .desktop-app-banner {
+        .desktop-app-banner-wrap {
             display: none;
+            margin-top: 1rem;
+        }
+
+        .desktop-app-banner {
             align-items: center;
             gap: 1rem;
             padding: 1rem 1.1rem;
-            margin-top: 1rem;
             border-radius: 1rem;
-            border: 1px solid rgba(59, 130, 246, 0.16);
+            border: 1px solid rgba(148, 163, 184, 0.22);
             background:
-                radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 42%),
-                linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.94));
-            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+                radial-gradient(circle at top left, rgba(59, 130, 246, 0.06), transparent 38%),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
             font-size: 0.92rem;
-            color: #526071;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            color: #5b6878;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .desktop-app-banner:hover {
-            border-color: rgba(59, 130, 246, 0.28);
-            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
-            transform: translateY(-1px);
+            border-color: rgba(100, 116, 139, 0.3);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.07);
         }
         [data-bs-theme="dark"] .desktop-app-banner {
             border-color: rgba(148, 163, 184, 0.2);
             background:
-                radial-gradient(circle at top left, rgba(96, 165, 250, 0.14), transparent 38%),
-                linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.94));
-            box-shadow: 0 18px 36px rgba(2, 6, 23, 0.28);
+                radial-gradient(circle at top left, rgba(96, 165, 250, 0.1), transparent 34%),
+                linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.98));
+            box-shadow: 0 14px 28px rgba(2, 6, 23, 0.28);
             color: #c2cddd;
         }
         [data-bs-theme="dark"] .desktop-app-banner:hover {
             border-color: rgba(148, 163, 184, 0.34);
-            box-shadow: 0 22px 40px rgba(2, 6, 23, 0.34);
+            box-shadow: 0 18px 34px rgba(2, 6, 23, 0.34);
         }
         .desktop-app-banner-icon {
             width: 2.8rem;
@@ -2435,6 +2437,8 @@
                                 Пока нет данных — запустите расчёт.
                             </div>
                             <div class="calc-result-panel" id="calcResult" style="display:none;"></div>
+                        </div>
+                        <div class="desktop-app-banner-wrap" id="desktopAppBannerWrap">
                             <div class="desktop-app-banner" id="desktopAppBanner" role="note" aria-label="Рекомендация">
                                 <div class="desktop-app-banner-icon" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -2445,14 +2449,14 @@
                                 </div>
                                 <div class="desktop-app-banner-body">
                                     <div class="desktop-app-banner-title">Для удобства использования рекомендуем десктопную версию</div>
-                                    <div>Если вы работаете в Windows вне Electron-приложения, удобнее открыть калькулятор в отдельном приложении.
+                                    <div>На Windows удобнее работать в отдельном приложении: стабильнее открытие файлов и меньше лишних вкладок в браузере.
                                         <a class="desktop-app-link" href="https://github.com/nazbav/3d-price/releases" target="_blank" rel="noopener noreferrer">
                                             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" style="margin-bottom:1px"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
                                             Скачать
                                         </a>
                                     </div>
                                 </div>
-                                <button class="desktop-app-banner-close" onclick="document.getElementById('desktopAppBanner').style.display='none'" title="Скрыть" aria-label="Скрыть">✕</button>
+                                <button class="desktop-app-banner-close" onclick="document.getElementById('desktopAppBannerWrap').style.display='none'" title="Скрыть" aria-label="Скрыть">✕</button>
                             </div>
                         </div>
                     </div>
@@ -10222,13 +10226,29 @@
     }
 
     function isElectronEnv() {
-        return !!(window && window.backupBridge);
+        return !!(
+            (window && window.backupBridge) ||
+            (window && window.process && window.process.versions && window.process.versions.electron) ||
+            /Electron/i.test(navigator.userAgent || '')
+        );
     }
 
     function shouldShowDesktopAppBanner({ platform = '', userAgent = '', isElectron = false } = {}) {
         if (isElectron) return false;
         return /Win/i.test(platform || '') || /Windows/i.test(userAgent || '');
     }
+
+    function updateDesktopAppBannerVisibility() {
+        const bannerWrap = document.getElementById('desktopAppBannerWrap');
+        if (!bannerWrap) return;
+        bannerWrap.style.display = shouldShowDesktopAppBanner({
+            platform: navigator.platform || '',
+            userAgent: navigator.userAgent || '',
+            isElectron: isElectronEnv()
+        }) ? 'block' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', updateDesktopAppBannerVisibility);
 
     function ensureElectronToastHost() {
         if (document.getElementById('electronToastContainer')) return;
@@ -11456,14 +11476,7 @@
         updateHistoryStats();
 
         // Рекомендуем десктоп-версию Windows-пользователям вне Electron
-        const _daBanner = document.getElementById('desktopAppBanner');
-        if (_daBanner) {
-            _daBanner.style.display = shouldShowDesktopAppBanner({
-                platform: navigator.platform || '',
-                userAgent: navigator.userAgent || '',
-                isElectron: isElectronEnv()
-            }) ? 'flex' : 'none';
-        }
+        updateDesktopAppBannerVisibility();
     }
 
     function findMaterialById(mid) {

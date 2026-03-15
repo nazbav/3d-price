@@ -21,7 +21,11 @@ test('shouldShowDesktopAppBanner only returns true for Windows outside Electron'
     const indexContent = fs.readFileSync(indexPath, 'utf8');
     const fnSource = extractFunctionSource(indexContent, 'shouldShowDesktopAppBanner', 'ensureElectronToastHost');
 
-    const context = {};
+    const context = {
+        document: {
+            addEventListener() {}
+        }
+    };
     vm.createContext(context);
     vm.runInContext(`${fnSource}; this.shouldShowDesktopAppBanner = shouldShowDesktopAppBanner;`, context);
 
@@ -29,4 +33,12 @@ test('shouldShowDesktopAppBanner only returns true for Windows outside Electron'
     assert.equal(context.shouldShowDesktopAppBanner({ platform: 'MacIntel', userAgent: 'Mozilla/5.0', isElectron: false }), false);
     assert.equal(context.shouldShowDesktopAppBanner({ platform: 'Win64', userAgent: 'Mozilla/5.0', isElectron: true }), false);
     assert.equal(context.shouldShowDesktopAppBanner({ platform: '', userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', isElectron: false }), true);
+    assert.equal(
+        context.shouldShowDesktopAppBanner({
+            platform: 'Win32',
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0',
+            isElectron: false
+        }),
+        true
+    );
 });
