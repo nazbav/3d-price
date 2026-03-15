@@ -9042,7 +9042,7 @@
                         <div class="calc-overhead-card-info">
                             <div class="calc-overhead-title">${name}</div>
                         </div>
-                        <div class="calc-overhead-amount" title="${escapeHtml(totalLabel)}">${distributed}</div>
+                        <div class="calc-overhead-amount" title="${escapeHtml(translateUiText(totalLabel))}">${distributed}</div>
                     </div>
                     <div class="calc-overhead-meta-row">
                         <div class="calc-overhead-meta"><span>Исх. стоим.</span><strong>${base}</strong></div>
@@ -9907,10 +9907,10 @@
         }
         const downtimeParts = [];
         if (totalCoolingHours > 0) {
-            downtimeParts.push(`усадка: ${formatTimeForDisplay(totalCoolingHours)} ч`);
+            downtimeParts.push(`${translateUiText('Остывание')}: ${formatTimeForDisplay(totalCoolingHours)} ${translateUiText('ч')}`);
         }
         if (totalPrepHours > 0) {
-            downtimeParts.push(`подготовка: ${formatTimeForDisplay(totalPrepHours)} ч`);
+            downtimeParts.push(`${translateUiText('Подготовка')}: ${formatTimeForDisplay(totalPrepHours)} ${translateUiText('ч')}`);
         }
         const downtimeHintParts = [];
         if (downtimeParts.length) downtimeHintParts.push(downtimeParts.join(', '));
@@ -10006,17 +10006,17 @@
 
 
                 totalWeight: safeFixed(totalWeight),
-                totalCost: safeFixed(finalSum),
-                priceOld: discountPercent > 0 ? safeFixed(totalBeforeDiscount) : '',
+                totalCost: finalSum,
+                priceOld: discountPercent > 0 ? totalBeforeDiscount : null,
                 discountPercent,
-                pricePerGram: safeFixed(pricePerGram),
+                pricePerGram,
                 finDate: finDateStr,
                 modelsHtml: summaryModels,
                 qr: qrDataUrl,
                 paymentInfo: appData.labelSettings.bankDetails,
                 services: servicesUsed,
-                servicesTotal: safeFixed(servicesTotal),
-                estimatePrintCost: includeEstimatePrint && estimatePrintCost > 0 ? safeFixed(estimatePrintCost) : '',
+                servicesTotal,
+                estimatePrintCost: includeEstimatePrint && estimatePrintCost > 0 ? estimatePrintCost : null,
                 urgencyTitle: urgencyProfile ? urgencyProfile.title : '',
                 urgencyProfileMarkup: profileMarkupPercent,
                 urgencyUserMarkup: userMarkupPercent
@@ -10033,11 +10033,11 @@
             activePrinters.forEach(d => {
                 const printerWeight = d.linesDetail.reduce((sum, ln) => sum + (ln.realWeight || 0), 0);
                 const printerInfo = buildResultInfoGrid([
-                    {label: 'Время', value: `${formatTimeForDisplay(d.printerTime)} ч`},
+                    {label: 'Время', value: `${formatTimeForDisplay(d.printerTime)} ${translateUiText('ч')}`},
                     {label: 'Моделей', value: d.linesDetail.length},
                     {
                         label: 'Подготовка',
-                        value: d.printerPrepMinutes ? `${formatTimeForDisplay((d.printerPrepMinutes || 0) / 60)} ч` : ''
+                        value: d.printerPrepMinutes ? `${formatTimeForDisplay((d.printerPrepMinutes || 0) / 60)} ${translateUiText('ч')}` : ''
                     },
                     {label: 'Стоимость', value: formatMoney(d.subTotal)},
                     {label: 'Вес', value: `${safeFixed(printerWeight)} г`}
@@ -10059,7 +10059,7 @@
                         const excludedNote = ln.excludedFromTotals ? ' <span class="badge bg-secondary ms-1">Не в расчёте<\/span>' : '';
                         const status = [statusLabel, qualityLabel].filter(Boolean).join(' · ') || '—';
                         const chipStats = [
-                            {icon: '⏱', value: `${formatTimeForDisplay(ln.hours)} ч`},
+                            {icon: '⏱', value: `${formatTimeForDisplay(ln.hours)} ${translateUiText('ч')}`},
                             {icon: '⚖', value: `${safeFixed(ln.realWeight)} г`},
                             {icon: '⚙', value: formatMoney(ln.costPrinterPart)},
                             {icon: '🧵', value: formatMoney(ln.costMaterial)},
@@ -10793,7 +10793,7 @@
         const sum = list.reduce((s,h)=>s+h.total,0);
         const hrs = list.reduce((s,h)=>s+h.totalHours,0);
         const div = document.getElementById('historyStats');
-        div.textContent = `Всего заказов: ${list.length}, сумма: ${safeFixed(sum)} ₽, часы печати: ${safeFixed(hrs)}`;
+        div.textContent = `${translateUiText('Всего заказов:')} ${list.length}, ${translateUiText('сумма:')} ${formatMoney(sum)}, ${translateUiText('часы печати:')} ${safeFixed(hrs)} ${translateUiText('ч')}`;
     }
     async function onDeleteCalcHistoryEntry(timestamp) {
         if(!await showConfirmModal("Удалить выбранный расчет из истории?")) return;
@@ -11207,7 +11207,7 @@
   <div id="labelContainer">
     <div class="label-header">${mat.name}<\/div>
     <div class="label-content">
-      <div>${mat.declaredWeight || "-"} кг<\/div>
+      <div>${mat.declaredWeight || "-"} ${translateUiText('кг')}<\/div>
       <div>${mat.manufacturer || "-"}<\/div>
       <div>${mat.productionDate || "-"}<\/div>
     <\/div>
@@ -11260,7 +11260,7 @@
       ${data.logo ? `<img src="${data.logo}" alt="${translateUiText('Логотип')}">` : ''}
       <h2>${data.company}</h2>
     </div>
-    <div class="qr"><img src="${data.qr}" alt="QR"></div>
+    <div class="qr"><img src="${data.qr}" alt="${translateUiText('QR-код')}"></div>
     <div class="info-item"><span class="label">${translateUiText('Код заказа:')}<\/span><span class="value">${data.orderId}<\/span></div>
     <div class="info-item"><span class="label">${translateUiText('Название заказа:')}<\/span><span class="value">${data.orderName}<\/span></div>
     <div class="info-item"><span class="label">${translateUiText('Клиент:')}<\/span><span class="value">${data.client}<\/span></div>
