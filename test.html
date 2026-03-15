@@ -3897,6 +3897,25 @@
         ,'Нет материалов. Заполните таблицу «Общие материалы».': 'No materials. Fill in the "Global materials" table.'
         ,'Открыть': 'Open'
         ,'Подробный расчёт': 'Detailed calculation'
+        ,'Детализация по принтерам': 'Printer breakdown'
+        ,'График печати': 'Print schedule'
+        ,'Моделей': 'Models'
+        ,'Вес': 'Weight'
+        ,'Длительность': 'Duration'
+        ,'Этап': 'Stage'
+        ,'Итого за день:': 'Total for the day:'
+        ,'Исх. стоим.': 'Base cost'
+        ,'Требуется:': 'Required:'
+        ,'Амортизация': 'Amortization'
+        ,'Электроэнергия': 'Electricity'
+        ,'Электричество': 'Electricity'
+        ,'Оператор': 'Operator'
+        ,'Работа оператора': 'Operator labor'
+        ,'Доставка и этикетки': 'Shipping and labels'
+        ,'Накладные по принтеру:': 'Printer overheads:'
+        ,'Обслуживание': 'Maintenance'
+        ,'Простои и охлаждение': 'Downtime and cooling'
+        ,'Всего:': 'Total:'
         ,'Название:': 'Name:'
         ,'Итог:': 'Total:'
         ,'Оператор ч.:': 'Operator hrs:'
@@ -9060,8 +9079,8 @@
                         <div class="calc-overhead-amount" title="${escapeHtml(translateUiText(totalLabel))}">${distributed}</div>
                     </div>
                     <div class="calc-overhead-meta-row">
-                        <div class="calc-overhead-meta"><span>Исх. стоим.</span><strong>${base}</strong></div>
-                        <div class="calc-overhead-meta"><span>Часы окуп.</span><strong>${payback}</strong></div>
+                        <div class="calc-overhead-meta"><span>${translateUiText('Исх. стоим.')}</span><strong>${base}</strong></div>
+                        <div class="calc-overhead-meta"><span>${translateUiText('Часы окуп.')}</span><strong>${payback}</strong></div>
                     </div>
                 </div>
             `;
@@ -9892,16 +9911,16 @@
         const marginPercent = subtotal > 0 ? (profitBeforeTax / subtotal) * 100 : 0;
         const shippingBucket = ship + totalLabelsCost + estimatePrintCost;
         const costStructureItems = [
-            {label: 'Материалы', value: totalMaterialCost, color: '#0ea5e9'},
-            {label: 'Амортизация', value: totalPrinterPartCost, color: '#6366f1'},
-            {label: 'Электроэнергия', value: totalElectricCost, color: '#22d3ee'},
-            {label: 'Обслуживание', value: totalMaintenanceCost, color: '#a855f7'},
-            {label: 'Работа оператора', value: operatorWorkCost, color: '#22c55e'},
-            {label: 'Простои и охлаждение', value: downtimeCost, color: '#f97316'},
-            {label: 'Подготовка', value: preparationCost, color: '#06b6d4'},
-            {label: 'Накладные расходы', value: sumGlobalAdd, color: '#f59e0b'},
-            {label: 'Услуги', value: servicesTotal, color: '#ec4899'},
-            {label: 'Доставка и этикетки', value: shippingBucket, color: '#94a3b8'}
+            {label: translateUiText('Материалы'), value: totalMaterialCost, color: '#0ea5e9'},
+            {label: translateUiText('Амортизация'), value: totalPrinterPartCost, color: '#6366f1'},
+            {label: translateUiText('Электроэнергия'), value: totalElectricCost, color: '#22d3ee'},
+            {label: translateUiText('Обслуживание'), value: totalMaintenanceCost, color: '#a855f7'},
+            {label: translateUiText('Работа оператора'), value: operatorWorkCost, color: '#22c55e'},
+            {label: translateUiText('Простои и охлаждение'), value: downtimeCost, color: '#f97316'},
+            {label: translateUiText('Подготовка'), value: preparationCost, color: '#06b6d4'},
+            {label: translateUiText('Накладные расходы'), value: sumGlobalAdd, color: '#f59e0b'},
+            {label: translateUiText('Услуги'), value: servicesTotal, color: '#ec4899'},
+            {label: translateUiText('Доставка и этикетки'), value: shippingBucket, color: '#94a3b8'}
         ].filter(item => item.value > 0.009);
 
         let finDateStr = calcFinishDate(timelineEvents, sDate);
@@ -9988,10 +10007,10 @@
                 summaryModels += `<div class="model-card">` +
                     (ln.thumbnail ? `<img src="data:image/png;base64,${ln.thumbnail}" alt="icon">` : fallbackModelCardImg) +
                     `<h3>${ln.name}<\/h3>` +
-                    `<p><strong>Требуется:<\/strong> ${formatTimeForDisplay(ln.hours)}<\/p>` +
-                    `<p><strong>Вес:<\/strong> ${safeFixed(ln.realWeight)} г<\/p>` +
-                    `<p><strong>Материал:<\/strong> ${ln.matName}<\/p>` +
-                    `<p><strong>Статус:<\/strong> ${statusDisplay}<\/p>` +
+                    `<p><strong>${translateUiText('Требуется:')}<\/strong> ${formatTimeForDisplay(ln.hours)}<\/p>` +
+                    `<p><strong>${translateUiText('Вес:')}<\/strong> ${safeFixed(ln.realWeight)} ${translateUiText('г')}<\/p>` +
+                    `<p><strong>${translateUiText('Материал:')}<\/strong> ${ln.matName}<\/p>` +
+                    `<p><strong>${translateUiText('Статус:')}<\/strong> ${statusDisplay}<\/p>` +
                     `</div>`;
             });
         });
@@ -10044,18 +10063,18 @@
 
         const activePrinters = detailsByPrinter.filter(d => (d.linesDetail && d.linesDetail.length) || d.printerTime > 0);
         if (activePrinters.length > 0) {
-            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">Детализация по принтерам<\/div><div class="calc-result-printers-grid">`;
+            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">${translateUiText('Детализация по принтерам')}<\/div><div class="calc-result-printers-grid">`;
             activePrinters.forEach(d => {
                 const printerWeight = d.linesDetail.reduce((sum, ln) => sum + (ln.realWeight || 0), 0);
                 const printerInfo = buildResultInfoGrid([
-                    {label: 'Время', value: `${formatTimeForDisplay(d.printerTime)} ${translateUiText('ч')}`},
-                    {label: 'Моделей', value: d.linesDetail.length},
+                    {label: translateUiText('Время'), value: `${formatTimeForDisplay(d.printerTime)} ${translateUiText('ч')}`},
+                    {label: translateUiText('Моделей'), value: d.linesDetail.length},
                     {
-                        label: 'Подготовка',
+                        label: translateUiText('Подготовка'),
                         value: d.printerPrepMinutes ? `${formatTimeForDisplay((d.printerPrepMinutes || 0) / 60)} ${translateUiText('ч')}` : ''
                     },
-                    {label: 'Стоимость', value: formatMoney(d.subTotal)},
-                    {label: 'Вес', value: `${safeFixed(printerWeight)} г`}
+                    {label: translateUiText('Стоимость'), value: formatMoney(d.subTotal)},
+                    {label: translateUiText('Вес'), value: `${safeFixed(printerWeight)} ${translateUiText('г')}`}
                 ]);
                 htmlRes += `<div class="calc-printer-card">`;
                 htmlRes += `<div class="calc-printer-card-header"><div><div class="calc-printer-title">${d.printerName}<\/div><div class="calc-printer-meta">ID: ${d.printerId}<\/div><\/div><\/div>`;
@@ -10075,7 +10094,7 @@
                         const status = [statusLabel, qualityLabel].filter(Boolean).join(' · ') || '—';
                         const chipStats = [
                             {icon: '⏱', value: `${formatTimeForDisplay(ln.hours)} ${translateUiText('ч')}`},
-                            {icon: '⚖', value: `${safeFixed(ln.realWeight)} г`},
+                            {icon: '⚖', value: `${safeFixed(ln.realWeight)} ${translateUiText('г')}`},
                             {icon: '⚙', value: formatMoney(ln.costPrinterPart)},
                             {icon: '🧵', value: formatMoney(ln.costMaterial)},
                             {icon: '⚡', value: formatMoney(ln.costElectric)},
@@ -10130,7 +10149,7 @@
                         sumPrinterAdditional += ad.costDistributed;
                     });
                     htmlRes += buildOverheadCards(d.additionalDetails, {totalLabel: 'Распределено (₽)'});
-                    htmlRes += `<div class="text-muted small mt-2">Накладные по принтеру: ${formatMoney(sumPrinterAdditional)}<\/div>`;
+                    htmlRes += `<div class="text-muted small mt-2">${translateUiText('Накладные по принтеру:')} ${formatMoney(sumPrinterAdditional)}<\/div>`;
                 }
                 htmlRes += `<\/div>`;
             });
@@ -10139,7 +10158,7 @@
 
 
         if (timelineEvents.length > 0) {
-            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">График печати<\/div>`;
+            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">${translateUiText('График печати')}<\/div>`;
             const timelineGroups = [];
             const printerOrder = [];
             const now = new Date();
@@ -10228,14 +10247,14 @@
                         dayTableRows.push(`<tr class="timeline-break-row">
             <td>${timeRange}</td>
             <td>${durationLabel}</td>
-            <td>Перерыв</td>
+            <td>${translateUiText('Перерыв')}</td>
           </tr>`);
                         breakPointer++;
                     }
                 };
                 let dayTotalMinutes = 0;
                 dayPrinters.forEach(prGroup => {
-                    dayTableRows.push(`<tr class="timeline-printer-row"><td colspan="5" class="text-center"><strong>Принтер: ${prGroup.printer}</strong></td></tr>`);
+                    dayTableRows.push(`<tr class="timeline-printer-row"><td colspan="5" class="text-center"><strong>${translateUiText('Принтер:')} ${prGroup.printer}</strong></td></tr>`);
                     prGroup.models.forEach(modelGroup => {
                         const hasReject = modelGroup.slots.some(slot => slot.status === 'reject');
                         const modelQuality = hasReject ? ' — Брак' : '';
@@ -10280,15 +10299,15 @@
           <table class="table table-sm table-bordered align-middle mb-0">
             <thead>
               <tr>
-                <th style="width:35%;">Время<\/th>
-                <th style="width:15%;">Длительность<\/th>
-                <th style="width:20%;">Этап<\/th>
+	                <th style="width:35%;">${translateUiText('Время')}<\/th>
+	                <th style="width:15%;">${translateUiText('Длительность')}<\/th>
+	                <th style="width:20%;">${translateUiText('Этап')}<\/th>
               <\/tr>
             <\/thead>
             <tbody>${dayBodyHtml}<\/tbody>
           <\/table>
         <\/div>
-        <div class="timeline-day-summary">Итого за день: ${minutesToDuration(dayTotalMinutes)}<\/div>
+	        <div class="timeline-day-summary">${translateUiText('Итого за день:')} ${minutesToDuration(dayTotalMinutes)}<\/div>
       <\/div>`);
             });
             if (dayBlocks.length) {
@@ -10304,7 +10323,7 @@
 
         if (globalAdditionalDetails.length > 0) {
             const overheadCards = buildOverheadCards(globalAdditionalDetails, {totalLabel: 'В заказе (₽)'});
-            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">Накладные расходы<\/div>${overheadCards}<div class="calc-overhead-total">Всего: ${formatMoney(sumGlobalAdd)}<\/div><\/div>`;
+            htmlRes += `<div class="calc-result-card"><div class="calc-result-card-title">${translateUiText('Накладные расходы')}<\/div>${overheadCards}<div class="calc-overhead-total">${translateUiText('Всего:')} ${formatMoney(sumGlobalAdd)}<\/div><\/div>`;
         }
 
         const calcResultEmptyEl = document.getElementById("calcResultEmpty");
@@ -12796,15 +12815,15 @@
             const materialKgTotal = formatNumber(kpis.totalGrams / 1000, 3);
 
             const breakdownRows = [
-                {label: 'Материалы', value: totalMaterialCost},
-                {label: 'Электричество', value: totalElectricityCost},
-                {label: 'Оператор', value: totalOperatorExpenses},
-                {label: 'Услуги', value: totalServiceCost},
-                {label: 'Доставка', value: totalShippingCost},
-                {label: 'Накладные', value: totalAdditionalCost},
-                {label: 'Амортизация', value: totalPrinterCost},
-                {label: 'Обслуживание', value: totalMaintenanceCost},
-                {label: 'Налоги', value: totalTax}
+                {label: translateUiText('Материалы'), value: totalMaterialCost},
+                {label: translateUiText('Электричество'), value: totalElectricityCost},
+                {label: translateUiText('Оператор'), value: totalOperatorExpenses},
+                {label: translateUiText('Услуги'), value: totalServiceCost},
+                {label: translateUiText('Доставка'), value: totalShippingCost},
+                {label: translateUiText('Накладные'), value: totalAdditionalCost},
+                {label: translateUiText('Амортизация'), value: totalPrinterCost},
+                {label: translateUiText('Обслуживание'), value: totalMaintenanceCost},
+                {label: translateUiText('Налоги'), value: totalTax}
             ];
 
             const breakdownFiltered = breakdownRows.filter(item => item.value && item.value > 0);
